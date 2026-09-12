@@ -1,0 +1,22 @@
+app = "wave-messenger"
+primary_region = "waw"
+
+[build]
+
+[env]
+  PORT = "4000"
+
+[[mounts]]
+  source = "wave_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
