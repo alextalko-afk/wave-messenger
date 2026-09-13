@@ -1,0 +1,19 @@
+{
+  "appId": "com.wave.messenger",
+  "appName": "Wave",
+  "webDir": "dist",
+  "server": {
+    "url": "https://wave-messenger-3r2p.onrender.com",
+    "cleartext": false
+  },
+  "android": {
+    "backgroundColor": "#0e1621"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 800,
+      "backgroundColor": "#0e1621",
+      "showSpinner": false
+    }
+  }
+}

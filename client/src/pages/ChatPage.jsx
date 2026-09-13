@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
 import { api } from '../lib/api.js';
 import { useSocket } from '../context/SocketContext.jsx';
 import Sidebar from '../components/Sidebar.jsx';
@@ -23,6 +24,15 @@ export default function ChatPage() {
   useEffect(() => {
     api.getConversations().then((r) => setConversations(r.conversations));
   }, []);
+
+  useEffect(() => {
+    let handle;
+    CapacitorApp.addListener('backButton', () => {
+      if (showChatOnMobile) setShowChatOnMobile(false);
+      else CapacitorApp.exitApp();
+    }).then((h) => (handle = h));
+    return () => handle?.remove();
+  }, [showChatOnMobile]);
 
   useEffect(() => {
     if (!socket) return;
