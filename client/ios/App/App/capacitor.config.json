@@ -1,0 +1,3 @@
+{
+  "_comment": "Unused. Kept as a static stub because App.xcodeproj's Resources build phase still copies this path; Capacitor was removed for the native SwiftUI rewrite."
+}

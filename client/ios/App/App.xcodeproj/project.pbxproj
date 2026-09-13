@@ -16,6 +16,16 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
+		D784AF7C3D4A4842804D2DA7 /* WaveApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F590AC0E026C42BE80D5FF99 /* WaveApp.swift */; };
+		0499A549C3604505A3A3F7EB /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9454D7EB74784BA2AA4E3490 /* Models.swift */; };
+		3E0637D2C06C41D195704C7E /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF057595057F4845A7930132 /* APIClient.swift */; };
+		9A060EF1A824480697D9677D /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3240FA0B7CB43C69A4077D2 /* SessionStore.swift */; };
+		D34CB038542E4DCC89717604 /* SocketManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 669DC00BFA034176923D902E /* SocketManager.swift */; };
+		8B140C1EB3A9449AA2022575 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17BC14A170724B3294DC3787 /* AvatarView.swift */; };
+		D8CC227146554E30B554812B /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB9A1A271F4869963430A2 /* LoginView.swift */; };
+		B231DBF932DB41BB9CD3BA90 /* ChatListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E98A870C6D904D60A8EC7E73 /* ChatListView.swift */; };
+		68C74571BE654D0CA1D2481E /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F851E9F2C544A53BCC2D22F /* ChatView.swift */; };
+		2C4CE01F2DDB4EE596F2A764 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 214A94224BDD49609B8F7387 /* RootView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +40,16 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		F590AC0E026C42BE80D5FF99 /* WaveApp.swift */ = {isa = PBXFileReference; name = "WaveApp.swift"; path = "WaveApp.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		9454D7EB74784BA2AA4E3490 /* Models.swift */ = {isa = PBXFileReference; name = "Models.swift"; path = "Models.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		BF057595057F4845A7930132 /* APIClient.swift */ = {isa = PBXFileReference; name = "APIClient.swift"; path = "APIClient.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		A3240FA0B7CB43C69A4077D2 /* SessionStore.swift */ = {isa = PBXFileReference; name = "SessionStore.swift"; path = "SessionStore.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		669DC00BFA034176923D902E /* SocketManager.swift */ = {isa = PBXFileReference; name = "SocketManager.swift"; path = "SocketManager.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		17BC14A170724B3294DC3787 /* AvatarView.swift */ = {isa = PBXFileReference; name = "AvatarView.swift"; path = "AvatarView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		D0CB9A1A271F4869963430A2 /* LoginView.swift */ = {isa = PBXFileReference; name = "LoginView.swift"; path = "LoginView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		E98A870C6D904D60A8EC7E73 /* ChatListView.swift */ = {isa = PBXFileReference; name = "ChatListView.swift"; path = "ChatListView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		0F851E9F2C544A53BCC2D22F /* ChatView.swift */ = {isa = PBXFileReference; name = "ChatView.swift"; path = "ChatView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		214A94224BDD49609B8F7387 /* RootView.swift */ = {isa = PBXFileReference; name = "RootView.swift"; path = "RootView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +93,16 @@
 				504EC3131FED79650016851F /* Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				F590AC0E026C42BE80D5FF99 /* WaveApp.swift */,
+				9454D7EB74784BA2AA4E3490 /* Models.swift */,
+				BF057595057F4845A7930132 /* APIClient.swift */,
+				A3240FA0B7CB43C69A4077D2 /* SessionStore.swift */,
+				669DC00BFA034176923D902E /* SocketManager.swift */,
+				17BC14A170724B3294DC3787 /* AvatarView.swift */,
+				D0CB9A1A271F4869963430A2 /* LoginView.swift */,
+				E98A870C6D904D60A8EC7E73 /* ChatListView.swift */,
+				0F851E9F2C544A53BCC2D22F /* ChatView.swift */,
+				214A94224BDD49609B8F7387 /* RootView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -106,8 +136,8 @@
 		504EC2FC1FED79650016851F /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 0920;
-				LastUpgradeCheck = 0920;
+				LastSwiftUpdateCheck = 920;
+				LastUpgradeCheck = 920;
 				TargetAttributes = {
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
@@ -160,6 +190,16 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				D784AF7C3D4A4842804D2DA7 /* WaveApp.swift in Sources */,
+				0499A549C3604505A3A3F7EB /* Models.swift in Sources */,
+				3E0637D2C06C41D195704C7E /* APIClient.swift in Sources */,
+				9A060EF1A824480697D9677D /* SessionStore.swift in Sources */,
+				D34CB038542E4DCC89717604 /* SocketManager.swift in Sources */,
+				8B140C1EB3A9449AA2022575 /* AvatarView.swift in Sources */,
+				D8CC227146554E30B554812B /* LoginView.swift in Sources */,
+				B231DBF932DB41BB9CD3BA90 /* ChatListView.swift in Sources */,
+				68C74571BE654D0CA1D2481E /* ChatView.swift in Sources */,
+				2C4CE01F2DDB4EE596F2A764 /* RootView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

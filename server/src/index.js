@@ -113,7 +113,10 @@ async function setPresence(userId, online) {
 }
 
 io.use((socket, next) => {
-  const token = socket.handshake.auth?.token;
+  // socket.io-client-swift (the iOS native client) has no support for the
+  // v3+ `auth` handshake payload, only query params - accept either so
+  // that client can authenticate the same way Android/web already do.
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token;
   const payload = token && verifySocketToken(token);
   if (!payload) return next(new Error('unauthorized'));
   socket.userId = payload.userId;

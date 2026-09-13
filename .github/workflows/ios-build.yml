@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'client/**'
+      - 'client/ios/**'
       - '.github/workflows/ios-build.yml'
 
 permissions:
@@ -17,62 +17,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install web client dependencies
-        working-directory: client
-        run: npm ci
-
-      - name: Build web assets
-        working-directory: client
-        run: npm run build
-
-      - name: Sync Capacitor iOS project
-        working-directory: client
-        run: npx cap sync ios
-
-      # @capacitor/app and @capacitor/splash-screen ship Swift source that
-      # calls Capacitor Swift APIs (CAPPluginCall.reject, PluginConfig
-      # .getString, bridge.viewController, ...) that no longer exist in the
-      # capacitor-swift-pm runtime, so they fail to compile no matter which
-      # core version they're paired with. Neither plugin does anything
-      # essential on iOS (hardware back button, native splash screen), so
-      # drop them from the SPM dependency graph before building - their JS
-      # calls just no-op/reject instead of crashing the build. This only
-      # touches the CI-generated file, not anything committed to git, so
-      # Android/web keep using both plugins normally.
-      - name: Drop incompatible plugins from the iOS build
-        working-directory: client/ios/App/CapApp-SPM
-        run: |
-          cat > Package.swift <<'EOF'
-          // swift-tools-version: 5.9
-          import PackageDescription
-
-          let package = Package(
-              name: "CapApp-SPM",
-              platforms: [.iOS(.v15)],
-              products: [
-                  .library(
-                      name: "CapApp-SPM",
-                      targets: ["CapApp-SPM"])
-              ],
-              dependencies: [
-                  .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.1.0")
-              ],
-              targets: [
-                  .target(
-                      name: "CapApp-SPM",
-                      dependencies: [
-                          .product(name: "Capacitor", package: "capacitor-swift-pm"),
-                          .product(name: "Cordova", package: "capacitor-swift-pm")
-                      ]
-                  )
-              ]
-          )
-          EOF
 
       # No signing identity here on purpose: this produces an unsigned .app.
       # Sideloadly/AltServer do the actual code-signing locally on your own
