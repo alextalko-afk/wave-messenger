@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatTime } from '../lib/format.js';
 import { isStickerContent } from '../lib/emoji.js';
-import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile, IconClose, IconDownload } from './Icons.jsx';
+import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile, IconClose, IconDownload, IconPlay } from './Icons.jsx';
 import VoiceMessage from './VoiceMessage.jsx';
 
 export default function MessageBubble({ message, isMine, showSender, isRead, showTail, onEdit, onDelete }) {
@@ -109,13 +109,17 @@ export default function MessageBubble({ message, isMine, showSender, isRead, sho
           />
         )}
         {message.fileUrl && isVideo && (
-          <video
-            src={message.fileUrl}
-            controls
-            playsInline
-            className="rounded-lg mb-1 max-h-72 w-full -mx-0.5"
-            style={{ background: '#000' }}
-          />
+          <div
+            onClick={() => setLightboxOpen(true)}
+            className="relative rounded-lg mb-1 -mx-0.5 cursor-pointer overflow-hidden"
+          >
+            <video src={message.fileUrl} playsInline muted className="max-h-72 w-full" style={{ background: '#000' }} />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-black/50 text-white">
+                <IconPlay size={22} />
+              </div>
+            </div>
+          </div>
         )}
         {message.fileUrl && isAudio && <VoiceMessage url={message.fileUrl} isMine={isMine} />}
         {message.fileUrl && !isImage && !isVideo && !isAudio && (
@@ -188,12 +192,23 @@ export default function MessageBubble({ message, isMine, showSender, isRead, sho
           >
             <IconDownload size={18} />
           </a>
-          <img
-            src={message.fileUrl}
-            alt={message.fileName}
-            onClick={(e) => e.stopPropagation()}
-            className="max-w-full max-h-full object-contain pop-in"
-          />
+          {isVideo ? (
+            <video
+              src={message.fileUrl}
+              controls
+              autoPlay
+              playsInline
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-full max-h-full object-contain pop-in"
+            />
+          ) : (
+            <img
+              src={message.fileUrl}
+              alt={message.fileName}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-full max-h-full object-contain pop-in"
+            />
+          )}
         </div>
       )}
     </div>
