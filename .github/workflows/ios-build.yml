@@ -8,6 +8,9 @@ on:
       - 'client/**'
       - '.github/workflows/ios-build.yml'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-14
@@ -100,3 +103,17 @@ jobs:
         with:
           name: Wave-unsigned-ipa
           path: client/ios/App/Wave-unsigned.ipa
+
+      # GitHub Actions artifacts require signing in to GitHub to download,
+      # even on a public repo. A release asset doesn't, so re-publish the
+      # same .ipa as a rolling "latest-ios" release each build - that gives
+      # a stable, no-login link to hand straight to Sideloadly/AltServer.
+      - name: Publish as a rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest-ios --yes --cleanup-tag || true
+          gh release create latest-ios client/ios/App/Wave-unsigned.ipa \
+            --title "Wave iOS (unsigned)" \
+            --notes "Unsigned build from commit ${{ github.sha }}. Sign and install with Sideloadly or AltServer using your Apple ID." \
+            --latest=false
