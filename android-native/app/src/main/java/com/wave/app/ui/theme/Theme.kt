@@ -1,8 +1,11 @@
 package com.wave.app.ui.theme
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
 // Mirrors client/src/index.css's dark palette so the native app matches
@@ -35,6 +38,12 @@ fun WaveTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = WaveColorScheme,
         typography = MaterialTheme.typography,
-        content = content
-    )
+    ) {
+        // A safety-net Surface: without it, any screen that isn't built on
+        // Scaffold (which sets its own contentColor) falls back to
+        // Compose's hardcoded black default text color on our dark background.
+        Surface(color = WaveBg, contentColor = WaveText, modifier = Modifier.fillMaxSize()) {
+            content()
+        }
+    }
 }

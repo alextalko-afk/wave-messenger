@@ -36,6 +36,7 @@ import com.wave.app.ui.theme.WaveAccent2
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WavePanel
+import com.wave.app.ui.theme.WaveText
 
 @Composable
 fun LoginScreen(viewModel: AuthViewModel, onLoggedIn: () -> Unit, onGoRegister: () -> Unit) {
@@ -44,7 +45,8 @@ fun LoginScreen(viewModel: AuthViewModel, onLoggedIn: () -> Unit, onGoRegister: 
     val busy by viewModel.busy.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    Box(modifier = Modifier.fillMaxSize().background(WaveBg), contentAlignment = Alignment.Center) {
+    androidx.compose.material3.Surface(color = WaveBg, contentColor = WaveText, modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -104,5 +106,6 @@ fun LoginScreen(viewModel: AuthViewModel, onLoggedIn: () -> Unit, onGoRegister: 
                 Text("Нет аккаунта? Зарегистрироваться", color = WaveAccent)
             }
         }
+    }
     }
 }

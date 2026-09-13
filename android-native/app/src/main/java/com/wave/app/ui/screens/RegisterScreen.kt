@@ -32,6 +32,7 @@ import com.wave.app.ui.theme.WaveAccent
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WavePanel
+import com.wave.app.ui.theme.WaveText
 
 @Composable
 fun RegisterScreen(viewModel: AuthViewModel, onRegistered: () -> Unit, onGoLogin: () -> Unit) {
@@ -41,7 +42,8 @@ fun RegisterScreen(viewModel: AuthViewModel, onRegistered: () -> Unit, onGoLogin
     val busy by viewModel.busy.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    Box(modifier = Modifier.fillMaxSize().background(WaveBg), contentAlignment = Alignment.Center) {
+    androidx.compose.material3.Surface(color = WaveBg, contentColor = WaveText, modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -89,5 +91,6 @@ fun RegisterScreen(viewModel: AuthViewModel, onRegistered: () -> Unit, onGoLogin
                 Text("Уже есть аккаунт? Войти", color = WaveAccent)
             }
         }
+    }
     }
 }

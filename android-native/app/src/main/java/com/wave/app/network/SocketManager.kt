@@ -26,7 +26,12 @@ object SocketManager {
     var onTyping: ((conversationId: String, userId: String, name: String?, typing: Boolean) -> Unit)? = null
 
     fun connect(token: String) {
-        if (socket?.connected() == true) return
+        // Guard on existence, not connected() - connect() is called from
+        // several places (app start, chat list) in quick succession, and
+        // connected() can still be false while a first attempt is in
+        // flight, which used to let a second Socket slip through and
+        // double-deliver every realtime event.
+        if (socket != null) return
         val opts = IO.Options.builder()
             .setAuth(mapOf("token" to token))
             .setReconnection(true)

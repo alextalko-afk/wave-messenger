@@ -44,7 +44,9 @@ class ChatViewModel(
         SocketManager.markRead(conversationId)
         SocketManager.onNewMessage = { msg ->
             if (msg.conversationId == conversationId) {
-                _messages.value = _messages.value + msg
+                if (_messages.value.none { it.id == msg.id }) {
+                    _messages.value = _messages.value + msg
+                }
                 SocketManager.markRead(conversationId)
             }
         }
