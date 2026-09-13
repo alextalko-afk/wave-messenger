@@ -33,6 +33,7 @@ import com.wave.app.model.Conversation
 import com.wave.app.model.User
 import com.wave.app.network.ApiClient
 import com.wave.app.network.DirectBody
+import com.wave.app.network.SocketManager
 import com.wave.app.ui.components.Avatar
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
@@ -61,7 +62,10 @@ fun NewChatScreen(onBack: () -> Unit, onOpen: (Conversation) -> Unit) {
     LaunchedEffect(openingUserId) {
         val userId = openingUserId ?: return@LaunchedEffect
         runCatching { ApiClient.conversations.openDirect(DirectBody(userId)) }
-            .onSuccess { onOpen(it.conversation) }
+            .onSuccess { conv ->
+                SocketManager.notifyConversationCreated(conv.conversation.id, conv.conversation.members.map { it.id })
+                onOpen(conv.conversation)
+            }
         openingUserId = null
     }
 

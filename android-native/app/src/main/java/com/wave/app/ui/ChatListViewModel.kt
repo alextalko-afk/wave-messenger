@@ -65,4 +65,32 @@ class ChatListViewModel(private val session: SessionStore) : ViewModel() {
             if (it.id == conversationId) it.copy(unreadCount = 0) else it
         }
     }
+
+    fun togglePin(conv: Conversation) {
+        val newValue = !conv.pinned
+        _conversations.value = _conversations.value.map { if (it.id == conv.id) it.copy(pinned = newValue) else it }
+            .sortedWith(compareByDescending<Conversation> { it.pinned }.thenByDescending { it.lastMessage?.createdAt ?: it.createdAt })
+        viewModelScope.launch { runCatching { ApiClient.conversations.pin(conv.id, com.wave.app.network.PinBody(newValue)) } }
+    }
+
+    fun toggleMute(conv: Conversation) {
+        val newValue = !conv.muted
+        _conversations.value = _conversations.value.map { if (it.id == conv.id) it.copy(muted = newValue) else it }
+        viewModelScope.launch { runCatching { ApiClient.conversations.mute(conv.id, com.wave.app.network.MuteBody(newValue)) } }
+    }
+
+    fun markUnread(conv: Conversation) {
+        _conversations.value = _conversations.value.map { if (it.id == conv.id) it.copy(unreadCount = maxOf(it.unreadCount, 1)) else it }
+        viewModelScope.launch { runCatching { ApiClient.conversations.markUnread(conv.id, com.wave.app.network.MarkUnreadBody(true)) } }
+    }
+
+    fun clearHistory(conv: Conversation) {
+        _conversations.value = _conversations.value.map { if (it.id == conv.id) it.copy(lastMessage = null, unreadCount = 0) else it }
+        viewModelScope.launch { runCatching { ApiClient.conversations.clear(conv.id) } }
+    }
+
+    fun deleteConversation(conv: Conversation) {
+        _conversations.value = _conversations.value.filterNot { it.id == conv.id }
+        viewModelScope.launch { runCatching { ApiClient.conversations.delete(conv.id) } }
+    }
 }

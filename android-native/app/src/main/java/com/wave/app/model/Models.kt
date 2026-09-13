@@ -59,3 +59,25 @@ data class UploadResponse(
     val name: String,
     val type: String
 )
+
+data class ConversationStats(
+    val photos: Int = 0,
+    val voice: Int = 0,
+    val files: Int = 0,
+    val sharedGroups: Int = 0
+)
+
+data class MediaItem(
+    val id: String,
+    val fileUrl: String?,
+    val fileName: String?,
+    val fileType: String?,
+    val createdAt: Long
+)
+
+data class SharedGroup(
+    val id: String,
+    val name: String,
+    val avatarColor: String?,
+    val memberCount: Int
+)

@@ -12,10 +12,12 @@ import com.wave.app.ui.AuthViewModel
 import com.wave.app.ui.ChatListViewModel
 import com.wave.app.ui.SelectedConversation
 import com.wave.app.ui.ViewModelFactory
+import com.wave.app.ui.screens.ChatInfoScreen
 import com.wave.app.ui.screens.ChatListScreen
 import com.wave.app.ui.screens.ChatScreen
 import com.wave.app.ui.screens.LoginScreen
 import com.wave.app.ui.screens.NewChatScreen
+import com.wave.app.ui.screens.NewGroupScreen
 import com.wave.app.ui.screens.RegisterScreen
 import com.wave.app.ui.theme.WaveTheme
 
@@ -69,6 +71,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("chat")
                             },
                             onNewChat = { navController.navigate("newChat") },
+                            onNewGroup = { navController.navigate("newGroup") },
                             onLogout = {
                                 session.clear()
                                 SocketManager.disconnect()
@@ -89,14 +92,32 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
+                    composable("newGroup") {
+                        NewGroupScreen(
+                            onBack = { navController.popBackStack() },
+                            onCreated = { conv ->
+                                SelectedConversation.current = conv
+                                navController.navigate("chat") {
+                                    popUpTo("newGroup") { inclusive = true }
+                                }
+                            }
+                        )
+                    }
                     composable("chat") {
                         val conv = SelectedConversation.current
                         if (conv != null) {
                             ChatScreen(
                                 session = session,
                                 conversation = conv,
-                                onBack = { navController.popBackStack() }
+                                onBack = { navController.popBackStack() },
+                                onOpenInfo = { navController.navigate("chatInfo") }
                             )
+                        }
+                    }
+                    composable("chatInfo") {
+                        val conv = SelectedConversation.current
+                        if (conv != null) {
+                            ChatInfoScreen(conversation = conv, onBack = { navController.popBackStack() })
                         }
                     }
                 }

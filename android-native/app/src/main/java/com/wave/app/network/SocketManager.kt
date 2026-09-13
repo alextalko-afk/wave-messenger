@@ -23,6 +23,7 @@ object SocketManager {
     var onConversationNew: ((Conversation) -> Unit)? = null
     var onMessageRead: ((conversationId: String, userId: String, readAt: Long) -> Unit)? = null
     var onPresenceUpdate: ((userId: String, online: Boolean, lastSeen: Long?) -> Unit)? = null
+    var onTyping: ((conversationId: String, userId: String, name: String?, typing: Boolean) -> Unit)? = null
 
     fun connect(token: String) {
         if (socket?.connected() == true) return
@@ -70,6 +71,17 @@ object SocketManager {
                     onPresenceUpdate?.invoke(obj.getString("userId"), obj.getBoolean("online"), lastSeen)
                 }
             }
+            s.on("typing:update") { args ->
+                runCatching {
+                    val obj = args[0] as JSONObject
+                    onTyping?.invoke(
+                        obj.getString("conversationId"),
+                        obj.getString("userId"),
+                        if (obj.isNull("name")) null else obj.optString("name"),
+                        obj.getBoolean("typing")
+                    )
+                }
+            }
             s.connect()
         }
     }
@@ -91,6 +103,46 @@ object SocketManager {
     fun markRead(conversationId: String) {
         val payload = JSONObject().put("conversationId", conversationId)
         socket?.emit("conversation:read", payload)
+    }
+
+    /** Tells the server to push a realtime conversation:new to the other members after a REST create. */
+    fun notifyConversationCreated(conversationId: String, memberIds: List<String>) {
+        val payload = JSONObject().apply {
+            put("conversationId", conversationId)
+            put("memberIds", org.json.JSONArray(memberIds))
+        }
+        socket?.emit("conversation:created", payload)
+    }
+
+    fun typingStart(conversationId: String) {
+        socket?.emit("typing:start", JSONObject().put("conversationId", conversationId))
+    }
+
+    fun typingStop(conversationId: String) {
+        socket?.emit("typing:stop", JSONObject().put("conversationId", conversationId))
+    }
+
+    fun editMessage(messageId: String, content: String, onResult: (Boolean, String?) -> Unit) {
+        val payload = JSONObject().apply {
+            put("messageId", messageId)
+            put("content", content)
+        }
+        socket?.emit("message:edit", payload, io.socket.client.Ack { args ->
+            runCatching {
+                val res = args[0] as JSONObject
+                if (res.has("error")) onResult(false, res.getString("error")) else onResult(true, null)
+            }.onFailure { onResult(false, it.message) }
+        })
+    }
+
+    fun deleteMessage(messageId: String, onResult: (Boolean, String?) -> Unit) {
+        val payload = JSONObject().put("messageId", messageId)
+        socket?.emit("message:delete", payload, io.socket.client.Ack { args ->
+            runCatching {
+                val res = args[0] as JSONObject
+                if (res.has("error")) onResult(false, res.getString("error")) else onResult(true, null)
+            }.onFailure { onResult(false, it.message) }
+        })
     }
 
     fun sendMessage(
