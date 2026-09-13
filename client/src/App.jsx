@@ -4,6 +4,7 @@ import { SocketProvider } from './context/SocketContext.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import ChatPage from './pages/ChatPage.jsx';
+import DebugInsets from './components/DebugInsets.jsx';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -18,6 +19,7 @@ export default function App() {
 
   return (
     <SocketProvider>
+      <DebugInsets />
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
         <Route path="/register" element={user ? <Navigate to="/" /> : <RegisterPage />} />
