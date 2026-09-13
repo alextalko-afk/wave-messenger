@@ -1,0 +1,106 @@
+package com.wave.app
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.wave.app.network.SocketManager
+import com.wave.app.ui.AuthViewModel
+import com.wave.app.ui.ChatListViewModel
+import com.wave.app.ui.SelectedConversation
+import com.wave.app.ui.ViewModelFactory
+import com.wave.app.ui.screens.ChatListScreen
+import com.wave.app.ui.screens.ChatScreen
+import com.wave.app.ui.screens.LoginScreen
+import com.wave.app.ui.screens.NewChatScreen
+import com.wave.app.ui.screens.RegisterScreen
+import com.wave.app.ui.theme.WaveTheme
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val session = (application as WaveApplication).session
+
+        setContent {
+            WaveTheme {
+                val navController = rememberNavController()
+                val factory = ViewModelFactory(session)
+                val startDestination = if (session.isLoggedIn()) "chats" else "login"
+
+                if (session.isLoggedIn()) {
+                    session.token?.let { SocketManager.connect(it) }
+                }
+
+                NavHost(navController = navController, startDestination = startDestination) {
+                    composable("login") {
+                        val vm: AuthViewModel = viewModel(factory = factory)
+                        LoginScreen(
+                            viewModel = vm,
+                            onLoggedIn = {
+                                navController.navigate("chats") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                            },
+                            onGoRegister = { navController.navigate("register") }
+                        )
+                    }
+                    composable("register") {
+                        val vm: AuthViewModel = viewModel(factory = factory)
+                        RegisterScreen(
+                            viewModel = vm,
+                            onRegistered = {
+                                navController.navigate("chats") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                            },
+                            onGoLogin = { navController.popBackStack() }
+                        )
+                    }
+                    composable("chats") {
+                        val vm: ChatListViewModel = viewModel(factory = factory)
+                        ChatListScreen(
+                            viewModel = vm,
+                            onOpenConversation = { conv ->
+                                SelectedConversation.current = conv
+                                vm.markReadLocally(conv.id)
+                                navController.navigate("chat")
+                            },
+                            onNewChat = { navController.navigate("newChat") },
+                            onLogout = {
+                                session.clear()
+                                SocketManager.disconnect()
+                                navController.navigate("login") {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+                    composable("newChat") {
+                        NewChatScreen(
+                            onBack = { navController.popBackStack() },
+                            onOpen = { conv ->
+                                SelectedConversation.current = conv
+                                navController.navigate("chat") {
+                                    popUpTo("newChat") { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+                    composable("chat") {
+                        val conv = SelectedConversation.current
+                        if (conv != null) {
+                            ChatScreen(
+                                session = session,
+                                conversation = conv,
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
