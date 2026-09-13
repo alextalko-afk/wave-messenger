@@ -14,11 +14,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -38,6 +36,8 @@ import com.wave.app.network.ApiClient
 import com.wave.app.network.GroupBody
 import com.wave.app.network.SocketManager
 import com.wave.app.ui.components.Avatar
+import com.wave.app.ui.components.WaveButton
+import com.wave.app.ui.components.WaveTextField
 import com.wave.app.ui.theme.WaveAccent
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
@@ -111,11 +111,11 @@ fun NewGroupScreen(onBack: () -> Unit, onCreated: (Conversation) -> Unit) {
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             if (step == 1) {
                 Column(Modifier.fillMaxSize()) {
-                    OutlinedTextField(
+                    WaveTextField(
                         value = query,
                         onValueChange = { query = it },
-                        placeholder = { Text("Поиск людей") },
-                        modifier = Modifier.fillMaxWidth().padding(12.dp)
+                        placeholder = "Поиск людей",
+                        modifier = Modifier.padding(12.dp)
                     )
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         items(results, key = { it.id }) { user ->
@@ -141,20 +141,18 @@ fun NewGroupScreen(onBack: () -> Unit, onCreated: (Conversation) -> Unit) {
                 Column(Modifier.fillMaxSize().padding(20.dp)) {
                     Text("Участников: ${selected.value.size}", color = WaveMuted)
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 12.dp))
-                    OutlinedTextField(
+                    WaveTextField(
                         value = groupName,
                         onValueChange = { groupName = it },
-                        placeholder = { Text("Название группы") },
-                        modifier = Modifier.fillMaxWidth()
+                        placeholder = "Название группы"
                     )
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 16.dp))
-                    androidx.compose.material3.Button(
+                    WaveButton(
+                        text = "Создать группу",
                         onClick = { create() },
-                        enabled = groupName.isNotBlank() && !creating,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        if (creating) CircularProgressIndicator(modifier = Modifier.padding(2.dp)) else Text("Создать группу")
-                    }
+                        enabled = groupName.isNotBlank(),
+                        loading = creating
+                    )
                 }
             }
         }

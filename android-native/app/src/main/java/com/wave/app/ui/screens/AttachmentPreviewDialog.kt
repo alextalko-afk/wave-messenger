@@ -7,14 +7,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,6 +30,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
+import com.wave.app.ui.components.WaveTextField
 import com.wave.app.ui.theme.WaveAccent
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WavePanel
@@ -68,12 +71,26 @@ fun AttachmentPreviewDialog(
                 isVideo -> Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(160.dp)
+                        .height(200.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(WavePanel2),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Видео готово к отправке", color = WaveMuted)
+                    AsyncImage(
+                        model = attachment.uri,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().height(200.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White)
+                    }
                 }
                 else -> Row(
                     modifier = Modifier
@@ -93,10 +110,10 @@ fun AttachmentPreviewDialog(
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 10.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
+                WaveTextField(
                     value = caption,
                     onValueChange = { caption = it },
-                    placeholder = { Text("Добавьте подпись…") },
+                    placeholder = "Добавьте подпись…",
                     modifier = Modifier.weight(1f),
                     enabled = !uploading
                 )

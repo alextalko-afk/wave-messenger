@@ -1,5 +1,6 @@
 package com.wave.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -36,17 +38,35 @@ import androidx.compose.ui.unit.dp
 import com.wave.app.model.Conversation
 import com.wave.app.model.ConversationStats
 import com.wave.app.model.SharedGroup
+import com.wave.app.model.User
 import com.wave.app.network.ApiClient
+import com.wave.app.network.DirectBody
+import com.wave.app.network.SocketManager
 import com.wave.app.ui.components.Avatar
+import com.wave.app.ui.components.WaveButton
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WavePanel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatInfoScreen(conversation: Conversation, onBack: () -> Unit) {
+fun ChatInfoScreen(conversation: Conversation, onBack: () -> Unit, onOpenConversation: (Conversation) -> Unit) {
     var stats by remember { mutableStateOf<ConversationStats?>(null) }
     var sharedGroups by remember { mutableStateOf<List<SharedGroup>>(emptyList()) }
+    var selectedMember by remember { mutableStateOf<User?>(null) }
+    var openingChat by remember { mutableStateOf(false) }
+
+    LaunchedEffect(openingChat) {
+        val member = selectedMember
+        if (!openingChat || member == null) return@LaunchedEffect
+        runCatching { ApiClient.conversations.openDirect(DirectBody(member.id)) }
+            .onSuccess { res ->
+                SocketManager.notifyConversationCreated(res.conversation.id, res.conversation.members.map { it.id })
+                selectedMember = null
+                onOpenConversation(res.conversation)
+            }
+        openingChat = false
+    }
 
     LaunchedEffect(conversation.id) {
         runCatching { ApiClient.conversations.stats(conversation.id) }.onSuccess { stats = it }
@@ -113,7 +133,10 @@ fun ChatInfoScreen(conversation: Conversation, onBack: () -> Unit) {
                 }
                 items(conversation.members, key = { it.id }) { member ->
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedMember = member }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Avatar(name = member.displayName, colorHex = member.avatarColor, size = 40)
@@ -143,6 +166,25 @@ fun ChatInfoScreen(conversation: Conversation, onBack: () -> Unit) {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    selectedMember?.let { member ->
+        ModalBottomSheet(onDismissRequest = { selectedMember = null }, containerColor = WavePanel) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Avatar(name = member.displayName, colorHex = member.avatarColor, size = 88)
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 12.dp))
+                Text(member.displayName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text("@${member.username}", color = WaveMuted)
+                if (!member.bio.isNullOrBlank()) {
+                    Text(member.bio, color = WaveMuted, modifier = Modifier.padding(top = 8.dp))
+                }
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 20.dp))
+                WaveButton(text = "Написать", onClick = { openingChat = true }, loading = openingChat)
             }
         }
     }

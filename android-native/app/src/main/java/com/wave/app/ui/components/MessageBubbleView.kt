@@ -26,7 +26,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -108,13 +107,19 @@ fun MessageBubbleView(
         horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
     ) {
         Box {
+            val bubbleShape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = if (isMine) 16.dp else 4.dp,
+                bottomEnd = if (isMine) 4.dp else 16.dp
+            )
             Column(
                 modifier = Modifier
                     .widthIn(max = 280.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(bubbleShape)
                     .background(if (isMine) WaveBubbleOut else WaveBubbleIn)
                     .combinedClickable(onClick = {}, onLongClick = { if (isMine) menuOpen = true })
-                    .padding(10.dp)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 if (showSender && !isMine && message.senderName != null) {
                     Text(
@@ -145,11 +150,17 @@ fun MessageBubbleView(
                             .clickable { viewerUrl = mediaUrl; viewerIsVideo = true },
                         contentAlignment = Alignment.Center
                     ) {
+                        AsyncImage(
+                            model = mediaUrl,
+                            contentDescription = message.fileName,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxWidth().size(220.dp)
+                        )
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
-                                .background(Color.Black.copy(alpha = 0.5f)),
+                                .background(Color.Black.copy(alpha = 0.45f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(Icons.Default.PlayArrow, contentDescription = "Воспроизвести", tint = Color.White)
@@ -178,11 +189,10 @@ fun MessageBubbleView(
 
                 if (editing) {
                     Column(modifier = Modifier.padding(top = 4.dp)) {
-                        OutlinedTextField(
+                        WaveTextField(
                             value = draft,
                             onValueChange = { draft = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = MaterialTheme.typography.bodyLarge
+                            placeholder = "Сообщение"
                         )
                         Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                             IconButton(onClick = { editing = false; draft = message.content }) {

@@ -117,7 +117,16 @@ class MainActivity : ComponentActivity() {
                     composable("chatInfo") {
                         val conv = SelectedConversation.current
                         if (conv != null) {
-                            ChatInfoScreen(conversation = conv, onBack = { navController.popBackStack() })
+                            ChatInfoScreen(
+                                conversation = conv,
+                                onBack = { navController.popBackStack() },
+                                onOpenConversation = { newConv ->
+                                    SelectedConversation.current = newConv
+                                    navController.navigate("chat") {
+                                        popUpTo("chats")
+                                    }
+                                }
+                            )
                         }
                     }
                 }

@@ -1,8 +1,8 @@
 package com.wave.app.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,7 +15,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -35,6 +34,7 @@ import com.wave.app.network.ApiClient
 import com.wave.app.network.DirectBody
 import com.wave.app.network.SocketManager
 import com.wave.app.ui.components.Avatar
+import com.wave.app.ui.components.WaveTextField
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WavePanel
@@ -73,15 +73,7 @@ fun NewChatScreen(onBack: () -> Unit, onOpen: (Conversation) -> Unit) {
         containerColor = WaveBg,
         topBar = {
             TopAppBar(
-                title = {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        placeholder = { Text("Поиск по логину или имени") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                },
+                title = { Text("Новый чат") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
@@ -91,25 +83,33 @@ fun NewChatScreen(onBack: () -> Unit, onOpen: (Conversation) -> Unit) {
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (loading || openingUserId != null) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (results.isEmpty() && query.isNotBlank()) {
-                Text("Никого не нашлось", color = WaveMuted, modifier = Modifier.align(Alignment.Center))
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(results, key = { it.id }) { user ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { openingUserId = user.id }
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Avatar(name = user.displayName, colorHex = user.avatarColor, size = 44)
-                            androidx.compose.foundation.layout.Column(modifier = Modifier.padding(start = 12.dp)) {
-                                Text(user.displayName)
-                                Text("@${user.username}", color = WaveMuted)
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            WaveTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = "Поиск по логину или имени",
+                modifier = Modifier.padding(12.dp)
+            )
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (loading || openingUserId != null) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                } else if (results.isEmpty() && query.isNotBlank()) {
+                    Text("Никого не нашлось", color = WaveMuted, modifier = Modifier.align(Alignment.Center))
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(results, key = { it.id }) { user ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { openingUserId = user.id }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Avatar(name = user.displayName, colorHex = user.avatarColor, size = 46)
+                                Column(modifier = Modifier.padding(start = 12.dp)) {
+                                    Text(user.displayName)
+                                    Text("@${user.username}", color = WaveMuted)
+                                }
                             }
                         }
                     }

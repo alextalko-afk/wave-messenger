@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachFile
@@ -31,8 +30,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -65,7 +62,6 @@ import com.wave.app.ui.theme.WaveAccent
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WavePanel
-import com.wave.app.ui.theme.WavePanel2
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -237,16 +233,11 @@ fun ChatScreen(
                         IconButton(onClick = { emojiSheetOpen = true }) {
                             Icon(Icons.Default.EmojiEmotions, contentDescription = "Эмодзи", tint = WaveAccent)
                         }
-                        OutlinedTextField(
+                        com.wave.app.ui.components.WaveTextField(
                             value = text,
                             onValueChange = { text = it; viewModel.onTextChanged() },
-                            placeholder = { Text("Написать сообщение…") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedContainerColor = WavePanel2,
-                                focusedContainerColor = WavePanel2
-                            )
+                            placeholder = "Написать сообщение…",
+                            modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
                         )
                         if (text.isNotBlank()) {
                             IconButton(onClick = { viewModel.sendText(text); text = "" }) {
