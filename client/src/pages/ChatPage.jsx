@@ -158,6 +158,7 @@ export default function ChatPage() {
           onSelect={handleSelect}
           onNewChat={(mode) => setModalMode(mode || 'direct')}
           onAction={handleConversationAction}
+          onCreated={handleCreated}
         />
       </div>
 

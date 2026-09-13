@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Avatar from './Avatar.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import ContextMenu from './ContextMenu.jsx';
 import { formatTime } from '../lib/format.js';
+import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import {
@@ -62,13 +63,47 @@ function MenuRow({ icon, label, danger, onClick, right }) {
   );
 }
 
-export default function Sidebar({ conversations, activeId, onSelect, onNewChat, onAction }) {
+export default function Sidebar({ conversations, activeId, onSelect, onNewChat, onAction, onCreated }) {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const [filter, setFilter] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
+  const [userResults, setUserResults] = useState([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  const [openingUserId, setOpeningUserId] = useState(null);
+
+  const trimmedFilter = filter.trim();
+
+  useEffect(() => {
+    if (!trimmedFilter) {
+      setUserResults([]);
+      setSearchingUsers(false);
+      return;
+    }
+    setSearchingUsers(true);
+    const t = setTimeout(() => {
+      api
+        .searchUsers(trimmedFilter)
+        .then((r) => setUserResults(r.users.filter((u) => u.id !== user.id)))
+        .catch(() => setUserResults([]))
+        .finally(() => setSearchingUsers(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [trimmedFilter, user.id]);
+
+  async function openUser(u) {
+    if (openingUserId) return;
+    setOpeningUserId(u.id);
+    try {
+      const { conversation } = await api.createDirect(u.id);
+      onCreated(conversation);
+      setFilter('');
+    } finally {
+      setOpeningUserId(null);
+    }
+  }
 
   function handleContextMenu(e, conv) {
     e.preventDefault();
@@ -208,12 +243,15 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
       </div>
 
       <div className="flex-1 overflow-y-auto px-1.5 pb-2">
-        {filtered.length === 0 && (
+        {!trimmedFilter && filtered.length === 0 && (
           <div className="text-center text-muted text-sm mt-10 px-6 leading-relaxed">
             Пока нет чатов.
             <br />
             Нажмите на меню, чтобы начать переписку.
           </div>
+        )}
+        {trimmedFilter && !searchingUsers && filtered.length === 0 && userResults.length === 0 && (
+          <div className="text-center text-muted text-sm mt-10 px-6 leading-relaxed">Никого не найдено</div>
         )}
         {filtered.map((c) => {
           const lastMine = c.lastMessage && c.lastMessage.senderId === user.id;
@@ -272,6 +310,28 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
             </button>
           );
         })}
+
+        {trimmedFilter && userResults.length > 0 && (
+          <>
+            <div className="px-3 pt-3 pb-1.5 text-xs font-medium text-muted uppercase tracking-wide">
+              Глобальный поиск
+            </div>
+            {userResults.map((u) => (
+              <button
+                key={u.id}
+                disabled={openingUserId === u.id}
+                onClick={() => openUser(u)}
+                className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-left mb-0.5 hover:bg-[var(--hover)] disabled:opacity-60"
+              >
+                <Avatar name={u.displayName} seed={u.id} size={52} online={u.online} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate text-[15px]">{u.displayName}</div>
+                  <div className="text-sm text-muted truncate">@{u.username}</div>
+                </div>
+              </button>
+            ))}
+          </>
+        )}
       </div>
 
       {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
