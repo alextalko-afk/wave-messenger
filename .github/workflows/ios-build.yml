@@ -49,27 +49,23 @@ jobs:
           path: client/ios/App/Wave-unsigned.ipa
 
       # GitHub Actions artifacts require signing in to GitHub to download,
-      # even on a public repo. A release asset doesn't, so re-publish the
-      # same .ipa as a rolling "latest-ios" release each build - that gives
-      # a stable, no-login link to hand straight to Sideloadly/AltServer.
+      # even on a public repo. A release asset doesn't, so publish the
+      # .ipa as a release each build - that gives a stable, no-login link
+      # to hand straight to Sideloadly/AltServer.
       #
-      # Update-in-place instead of delete+create: a delete that hits a
-      # transient GitHub API error (seen in practice as an HTTP 500 from
-      # the releases endpoint) leaves the old release behind, and the
-      # following create then fails with "a release with the same tag
-      # name already exists". Editing/uploading to the existing release
-      # avoids depending on delete succeeding at all.
-      - name: Publish as a rolling release
+      # A fixed "latest-ios" tag was tried first (delete old + create new
+      # each run), but the underlying release object got stuck returning
+      # HTTP 500 from GitHub's API on every delete/edit/upload attempt
+      # against it. Sidestepping that entirely: create a fresh, uniquely
+      # tagged release every run (never touching any prior release), and
+      # mark it `--latest` so the permanent, run-independent download URL
+      # is GitHub's own "latest release" alias:
+      #   https://github.com/<owner>/<repo>/releases/latest/download/Wave-unsigned.ipa
+      - name: Publish as a release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTES="Unsigned build from commit ${{ github.sha }}. Sign and install with Sideloadly or AltServer using your Apple ID."
-          if gh release view latest-ios >/dev/null 2>&1; then
-            gh release upload latest-ios client/ios/App/Wave-unsigned.ipa --clobber
-            gh release edit latest-ios --title "Wave iOS (unsigned)" --notes "$NOTES"
-          else
-            gh release create latest-ios client/ios/App/Wave-unsigned.ipa \
-              --title "Wave iOS (unsigned)" \
-              --notes "$NOTES" \
-              --latest=false
-          fi
+          gh release create "ios-${{ github.run_number }}" client/ios/App/Wave-unsigned.ipa \
+            --title "Wave iOS (unsigned) build ${{ github.run_number }}" \
+            --notes "Unsigned build from commit ${{ github.sha }}. Sign and install with Sideloadly or AltServer using your Apple ID." \
+            --latest
