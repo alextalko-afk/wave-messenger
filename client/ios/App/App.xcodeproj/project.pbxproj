@@ -30,6 +30,7 @@
 		AC32FAC403904BF3AAD261FD /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8123952AB6D47568D527CA6 /* Theme.swift */; };
 		684FDF78BB074DBEB6C64482 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = D61571DD87F34B5FABF6598E /* Formatters.swift */; };
 		56D142936219431D858B2796 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8796E2AA01994C84805666A6 /* SettingsView.swift */; };
+		5399708607D34270BD918DDA /* NewGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1815CD6251E4B8C91E7223F /* NewGroupView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -58,6 +59,7 @@
 		A8123952AB6D47568D527CA6 /* Theme.swift */ = {isa = PBXFileReference; name = "Theme.swift"; path = "Theme.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		D61571DD87F34B5FABF6598E /* Formatters.swift */ = {isa = PBXFileReference; name = "Formatters.swift"; path = "Formatters.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		8796E2AA01994C84805666A6 /* SettingsView.swift */ = {isa = PBXFileReference; name = "SettingsView.swift"; path = "SettingsView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		B1815CD6251E4B8C91E7223F /* NewGroupView.swift */ = {isa = PBXFileReference; name = "NewGroupView.swift"; path = "NewGroupView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -115,6 +117,7 @@
 				A8123952AB6D47568D527CA6 /* Theme.swift */,
 				D61571DD87F34B5FABF6598E /* Formatters.swift */,
 				8796E2AA01994C84805666A6 /* SettingsView.swift */,
+				B1815CD6251E4B8C91E7223F /* NewGroupView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -216,6 +219,7 @@
 				AC32FAC403904BF3AAD261FD /* Theme.swift in Sources */,
 				684FDF78BB074DBEB6C64482 /* Formatters.swift in Sources */,
 				56D142936219431D858B2796 /* SettingsView.swift in Sources */,
+				5399708607D34270BD918DDA /* NewGroupView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

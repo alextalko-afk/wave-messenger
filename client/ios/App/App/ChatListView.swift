@@ -7,6 +7,7 @@ struct ChatListView: View {
     @State private var error: String?
     @State private var path: [Conversation] = []
     @State private var showingNewChat = false
+    @State private var showingNewGroup = false
     @State private var showingSettings = false
 
     var body: some View {
@@ -95,7 +96,14 @@ struct ChatListView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showingNewChat = true } label: {
+                    Menu {
+                        Button { showingNewChat = true } label: {
+                            Label("Новый чат", systemImage: "person")
+                        }
+                        Button { showingNewGroup = true } label: {
+                            Label("Новая группа", systemImage: "person.3")
+                        }
+                    } label: {
                         Image(systemName: "square.and.pencil")
                     }
                 }
@@ -107,14 +115,24 @@ struct ChatListView: View {
                 ChatView(conversation: conversation)
             }
             .task { await load() }
+            .onAppear {
+                AppSocketManager.shared.onNewConversation = { conversation in
+                    upsert(conversation)
+                }
+            }
             .sheet(isPresented: $showingNewChat) {
                 NewChatView { conversation in
-                    if let index = conversations.firstIndex(where: { $0.id == conversation.id }) {
-                        conversations[index] = conversation
-                    } else {
-                        conversations.insert(conversation, at: 0)
-                    }
+                    upsert(conversation)
+                    notifyCreated(conversation)
                     showingNewChat = false
+                    path.append(conversation)
+                }
+            }
+            .sheet(isPresented: $showingNewGroup) {
+                NewGroupView { conversation in
+                    upsert(conversation)
+                    notifyCreated(conversation)
+                    showingNewGroup = false
                     path.append(conversation)
                 }
             }
@@ -123,6 +141,19 @@ struct ChatListView: View {
             }
         }
         .tint(Wave.accent)
+    }
+
+    private func upsert(_ conversation: Conversation) {
+        if let index = conversations.firstIndex(where: { $0.id == conversation.id }) {
+            conversations[index] = conversation
+        } else {
+            conversations.insert(conversation, at: 0)
+        }
+    }
+
+    private func notifyCreated(_ conversation: Conversation) {
+        guard let memberIds = conversation.members?.map({ $0.id }) else { return }
+        AppSocketManager.shared.notifyConversationCreated(conversationId: conversation.id, memberIds: memberIds)
     }
 
     private func load() async {

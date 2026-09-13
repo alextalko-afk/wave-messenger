@@ -17,6 +17,12 @@ final class APIClient {
 
     static let baseURL = URL(string: "https://wave-messenger-3r2p.onrender.com")!
 
+    static func absoluteURL(for fileUrl: String?) -> URL? {
+        guard let fileUrl, !fileUrl.isEmpty else { return nil }
+        if fileUrl.hasPrefix("http") { return URL(string: fileUrl) }
+        return URL(string: fileUrl, relativeTo: baseURL)
+    }
+
     private let session = URLSession(configuration: .default)
     private let decoder: JSONDecoder = JSONDecoder()
     private let encoder: JSONEncoder = JSONEncoder()
@@ -86,6 +92,44 @@ final class APIClient {
 
     func createDirectConversation(userId: String) async throws -> DirectConversationResponse {
         try await request("api/conversations/direct", method: "POST", body: DirectConversationBody(userId: userId))
+    }
+
+    func createGroupConversation(name: String, memberIds: [String]) async throws -> DirectConversationResponse {
+        try await request("api/conversations/group", method: "POST", body: GroupConversationBody(name: name, memberIds: memberIds))
+    }
+
+    func uploadFile(data: Data, filename: String, mimeType: String) async throws -> UploadResponse {
+        var request = URLRequest(url: APIClient.baseURL.appendingPathComponent("api/upload"))
+        request.httpMethod = "POST"
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        if let token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(data)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        let (responseData, response): (Data, URLResponse)
+        do {
+            (responseData, response) = try await session.data(for: request)
+        } catch {
+            throw APIError.network
+        }
+
+        guard let http = response as? HTTPURLResponse else { throw APIError.network }
+        if !(200...299).contains(http.statusCode) {
+            if let err = try? decoder.decode(ErrorResponse.self, from: responseData) {
+                throw APIError.server(err.error)
+            }
+            throw APIError.server("Не удалось загрузить файл (\(http.statusCode))")
+        }
+        return try decoder.decode(UploadResponse.self, from: responseData)
     }
 
     func setPinned(conversationId: String, pinned: Bool) async throws {
