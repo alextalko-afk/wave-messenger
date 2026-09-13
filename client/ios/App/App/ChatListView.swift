@@ -5,9 +5,11 @@ struct ChatListView: View {
     @State private var conversations: [Conversation] = []
     @State private var loading = true
     @State private var error: String?
+    @State private var path: [Conversation] = []
+    @State private var showingNewChat = false
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if loading {
                     ProgressView()
@@ -33,12 +35,28 @@ struct ChatListView: View {
                 ChatView(conversation: conversation)
             }
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Выйти") { session.logout() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { showingNewChat = true } label: {
+                        Image(systemName: "square.and.pencil")
+                    }
                 }
             }
             .task { await load() }
             .refreshable { await load() }
+            .sheet(isPresented: $showingNewChat) {
+                NewChatView { conversation in
+                    if let index = conversations.firstIndex(where: { $0.id == conversation.id }) {
+                        conversations[index] = conversation
+                    } else {
+                        conversations.insert(conversation, at: 0)
+                    }
+                    showingNewChat = false
+                    path.append(conversation)
+                }
+            }
         }
     }
 

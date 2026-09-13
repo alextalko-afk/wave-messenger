@@ -76,6 +76,17 @@ final class APIClient {
         }
         return try await request(path)
     }
+
+    func searchUsers(query: String) async throws -> UsersSearchResponse {
+        var components = URLComponents()
+        components.queryItems = [URLQueryItem(name: "q", value: query)]
+        let queryString = components.percentEncodedQuery ?? ""
+        return try await request("api/users/search?\(queryString)")
+    }
+
+    func createDirectConversation(userId: String) async throws -> DirectConversationResponse {
+        try await request("api/conversations/direct", method: "POST", body: DirectConversationBody(userId: userId))
+    }
 }
 
 private struct AnyEncodable: Encodable {

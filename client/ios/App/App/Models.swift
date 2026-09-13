@@ -88,3 +88,15 @@ struct MessagesResponse: Codable {
 struct ErrorResponse: Codable {
     let error: String
 }
+
+struct UsersSearchResponse: Codable {
+    let users: [User]
+}
+
+struct DirectConversationResponse: Codable {
+    let conversation: Conversation
+}
+
+struct DirectConversationBody: Codable {
+    let userId: String
+}

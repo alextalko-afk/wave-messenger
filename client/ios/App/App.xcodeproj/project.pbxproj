@@ -26,6 +26,7 @@
 		B231DBF932DB41BB9CD3BA90 /* ChatListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E98A870C6D904D60A8EC7E73 /* ChatListView.swift */; };
 		68C74571BE654D0CA1D2481E /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F851E9F2C544A53BCC2D22F /* ChatView.swift */; };
 		2C4CE01F2DDB4EE596F2A764 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 214A94224BDD49609B8F7387 /* RootView.swift */; };
+		8A55345C078B4F0EB1935CB0 /* NewChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 413C304C3EFB4CBCAE0ADEC8 /* NewChatView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,6 +51,7 @@
 		E98A870C6D904D60A8EC7E73 /* ChatListView.swift */ = {isa = PBXFileReference; name = "ChatListView.swift"; path = "ChatListView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		0F851E9F2C544A53BCC2D22F /* ChatView.swift */ = {isa = PBXFileReference; name = "ChatView.swift"; path = "ChatView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		214A94224BDD49609B8F7387 /* RootView.swift */ = {isa = PBXFileReference; name = "RootView.swift"; path = "RootView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		413C304C3EFB4CBCAE0ADEC8 /* NewChatView.swift */ = {isa = PBXFileReference; name = "NewChatView.swift"; path = "NewChatView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,6 +105,7 @@
 				E98A870C6D904D60A8EC7E73 /* ChatListView.swift */,
 				0F851E9F2C544A53BCC2D22F /* ChatView.swift */,
 				214A94224BDD49609B8F7387 /* RootView.swift */,
+				413C304C3EFB4CBCAE0ADEC8 /* NewChatView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -200,6 +203,7 @@
 				B231DBF932DB41BB9CD3BA90 /* ChatListView.swift in Sources */,
 				68C74571BE654D0CA1D2481E /* ChatView.swift in Sources */,
 				2C4CE01F2DDB4EE596F2A764 /* RootView.swift in Sources */,
+				8A55345C078B4F0EB1935CB0 /* NewChatView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
