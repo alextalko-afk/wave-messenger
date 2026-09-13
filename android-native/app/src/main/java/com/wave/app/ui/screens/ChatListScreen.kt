@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.MarkChatUnread
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
@@ -25,6 +24,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -47,7 +47,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,8 +55,6 @@ import com.wave.app.ui.ChatListViewModel
 import com.wave.app.ui.components.Avatar
 import com.wave.app.ui.components.formatTime
 import com.wave.app.ui.theme.WaveAccent
-import com.wave.app.ui.theme.WaveAccent2
-import com.wave.app.ui.theme.WaveAccentDeep
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WaveMutedFaint
@@ -70,7 +67,7 @@ fun ChatListScreen(
     onOpenConversation: (Conversation) -> Unit,
     onNewChat: () -> Unit,
     onNewGroup: () -> Unit,
-    onLogout: () -> Unit
+    onOpenSettings: () -> Unit
 ) {
     val conversations by viewModel.conversations.collectAsState()
     val loading by viewModel.loading.collectAsState()
@@ -83,8 +80,8 @@ fun ChatListScreen(
                 title = { Text("Wave", style = MaterialTheme.typography.headlineLarge) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = WavePanel),
                 actions = {
-                    IconButton(onClick = onLogout) {
-                        Icon(Icons.Default.Logout, contentDescription = "Выйти", tint = WaveMuted)
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = WaveMuted)
                     }
                 }
             )
@@ -97,15 +94,15 @@ fun ChatListScreen(
                     color = Color.Transparent,
                     modifier = Modifier
                         .size(58.dp)
-                        .shadow(elevation = 16.dp, shape = androidx.compose.foundation.shape.CircleShape, ambientColor = WaveAccent, spotColor = WaveAccent)
+                        .shadow(elevation = 10.dp, shape = androidx.compose.foundation.shape.CircleShape, ambientColor = Color.Black, spotColor = Color.Black)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep))),
+                            .background(WaveAccent),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Новый чат", tint = Color.White)
+                        Icon(Icons.Default.Add, contentDescription = "Новый чат", tint = Color.Black)
                     }
                 }
                 DropdownMenu(expanded = fabMenuOpen, onDismissRequest = { fabMenuOpen = false }) {
@@ -218,7 +215,7 @@ private fun ConversationRow(
                     Text(formatTime(conv.lastMessage.createdAt), color = WaveMuted, style = MaterialTheme.typography.labelSmall)
                 }
                 if (conv.unreadCount > 0) {
-                    Badge(containerColor = WaveAccent, modifier = Modifier.padding(top = 4.dp)) {
+                    Badge(containerColor = WaveAccent, contentColor = Color.Black, modifier = Modifier.padding(top = 4.dp)) {
                         Text(conv.unreadCount.toString())
                     }
                 }

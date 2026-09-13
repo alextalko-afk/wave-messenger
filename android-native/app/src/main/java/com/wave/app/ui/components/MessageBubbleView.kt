@@ -36,10 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -48,7 +46,6 @@ import coil.compose.AsyncImage
 import com.wave.app.data.isStickerContent
 import com.wave.app.model.Message
 import com.wave.app.network.resolveMediaUrl
-import com.wave.app.ui.theme.WaveAccentDeep
 import com.wave.app.ui.theme.WaveBubbleIn
 import com.wave.app.ui.theme.WaveBubbleOut
 import com.wave.app.ui.theme.WaveCheck
@@ -119,11 +116,7 @@ fun MessageBubbleView(
                 bottomStart = if (isMine) 16.dp else 4.dp,
                 bottomEnd = if (isMine) 4.dp else 16.dp
             )
-            val bubbleBrush = if (isMine) {
-                Brush.linearGradient(listOf(WaveBubbleOut, lerp(WaveBubbleOut, WaveAccentDeep, 0.35f)))
-            } else {
-                SolidColor(WaveBubbleIn)
-            }
+            val bubbleBrush = SolidColor(if (isMine) WaveBubbleOut else WaveBubbleIn)
             Column(
                 modifier = Modifier
                     .widthIn(max = 280.dp)

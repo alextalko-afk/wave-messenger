@@ -25,6 +25,7 @@ import com.wave.app.ui.screens.LoginScreen
 import com.wave.app.ui.screens.NewChatScreen
 import com.wave.app.ui.screens.NewGroupScreen
 import com.wave.app.ui.screens.RegisterScreen
+import com.wave.app.ui.screens.SettingsScreen
 import com.wave.app.ui.theme.WaveTheme
 
 class MainActivity : ComponentActivity() {
@@ -89,6 +90,13 @@ class MainActivity : ComponentActivity() {
                             },
                             onNewChat = { navController.navigate("newChat") },
                             onNewGroup = { navController.navigate("newGroup") },
+                            onOpenSettings = { navController.navigate("settings") }
+                        )
+                    }
+                    composable("settings") {
+                        SettingsScreen(
+                            session = session,
+                            onBack = { navController.popBackStack() },
                             onLogout = {
                                 session.clear()
                                 SocketManager.disconnect()

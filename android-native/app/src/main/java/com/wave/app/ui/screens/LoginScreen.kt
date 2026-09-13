@@ -24,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -34,8 +33,6 @@ import com.wave.app.ui.AuthViewModel
 import com.wave.app.ui.components.WaveButton
 import com.wave.app.ui.components.WaveTextField
 import com.wave.app.ui.theme.WaveAccent
-import com.wave.app.ui.theme.WaveAccent2
-import com.wave.app.ui.theme.WaveAccentDeep
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WavePanel
@@ -58,20 +55,17 @@ fun LoginScreen(viewModel: AuthViewModel, onLoggedIn: () -> Unit, onGoRegister: 
                 Box(
                     modifier = Modifier
                         .size(64.dp)
-                        .blur(40.dp, edgeTreatment = androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
-                        .background(WaveAccent.copy(alpha = 0.45f), shape = CircleShape)
+                        .blur(36.dp, edgeTreatment = androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
+                        .background(WaveAccent.copy(alpha = 0.18f), shape = CircleShape)
                 )
                 Box(
                     modifier = Modifier
                         .size(84.dp)
-                        .shadow(elevation = 24.dp, shape = CircleShape, ambientColor = WaveAccent, spotColor = WaveAccent)
-                        .background(
-                            Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep)),
-                            shape = CircleShape
-                        ),
+                        .shadow(elevation = 16.dp, shape = CircleShape, ambientColor = Color.Black, spotColor = Color.Black)
+                        .background(WaveAccent, shape = CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("W", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("W", color = Color.Black, fontSize = 36.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
 
