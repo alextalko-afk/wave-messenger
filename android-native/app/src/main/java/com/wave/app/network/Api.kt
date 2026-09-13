@@ -26,7 +26,8 @@ data class GroupBody(val name: String, val memberIds: List<String>)
 data class PinBody(val pinned: Boolean)
 data class MuteBody(val muted: Boolean)
 data class MarkUnreadBody(val unread: Boolean)
-data class UpdateMeBody(val displayName: String? = null, val bio: String? = null)
+data class UpdateMeBody(val displayName: String? = null, val bio: String? = null, val username: String? = null)
+data class ChangePasswordBody(val currentPassword: String, val newPassword: String)
 data class ConversationsResponse(val conversations: List<Conversation>)
 data class MessagesResponse(val messages: List<Message>)
 data class ConversationResponse(val conversation: Conversation)
@@ -48,6 +49,9 @@ interface AuthApi {
 
     @PUT("api/auth/me")
     suspend fun updateMe(@Body body: UpdateMeBody): MeResponse
+
+    @POST("api/auth/change-password")
+    suspend fun changePassword(@Body body: ChangePasswordBody): OkResponse
 }
 
 interface ConversationsApi {

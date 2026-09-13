@@ -72,7 +72,21 @@ router.get('/me', authMiddleware, async (req, res) => {
 });
 
 router.put('/me', authMiddleware, async (req, res) => {
-  const { displayName, bio } = req.body || {};
+  const { displayName, bio, username } = req.body || {};
+
+  if (username != null) {
+    const normalized = String(username).toLowerCase().trim();
+    if (normalized.length < 3) {
+      return res.status(400).json({ error: 'Логин от 3 символов' });
+    }
+    if (!/^[a-z0-9_]+$/.test(normalized)) {
+      return res.status(400).json({ error: 'Логин может содержать только латинские буквы, цифры и подчёркивание' });
+    }
+    const exists = await get('SELECT id FROM users WHERE username = ? AND id != ?', [normalized, req.userId]);
+    if (exists) return res.status(409).json({ error: 'Такой логин уже занят' });
+    await run('UPDATE users SET username = ? WHERE id = ?', [normalized, req.userId]);
+  }
+
   await run('UPDATE users SET display_name = COALESCE(?, display_name), bio = COALESCE(?, bio) WHERE id = ?', [
     displayName ?? null,
     bio ?? null,
@@ -80,6 +94,20 @@ router.put('/me', authMiddleware, async (req, res) => {
   ]);
   const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
   res.json({ user: publicUser(user) });
+});
+
+router.post('/change-password', authMiddleware, authLimiter, async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (!newPassword || newPassword.length < 4) {
+    return res.status(400).json({ error: 'Новый пароль от 4 символов' });
+  }
+  const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
+  if (!user || !bcrypt.compareSync(currentPassword || '', user.password_hash)) {
+    return res.status(401).json({ error: 'Неверный текущий пароль' });
+  }
+  const hash = bcrypt.hashSync(newPassword, 10);
+  await run('UPDATE users SET password_hash = ? WHERE id = ?', [hash, req.userId]);
+  res.json({ ok: true });
 });
 
 export { publicUser };
