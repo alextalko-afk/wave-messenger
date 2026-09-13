@@ -8,7 +8,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { nanoid } from 'nanoid';
 
-import db from './db/index.js';
+import { get, all, run } from './db/index.js';
 import { verifySocketToken } from './middleware/auth.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -65,17 +65,14 @@ if (fs.existsSync(clientDist)) {
 
 // -------- Socket.io realtime layer --------
 const onlineUsers = new Map(); // userId -> Set(socketIds)
-const typingState = new Map(); // conversationId -> Map(userId -> timeout)
 
-function getConversationMemberIds(conversationId) {
-  return db
-    .prepare('SELECT user_id FROM conversation_members WHERE conversation_id = ?')
-    .all(conversationId)
-    .map((r) => r.user_id);
+async function getConversationMemberIds(conversationId) {
+  const rows = await all('SELECT user_id FROM conversation_members WHERE conversation_id = ?', [conversationId]);
+  return rows.map((r) => r.user_id);
 }
 
-function broadcastToConversation(conversationId, event, payload, exceptSocketId = null) {
-  const memberIds = getConversationMemberIds(conversationId);
+async function broadcastToConversation(conversationId, event, payload, exceptSocketId = null) {
+  const memberIds = await getConversationMemberIds(conversationId);
   for (const uid of memberIds) {
     const sockets = onlineUsers.get(uid);
     if (!sockets) continue;
@@ -86,15 +83,12 @@ function broadcastToConversation(conversationId, event, payload, exceptSocketId 
   }
 }
 
-function setPresence(userId, online) {
-  db.prepare('UPDATE users SET online = ?, last_seen = strftime(\'%s\',\'now\') WHERE id = ?').run(
-    online ? 1 : 0,
-    userId
-  );
-  const rows = db.prepare('SELECT conversation_id FROM conversation_members WHERE user_id = ?').all(userId);
-  const user = db.prepare('SELECT last_seen FROM users WHERE id = ?').get(userId);
+async function setPresence(userId, online) {
+  await run("UPDATE users SET online = ?, last_seen = strftime('%s','now') WHERE id = ?", [online ? 1 : 0, userId]);
+  const rows = await all('SELECT conversation_id FROM conversation_members WHERE user_id = ?', [userId]);
+  const user = await get('SELECT last_seen FROM users WHERE id = ?', [userId]);
   for (const { conversation_id } of rows) {
-    broadcastToConversation(conversation_id, 'presence:update', {
+    await broadcastToConversation(conversation_id, 'presence:update', {
       userId,
       online,
       lastSeen: user.last_seen,
@@ -125,22 +119,24 @@ io.on('connection', (socket) => {
     socket.leave(conversationId);
   });
 
-  socket.on('message:send', (data, ack) => {
+  socket.on('message:send', async (data, ack) => {
     try {
       const { conversationId, content, fileUrl, fileName, fileType, replyToId } = data || {};
-      const member = db
-        .prepare('SELECT 1 FROM conversation_members WHERE conversation_id = ? AND user_id = ?')
-        .get(conversationId, userId);
+      const member = await get('SELECT 1 FROM conversation_members WHERE conversation_id = ? AND user_id = ?', [
+        conversationId,
+        userId,
+      ]);
       if (!member) return ack?.({ error: 'Нет доступа к чату' });
       if (!content?.trim() && !fileUrl) return ack?.({ error: 'Пустое сообщение' });
 
       const id = nanoid();
-      db.prepare(
+      await run(
         `INSERT INTO messages (id, conversation_id, sender_id, content, file_url, file_name, file_type, reply_to_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-      ).run(id, conversationId, userId, content?.trim() || '', fileUrl || null, fileName || null, fileType || null, replyToId || null);
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, conversationId, userId, content?.trim() || '', fileUrl || null, fileName || null, fileType || null, replyToId || null]
+      );
 
-      const sender = db.prepare('SELECT display_name, avatar_color FROM users WHERE id = ?').get(userId);
+      const sender = await get('SELECT display_name, avatar_color FROM users WHERE id = ?', [userId]);
       const message = {
         id,
         conversationId,
@@ -157,7 +153,7 @@ io.on('connection', (socket) => {
         createdAt: Math.floor(Date.now() / 1000),
       };
 
-      broadcastToConversation(conversationId, 'message:new', message);
+      await broadcastToConversation(conversationId, 'message:new', message);
       ack?.({ message });
     } catch (err) {
       console.error(err);
@@ -165,48 +161,53 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('message:edit', ({ messageId, content }, ack) => {
-    const msg = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
+  socket.on('message:edit', async ({ messageId, content }, ack) => {
+    const msg = await get('SELECT * FROM messages WHERE id = ?', [messageId]);
     if (!msg || msg.sender_id !== userId) return ack?.({ error: 'Нельзя редактировать это сообщение' });
     const editedAt = Math.floor(Date.now() / 1000);
-    db.prepare('UPDATE messages SET content = ?, edited_at = ? WHERE id = ?').run(content, editedAt, messageId);
-    broadcastToConversation(msg.conversation_id, 'message:updated', { id: messageId, content, editedAt });
+    await run('UPDATE messages SET content = ?, edited_at = ? WHERE id = ?', [content, editedAt, messageId]);
+    await broadcastToConversation(msg.conversation_id, 'message:updated', { id: messageId, content, editedAt });
     ack?.({ ok: true });
   });
 
-  socket.on('message:delete', ({ messageId }, ack) => {
-    const msg = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
+  socket.on('message:delete', async ({ messageId }, ack) => {
+    const msg = await get('SELECT * FROM messages WHERE id = ?', [messageId]);
     if (!msg || msg.sender_id !== userId) return ack?.({ error: 'Нельзя удалить это сообщение' });
-    db.prepare('UPDATE messages SET deleted = 1, content = \'\', file_url = NULL WHERE id = ?').run(messageId);
-    broadcastToConversation(msg.conversation_id, 'message:deleted', { id: messageId });
+    await run("UPDATE messages SET deleted = 1, content = '', file_url = NULL WHERE id = ?", [messageId]);
+    await broadcastToConversation(msg.conversation_id, 'message:deleted', { id: messageId });
     ack?.({ ok: true });
   });
 
-  socket.on('typing:start', ({ conversationId }) => {
-    const user = db.prepare('SELECT display_name FROM users WHERE id = ?').get(userId);
-    broadcastToConversation(conversationId, 'typing:update', { conversationId, userId, name: user.display_name, typing: true }, socket.id);
+  socket.on('typing:start', async ({ conversationId }) => {
+    const user = await get('SELECT display_name FROM users WHERE id = ?', [userId]);
+    await broadcastToConversation(
+      conversationId,
+      'typing:update',
+      { conversationId, userId, name: user.display_name, typing: true },
+      socket.id
+    );
   });
 
-  socket.on('typing:stop', ({ conversationId }) => {
-    broadcastToConversation(conversationId, 'typing:update', { conversationId, userId, typing: false }, socket.id);
+  socket.on('typing:stop', async ({ conversationId }) => {
+    await broadcastToConversation(conversationId, 'typing:update', { conversationId, userId, typing: false }, socket.id);
   });
 
-  socket.on('conversation:read', ({ conversationId }) => {
+  socket.on('conversation:read', async ({ conversationId }) => {
     const now = Math.floor(Date.now() / 1000);
-    db.prepare('UPDATE conversation_members SET last_read_at = ? WHERE conversation_id = ? AND user_id = ?').run(
+    await run('UPDATE conversation_members SET last_read_at = ? WHERE conversation_id = ? AND user_id = ?', [
       now,
       conversationId,
-      userId
-    );
-    broadcastToConversation(conversationId, 'message:read', { conversationId, userId, readAt: now }, socket.id);
+      userId,
+    ]);
+    await broadcastToConversation(conversationId, 'message:read', { conversationId, userId, readAt: now }, socket.id);
   });
 
-  socket.on('conversation:created', ({ conversationId, memberIds }) => {
+  socket.on('conversation:created', async ({ conversationId, memberIds }) => {
     for (const uid of memberIds || []) {
       const sockets = onlineUsers.get(uid);
       if (!sockets) continue;
-      const conv = db.prepare('SELECT * FROM conversations WHERE id = ?').get(conversationId);
-      const payload = serializeConversation(conv, uid);
+      const conv = await get('SELECT * FROM conversations WHERE id = ?', [conversationId]);
+      const payload = await serializeConversation(conv, uid);
       for (const sid of sockets) io.to(sid).emit('conversation:new', payload);
     }
   });

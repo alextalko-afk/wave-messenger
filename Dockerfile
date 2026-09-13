@@ -16,8 +16,6 @@ COPY --from=client-build /app/client/dist ./public
 
 ENV NODE_ENV=production
 ENV PORT=4000
-ENV DB_PATH=/data/messenger.db
-ENV UPLOADS_DIR=/data/uploads
 
 EXPOSE 4000
 CMD ["node", "src/index.js"]

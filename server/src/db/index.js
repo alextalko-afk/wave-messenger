@@ -1,17 +1,27 @@
-import { DatabaseSync } from 'node:sqlite';
+import { createClient } from '@libsql/client';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = process.env.DB_PATH || path.join(__dirname, '..', '..', 'messenger.db');
-fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-const db = new DatabaseSync(dbPath);
+const isRemote = !!process.env.TURSO_DATABASE_URL;
 
-db.exec('PRAGMA journal_mode = WAL');
-db.exec('PRAGMA foreign_keys = ON');
+let url;
+if (isRemote) {
+  url = process.env.TURSO_DATABASE_URL;
+} else {
+  const dbPath = process.env.DB_PATH || path.join(__dirname, '..', '..', 'messenger.db');
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  url = `file:${dbPath}`;
+}
 
-db.exec(`
+const client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+
+if (!isRemote) {
+  await client.executeMultiple('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+}
+
+await client.executeMultiple(`
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
@@ -60,28 +70,39 @@ CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id, create
 CREATE INDEX IF NOT EXISTS idx_members_user ON conversation_members(user_id);
 `);
 
-function ensureColumn(table, column, definition) {
-  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
-  if (!cols.some((c) => c.name === column)) {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+async function ensureColumn(table, column, definition) {
+  const res = await client.execute(`PRAGMA table_info(${table})`);
+  const exists = res.rows.some((c) => c.name === column);
+  if (!exists) {
+    await client.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
 }
 
-ensureColumn('conversation_members', 'pinned', 'INTEGER DEFAULT 0');
-ensureColumn('conversation_members', 'muted', 'INTEGER DEFAULT 0');
-ensureColumn('conversation_members', 'manually_unread', 'INTEGER DEFAULT 0');
-ensureColumn('conversation_members', 'cleared_before', 'INTEGER DEFAULT 0');
+await ensureColumn('conversation_members', 'pinned', 'INTEGER DEFAULT 0');
+await ensureColumn('conversation_members', 'muted', 'INTEGER DEFAULT 0');
+await ensureColumn('conversation_members', 'manually_unread', 'INTEGER DEFAULT 0');
+await ensureColumn('conversation_members', 'cleared_before', 'INTEGER DEFAULT 0');
 
-export function transaction(fn) {
-  db.exec('BEGIN');
-  try {
-    const result = fn();
-    db.exec('COMMIT');
-    return result;
-  } catch (err) {
-    db.exec('ROLLBACK');
-    throw err;
-  }
+export async function get(sql, args = []) {
+  const res = await client.execute({ sql, args });
+  return res.rows[0] || null;
 }
 
-export default db;
+export async function all(sql, args = []) {
+  const res = await client.execute({ sql, args });
+  return res.rows;
+}
+
+export async function run(sql, args = []) {
+  const res = await client.execute({ sql, args });
+  return { changes: Number(res.rowsAffected), lastInsertRowid: res.lastInsertRowid };
+}
+
+export async function batch(statements) {
+  return client.batch(
+    statements.map((s) => ({ sql: s.sql, args: s.args || [] })),
+    'write'
+  );
+}
+
+export default client;
