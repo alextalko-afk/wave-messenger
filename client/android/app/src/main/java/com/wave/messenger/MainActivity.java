@@ -3,6 +3,7 @@ package com.wave.messenger;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
+import android.webkit.WebView;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -15,7 +16,7 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         View decor = getWindow().getDecorView();
-        View webView = this.bridge.getWebView();
+        WebView webView = this.bridge.getWebView();
         webView.setBackgroundColor(Color.parseColor("#0e1621"));
 
         // Resizing/margining the WebView itself turned out to be unreliable
