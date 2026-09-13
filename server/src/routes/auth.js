@@ -3,10 +3,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
 import { rateLimit } from 'express-rate-limit';
+import { OAuth2Client } from 'google-auth-library';
 import { get, run } from '../db/index.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -18,6 +20,13 @@ const authLimiter = rateLimit({
 
 const COLORS = ['#7c5cff', '#ff6b6b', '#2ecc71', '#f1c40f', '#3498db', '#e67e22', '#e84393', '#00cec9'];
 const pickColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
+
+function normalizePhone(phone) {
+  if (!phone) return null;
+  const digits = String(phone).trim().replace(/[^\d+]/g, '');
+  if (!/^\+?\d{7,15}$/.test(digits)) return null;
+  return digits.startsWith('+') ? digits : `+${digits}`;
+}
 
 function publicUser(u) {
   if (!u) return null;
@@ -108,6 +117,100 @@ router.post('/change-password', authMiddleware, authLimiter, async (req, res) =>
   const hash = bcrypt.hashSync(newPassword, 10);
   await run('UPDATE users SET password_hash = ? WHERE id = ?', [hash, req.userId]);
   res.json({ ok: true });
+});
+
+// No SMS gateway is configured, so instead of sending a text we hand the
+// code straight back in the response (devCode) - fine for personal/testing
+// use like the rest of this app, but anyone with the phone number can log
+// in without owning it. Swap this out for a real gateway (Twilio, SMS.ru,
+// etc.) before this is used by people you don't trust.
+router.post('/phone/request', authLimiter, async (req, res) => {
+  const phone = normalizePhone(req.body?.phone);
+  if (!phone) return res.status(400).json({ error: 'Некорректный номер телефона' });
+
+  const code = String(Math.floor(10000 + Math.random() * 90000));
+  const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
+  await run(
+    `INSERT INTO phone_codes (phone, code, expires_at, attempts) VALUES (?, ?, ?, 0)
+     ON CONFLICT(phone) DO UPDATE SET code = excluded.code, expires_at = excluded.expires_at, attempts = 0`,
+    [phone, code, expiresAt]
+  );
+  res.json({ ok: true, devCode: code });
+});
+
+router.post('/phone/verify', authLimiter, async (req, res) => {
+  const phone = normalizePhone(req.body?.phone);
+  const { code, displayName } = req.body || {};
+  if (!phone) return res.status(400).json({ error: 'Некорректный номер телефона' });
+
+  const entry = await get('SELECT * FROM phone_codes WHERE phone = ?', [phone]);
+  if (!entry) return res.status(400).json({ error: 'Сначала запросите код' });
+  if (entry.expires_at < Math.floor(Date.now() / 1000)) {
+    return res.status(400).json({ error: 'Код истёк, запросите новый' });
+  }
+  if (entry.attempts >= 5) {
+    return res.status(429).json({ error: 'Слишком много попыток, запросите новый код' });
+  }
+  if (String(code || '') !== entry.code) {
+    await run('UPDATE phone_codes SET attempts = attempts + 1 WHERE phone = ?', [phone]);
+    return res.status(401).json({ error: 'Неверный код' });
+  }
+  await run('DELETE FROM phone_codes WHERE phone = ?', [phone]);
+
+  let user = await get('SELECT * FROM users WHERE phone = ?', [phone]);
+  let isNewUser = false;
+  if (!user) {
+    isNewUser = true;
+    const id = nanoid();
+    const username = `user_${Math.floor(1e8 + Math.random() * 9e8)}`;
+    const randomPasswordHash = bcrypt.hashSync(nanoid(), 10);
+    await run(
+      'INSERT INTO users (id, username, display_name, password_hash, avatar_color, phone) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, username, displayName || 'Новый пользователь', randomPasswordHash, pickColor(), phone]
+    );
+    user = await get('SELECT * FROM users WHERE id = ?', [id]);
+  }
+
+  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  res.json({ token, user: publicUser(user), isNewUser });
+});
+
+router.post('/google', authLimiter, async (req, res) => {
+  const { idToken } = req.body || {};
+  if (!idToken) return res.status(400).json({ error: 'Нет idToken' });
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    return res.status(500).json({ error: 'Google Sign-In не настроен на сервере' });
+  }
+
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
+    payload = ticket.getPayload();
+  } catch {
+    return res.status(401).json({ error: 'Недействительный токен Google' });
+  }
+
+  const googleId = payload.sub;
+  let user = await get('SELECT * FROM users WHERE google_id = ?', [googleId]);
+  let isNewUser = false;
+  if (!user) {
+    isNewUser = true;
+    const id = nanoid();
+    const base = (payload.email ? payload.email.split('@')[0] : 'user').toLowerCase().replace(/[^a-z0-9_]/g, '') || 'user';
+    let username = base;
+    while (await get('SELECT id FROM users WHERE username = ?', [username])) {
+      username = `${base}_${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+    const randomPasswordHash = bcrypt.hashSync(nanoid(), 10);
+    await run(
+      'INSERT INTO users (id, username, display_name, password_hash, avatar_color, google_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, username, payload.name || username, randomPasswordHash, pickColor(), googleId]
+    );
+    user = await get('SELECT * FROM users WHERE id = ?', [id]);
+  }
+
+  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  res.json({ token, user: publicUser(user), isNewUser });
 });
 
 export { publicUser };

@@ -59,7 +59,11 @@ import com.wave.app.ui.theme.WaveAccent2
 import com.wave.app.ui.theme.WaveAccentDeep
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
+import com.wave.app.ui.theme.WaveOnAccent
 import com.wave.app.ui.theme.WavePanel
+import com.wave.app.ui.theme.WaveThemeVariant
+import com.wave.app.ui.theme.currentWaveThemeVariant
+import com.wave.app.ui.theme.setWaveTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -275,6 +279,41 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                                 iconVariant = AppIconVariant.MONO
                                 setAppIcon(context, AppIconVariant.MONO)
                             }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.ChatBubble, contentDescription = null, tint = Color.White)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.padding(top = 20.dp))
+
+                SectionCard(title = "Тема") {
+                    Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
+                        IconChoice(
+                            selected = currentWaveThemeVariant == WaveThemeVariant.COLORFUL,
+                            label = "Цветная",
+                            onClick = { setWaveTheme(context, WaveThemeVariant.COLORFUL) }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep))),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.ChatBubble, contentDescription = null, tint = WaveOnAccent)
+                            }
+                        }
+                        IconChoice(
+                            selected = currentWaveThemeVariant == WaveThemeVariant.MONO,
+                            label = "Монохром",
+                            onClick = { setWaveTheme(context, WaveThemeVariant.MONO) }
                         ) {
                             Box(
                                 modifier = Modifier

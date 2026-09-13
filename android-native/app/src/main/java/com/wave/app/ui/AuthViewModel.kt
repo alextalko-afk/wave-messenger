@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wave.app.data.SessionStore
 import com.wave.app.network.ApiClient
+import com.wave.app.network.GoogleAuthBody
 import com.wave.app.network.LoginBody
 import com.wave.app.network.RegisterBody
 import com.wave.app.network.SocketManager
@@ -44,6 +45,28 @@ class AuthViewModel(private val session: SessionStore) : ViewModel() {
                 val res = ApiClient.auth.register(
                     RegisterBody(username.trim(), password, displayName.ifBlank { username.trim() })
                 )
+                session.token = res.token
+                session.user = res.user
+                SocketManager.connect(res.token)
+                onSuccess()
+            } catch (e: Exception) {
+                _error.value = friendlyError(e)
+            } finally {
+                _busy.value = false
+            }
+        }
+    }
+
+    fun setErrorMessage(message: String) {
+        _error.value = message
+    }
+
+    fun loginWithGoogle(idToken: String, onSuccess: () -> Unit) {
+        _error.value = null
+        _busy.value = true
+        viewModelScope.launch {
+            try {
+                val res = ApiClient.auth.googleAuth(GoogleAuthBody(idToken))
                 session.token = res.token
                 session.user = res.user
                 SocketManager.connect(res.token)

@@ -68,6 +68,13 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_members_user ON conversation_members(user_id);
+
+CREATE TABLE IF NOT EXISTS phone_codes (
+  phone TEXT PRIMARY KEY,
+  code TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  attempts INTEGER DEFAULT 0
+);
 `);
 
 async function ensureColumn(table, column, definition) {
@@ -82,6 +89,8 @@ await ensureColumn('conversation_members', 'pinned', 'INTEGER DEFAULT 0');
 await ensureColumn('conversation_members', 'muted', 'INTEGER DEFAULT 0');
 await ensureColumn('conversation_members', 'manually_unread', 'INTEGER DEFAULT 0');
 await ensureColumn('conversation_members', 'cleared_before', 'INTEGER DEFAULT 0');
+await ensureColumn('users', 'phone', 'TEXT');
+await ensureColumn('users', 'google_id', 'TEXT');
 
 export async function get(sql, args = []) {
   const res = await client.execute({ sql, args });

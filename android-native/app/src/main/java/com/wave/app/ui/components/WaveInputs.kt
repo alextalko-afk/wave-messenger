@@ -36,6 +36,7 @@ import com.wave.app.ui.theme.WaveAccent
 import com.wave.app.ui.theme.WaveAccent2
 import com.wave.app.ui.theme.WaveAccentDeep
 import com.wave.app.ui.theme.WaveMuted
+import com.wave.app.ui.theme.WaveOnAccent
 import com.wave.app.ui.theme.WavePanel2
 import com.wave.app.ui.theme.WaveText
 
@@ -123,9 +124,9 @@ fun WaveButton(
             contentAlignment = Alignment.Center
         ) {
             if (loading) {
-                CircularProgressIndicator(modifier = Modifier.height(20.dp), color = Color.White, strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.height(20.dp), color = WaveOnAccent, strokeWidth = 2.dp)
             } else {
-                Text(text, color = Color.White, fontFamily = Inter, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
+                Text(text, color = WaveOnAccent, fontFamily = Inter, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
             }
         }
     }

@@ -27,12 +27,14 @@ import com.wave.app.ui.screens.NewGroupScreen
 import com.wave.app.ui.screens.RegisterScreen
 import com.wave.app.ui.screens.SettingsScreen
 import com.wave.app.ui.theme.WaveTheme
+import com.wave.app.ui.theme.loadWaveTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         val session = (application as WaveApplication).session
+        loadWaveTheme(this)
 
         setContent {
             WaveTheme {

@@ -25,6 +25,8 @@ export const api = {
   login: (body) => request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
   me: () => request('/auth/me'),
   updateMe: (body) => request('/auth/me', { method: 'PUT', body: JSON.stringify(body) }),
+  changePassword: (body) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(body) }),
+  googleAuth: (idToken) => request('/auth/google', { method: 'POST', body: JSON.stringify({ idToken }) }),
   searchUsers: (q) => request(`/users/search?q=${encodeURIComponent(q)}`),
   getConversations: () => request('/conversations'),
   createDirect: (userId) => request('/conversations/direct', { method: 'POST', body: JSON.stringify({ userId }) }),

@@ -23,6 +23,10 @@ class SessionStore(context: Context) {
         get() = prefs.getString("user", null)?.let { gson.fromJson(it, User::class.java) }
         set(value) = prefs.edit().putString("user", value?.let { gson.toJson(it) }).apply()
 
+    var themeVariant: String?
+        get() = prefs.getString("theme_variant", null)
+        set(value) = prefs.edit().putString("theme_variant", value).apply()
+
     fun clear() {
         prefs.edit().clear().apply()
     }

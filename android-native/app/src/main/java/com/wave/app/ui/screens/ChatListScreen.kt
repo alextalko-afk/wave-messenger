@@ -70,6 +70,7 @@ import com.wave.app.ui.theme.WaveAccentDeep
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WaveMutedFaint
+import com.wave.app.ui.theme.WaveOnAccent
 import com.wave.app.ui.theme.WavePanel
 import kotlinx.coroutines.delay
 
@@ -168,7 +169,7 @@ fun ChatListScreen(
                                 .background(Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep))),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Новый чат", tint = Color.White)
+                            Icon(Icons.Default.Add, contentDescription = "Новый чат", tint = WaveOnAccent)
                         }
                     }
                     DropdownMenu(expanded = fabMenuOpen, onDismissRequest = { fabMenuOpen = false }) {
@@ -306,7 +307,7 @@ private fun ConversationRow(
                     Text(formatTime(conv.lastMessage.createdAt), color = WaveMuted, style = MaterialTheme.typography.labelSmall)
                 }
                 if (conv.unreadCount > 0) {
-                    Badge(containerColor = WaveAccent, modifier = Modifier.padding(top = 4.dp)) {
+                    Badge(containerColor = WaveAccent, contentColor = WaveOnAccent, modifier = Modifier.padding(top = 4.dp)) {
                         Text(conv.unreadCount.toString())
                     }
                 }

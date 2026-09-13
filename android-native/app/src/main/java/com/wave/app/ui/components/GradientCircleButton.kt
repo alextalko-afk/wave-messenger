@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.wave.app.ui.theme.WaveAccent
 import com.wave.app.ui.theme.WaveAccent2
 import com.wave.app.ui.theme.WaveAccentDeep
+import com.wave.app.ui.theme.WaveOnAccent
 
 /** Small circular gradient action button (send/mic/fab-style) with a soft glow and press feedback. */
 @Composable
@@ -56,7 +57,7 @@ fun GradientCircleButton(
                 .background(Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep))),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = contentDescription, tint = Color.White, modifier = Modifier.size(size * 0.45f))
+            Icon(icon, contentDescription = contentDescription, tint = WaveOnAccent, modifier = Modifier.size(size * 0.45f))
         }
     }
 }

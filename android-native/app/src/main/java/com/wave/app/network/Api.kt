@@ -28,6 +28,12 @@ data class MuteBody(val muted: Boolean)
 data class MarkUnreadBody(val unread: Boolean)
 data class UpdateMeBody(val displayName: String? = null, val bio: String? = null, val username: String? = null)
 data class ChangePasswordBody(val currentPassword: String, val newPassword: String)
+data class PhoneRequestBody(val phone: String)
+data class PhoneRequestResponse(val ok: Boolean = true, val devCode: String? = null)
+data class PhoneVerifyBody(val phone: String, val code: String, val displayName: String? = null)
+data class PhoneVerifyResponse(val token: String, val user: User, val isNewUser: Boolean = false)
+data class GoogleAuthBody(val idToken: String)
+data class GoogleAuthResponse(val token: String, val user: User, val isNewUser: Boolean = false)
 data class ConversationsResponse(val conversations: List<Conversation>)
 data class MessagesResponse(val messages: List<Message>)
 data class ConversationResponse(val conversation: Conversation)
@@ -52,6 +58,15 @@ interface AuthApi {
 
     @POST("api/auth/change-password")
     suspend fun changePassword(@Body body: ChangePasswordBody): OkResponse
+
+    @POST("api/auth/phone/request")
+    suspend fun requestPhoneCode(@Body body: PhoneRequestBody): PhoneRequestResponse
+
+    @POST("api/auth/phone/verify")
+    suspend fun verifyPhoneCode(@Body body: PhoneVerifyBody): PhoneVerifyResponse
+
+    @POST("api/auth/google")
+    suspend fun googleAuth(@Body body: GoogleAuthBody): GoogleAuthResponse
 }
 
 interface ConversationsApi {

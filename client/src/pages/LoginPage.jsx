@@ -1,15 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { IconChatLogo } from '../components/Icons.jsx';
+import { renderGoogleButton } from '../lib/googleAuth.js';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const googleButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (!googleButtonRef.current) return;
+    renderGoogleButton(googleButtonRef.current, {
+      onCredential: async (idToken) => {
+        setError('');
+        try {
+          await loginWithGoogle(idToken);
+          navigate('/');
+        } catch (err) {
+          setError(err.message);
+        }
+      },
+      onError: (message) => setError(message),
+    });
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -66,6 +84,14 @@ export default function LoginPage() {
           >
             {busy ? 'Входим…' : 'Войти'}
           </button>
+
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+            <span className="text-xs text-muted">или</span>
+            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+          </div>
+
+          <div ref={googleButtonRef} className="flex justify-center" />
         </div>
 
         <p className="text-sm text-muted text-center mt-5">

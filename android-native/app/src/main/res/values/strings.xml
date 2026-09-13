@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Wave</string>
+    <!-- The "Web application" OAuth client ID from Google Cloud Console
+         (Credentials -> OAuth client ID -> Web application), NOT the
+         Android client. Credential Manager uses it as serverClientId so
+         the ID token's audience matches what the backend verifies against. -->
+    <string name="google_web_client_id" translatable="false">102793506258-1hrii748vubehmm05haftbr4ove278nt.apps.googleusercontent.com</string>
 </resources>
