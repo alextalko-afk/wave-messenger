@@ -8,28 +8,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
-// Monochrome, minimal: pure grayscale surfaces, no brand color. Contrast and
-// typography carry the hierarchy instead of hue.
-val WaveBg = Color(0xFF000000)
-val WavePanel = Color(0xFF121212)
-val WavePanel2 = Color(0xFF1C1C1E)
-val WaveElevated = Color(0xFF242426)
-val WaveBorder = Color(0xFF2C2C2E)
+// A layered, near-black palette (Discord/Linear-style depth) rather than
+// one flat dark gray - each surface tone reads as a distinct plane.
+val WaveBg = Color(0xFF0A0E14)
+val WavePanel = Color(0xFF121822)
+val WavePanel2 = Color(0xFF1A2230)
+val WaveElevated = Color(0xFF202A38)
+val WaveBorder = Color(0xFF232C3A)
 
-// Kept as three names for call-site compatibility (buttons/avatars/FAB used
-// to gradient across these) - now three closely-spaced grays so anything
-// still using a gradient brush reads as a flat, near-monochrome surface.
-val WaveAccent = Color(0xFFFFFFFF)
-val WaveAccent2 = Color(0xFFF0F0F0)
-val WaveAccentDeep = Color(0xFFD8D8D8)
+val WaveAccent = Color(0xFF2AABEE)
+val WaveAccent2 = Color(0xFF3E7BFA)
+val WaveAccentDeep = Color(0xFF6C5CE7)
 
-val WaveText = Color(0xFFF5F5F5)
-val WaveMuted = Color(0xFF9A9A9E)
-val WaveMutedFaint = Color(0xFF5C5C5E)
+val WaveText = Color(0xFFF3F6FA)
+val WaveMuted = Color(0xFF8A93A6)
+val WaveMutedFaint = Color(0xFF5B6373)
 
-val WaveBubbleOut = Color(0xFF3A3A3C)
-val WaveBubbleIn = Color(0xFF1C1C1E)
-val WaveCheck = Color(0xFFFFFFFF)
+val WaveBubbleOut = Color(0xFF285D8C)
+val WaveBubbleIn = Color(0xFF161F2B)
+val WaveCheck = Color(0xFF5FD3A0)
 
 val WaveShadow = Color(0xFF000000)
 

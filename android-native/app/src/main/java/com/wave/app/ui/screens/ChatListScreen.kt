@@ -3,6 +3,7 @@ package com.wave.app.ui.screens
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.MarkChatUnread
 import androidx.compose.material.icons.filled.Notifications
@@ -24,6 +26,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,6 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,18 +51,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wave.app.model.Conversation
+import com.wave.app.model.User
+import com.wave.app.network.ApiClient
+import com.wave.app.network.DirectBody
+import com.wave.app.network.SocketManager
 import com.wave.app.ui.ChatListViewModel
 import com.wave.app.ui.components.Avatar
+import com.wave.app.ui.components.WaveTextField
 import com.wave.app.ui.components.formatTime
 import com.wave.app.ui.theme.WaveAccent
+import com.wave.app.ui.theme.WaveAccent2
+import com.wave.app.ui.theme.WaveAccentDeep
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WaveMutedFaint
 import com.wave.app.ui.theme.WavePanel
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,55 +86,133 @@ fun ChatListScreen(
     val loading by viewModel.loading.collectAsState()
     var fabMenuOpen by remember { mutableStateOf(false) }
 
+    var searchActive by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    var userResults by remember { mutableStateOf<List<User>>(emptyList()) }
+    var searching by remember { mutableStateOf(false) }
+    var openingUserId by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(query) {
+        if (query.isBlank()) {
+            userResults = emptyList()
+            return@LaunchedEffect
+        }
+        delay(300)
+        searching = true
+        runCatching { ApiClient.users.search(query) }.onSuccess { userResults = it.users }
+        searching = false
+    }
+
+    LaunchedEffect(openingUserId) {
+        val userId = openingUserId ?: return@LaunchedEffect
+        runCatching { ApiClient.conversations.openDirect(DirectBody(userId)) }
+            .onSuccess { res ->
+                SocketManager.notifyConversationCreated(res.conversation.id, res.conversation.members.map { it.id })
+                searchActive = false
+                query = ""
+                onOpenConversation(res.conversation)
+            }
+        openingUserId = null
+    }
+
     Scaffold(
         containerColor = WaveBg,
         topBar = {
             TopAppBar(
-                title = { Text("Wave", style = MaterialTheme.typography.headlineLarge) },
+                title = {
+                    if (searchActive) {
+                        WaveTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            placeholder = "Поиск по логину или имени",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        Text("Wave", style = MaterialTheme.typography.headlineLarge)
+                    }
+                },
+                navigationIcon = {
+                    if (searchActive) {
+                        IconButton(onClick = { searchActive = false; query = "" }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Закрыть поиск")
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = WavePanel),
                 actions = {
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = WaveMuted)
+                    if (!searchActive) {
+                        IconButton(onClick = { searchActive = true }) {
+                            Icon(Icons.Default.Search, contentDescription = "Поиск", tint = WaveMuted)
+                        }
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = WaveMuted)
+                        }
                     }
                 }
             )
         },
         floatingActionButton = {
-            Box {
-                Surface(
-                    onClick = { fabMenuOpen = true },
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    color = Color.Transparent,
-                    modifier = Modifier
-                        .size(58.dp)
-                        .shadow(elevation = 10.dp, shape = androidx.compose.foundation.shape.CircleShape, ambientColor = Color.Black, spotColor = Color.Black)
-                ) {
-                    Box(
+            if (!searchActive) {
+                Box {
+                    Surface(
+                        onClick = { fabMenuOpen = true },
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        color = Color.Transparent,
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(WaveAccent),
-                        contentAlignment = Alignment.Center
+                            .size(58.dp)
+                            .shadow(elevation = 16.dp, shape = androidx.compose.foundation.shape.CircleShape, ambientColor = WaveAccent, spotColor = WaveAccent)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Новый чат", tint = Color.Black)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep))),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Новый чат", tint = Color.White)
+                        }
                     }
-                }
-                DropdownMenu(expanded = fabMenuOpen, onDismissRequest = { fabMenuOpen = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Новый чат") },
-                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                        onClick = { fabMenuOpen = false; onNewChat() }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Новая группа") },
-                        leadingIcon = { Icon(Icons.Default.Group, contentDescription = null) },
-                        onClick = { fabMenuOpen = false; onNewGroup() }
-                    )
+                    DropdownMenu(expanded = fabMenuOpen, onDismissRequest = { fabMenuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Новый чат") },
+                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            onClick = { fabMenuOpen = false; onNewChat() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Новая группа") },
+                            leadingIcon = { Icon(Icons.Default.Group, contentDescription = null) },
+                            onClick = { fabMenuOpen = false; onNewGroup() }
+                        )
+                    }
                 }
             }
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (loading && conversations.isEmpty()) {
+            if (searchActive) {
+                if (searching || openingUserId != null) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                } else if (query.isNotBlank() && userResults.isEmpty()) {
+                    Text("Никого не нашлось", color = WaveMuted, modifier = Modifier.align(Alignment.Center))
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(userResults, key = { it.id }) { user ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { openingUserId = user.id }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Avatar(name = user.displayName, colorHex = user.avatarColor, size = 46)
+                                Column(modifier = Modifier.padding(start = 12.dp)) {
+                                    Text(user.displayName, style = MaterialTheme.typography.titleMedium)
+                                    Text("@${user.username}", color = WaveMuted, style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (loading && conversations.isEmpty()) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (conversations.isEmpty()) {
                 Column(
@@ -215,7 +306,7 @@ private fun ConversationRow(
                     Text(formatTime(conv.lastMessage.createdAt), color = WaveMuted, style = MaterialTheme.typography.labelSmall)
                 }
                 if (conv.unreadCount > 0) {
-                    Badge(containerColor = WaveAccent, contentColor = Color.Black, modifier = Modifier.padding(top = 4.dp)) {
+                    Badge(containerColor = WaveAccent, modifier = Modifier.padding(top = 4.dp)) {
                         Text(conv.unreadCount.toString())
                     }
                 }

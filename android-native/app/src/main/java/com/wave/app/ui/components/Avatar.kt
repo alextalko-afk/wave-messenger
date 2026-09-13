@@ -21,23 +21,18 @@ import com.wave.app.ui.theme.Inter
 
 @Composable
 fun Avatar(name: String, colorHex: String?, size: Int = 44) {
-    // Desaturate whatever per-user color the server assigned down to a
-    // gray - keeps a bit of per-user distinction without any hue.
-    val gray = remember(colorHex) {
-        val c = runCatching { Color(android.graphics.Color.parseColor(colorHex ?: "#7c5cff")) }
+    val base = remember(colorHex) {
+        runCatching { Color(android.graphics.Color.parseColor(colorHex ?: "#7c5cff")) }
             .getOrDefault(Color(0xFF7C5CFF))
-        val luminance = 0.299f * c.red + 0.587f * c.green + 0.114f * c.blue
-        val level = 0.32f + luminance * 0.28f
-        Color(level, level, level)
     }
-    val light = remember(gray) { lerp(gray, Color.White, 0.22f) }
-    val deep = remember(gray) { lerp(gray, Color.Black, 0.22f) }
+    val light = remember(base) { lerp(base, Color.White, 0.16f) }
+    val deep = remember(base) { lerp(base, Color.Black, 0.28f) }
     val initial = name.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?"
 
     Box(
         modifier = Modifier
             .size(size.dp)
-            .shadow(elevation = (size / 9).dp, shape = CircleShape, ambientColor = Color.Black, spotColor = Color.Black)
+            .shadow(elevation = (size / 7).dp, shape = CircleShape, ambientColor = base, spotColor = base)
             .clip(CircleShape)
             .background(Brush.linearGradient(listOf(light, deep))),
         contentAlignment = Alignment.Center

@@ -18,12 +18,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.wave.app.ui.theme.WaveText
+import com.wave.app.ui.theme.WaveAccent
+import com.wave.app.ui.theme.WaveAccent2
+import com.wave.app.ui.theme.WaveAccentDeep
 
-/** Small circular action button (send/mic/fab-style) - solid white, black glyph, press feedback. */
+/** Small circular gradient action button (send/mic/fab-style) with a soft glow and press feedback. */
 @Composable
 fun GradientCircleButton(
     icon: ImageVector,
@@ -45,15 +48,15 @@ fun GradientCircleButton(
         modifier = Modifier
             .size(size)
             .scale(scale)
-            .shadow(elevation = 6.dp, shape = CircleShape, ambientColor = Color.Black, spotColor = Color.Black)
+            .shadow(elevation = 10.dp, shape = CircleShape, ambientColor = WaveAccent, spotColor = WaveAccent)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(WaveText),
+                .background(Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep))),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = contentDescription, tint = Color.Black, modifier = Modifier.size(size * 0.45f))
+            Icon(icon, contentDescription = contentDescription, tint = Color.White, modifier = Modifier.size(size * 0.45f))
         }
     }
 }

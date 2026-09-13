@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -32,8 +33,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.wave.app.ui.theme.Inter
 import com.wave.app.ui.theme.WaveAccent
+import com.wave.app.ui.theme.WaveAccent2
+import com.wave.app.ui.theme.WaveAccentDeep
 import com.wave.app.ui.theme.WaveMuted
-import com.wave.app.ui.theme.WaveMutedFaint
 import com.wave.app.ui.theme.WavePanel2
 import com.wave.app.ui.theme.WaveText
 
@@ -83,7 +85,7 @@ fun WaveTextField(
     )
 }
 
-/** Solid, high-contrast pill button - white on black, monochrome. */
+/** Pill-shaped gradient button with a soft colored glow and a tactile press animation. */
 @Composable
 fun WaveButton(
     text: String,
@@ -95,29 +97,35 @@ fun WaveButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(if (isPressed) 0.97f else 1f, animationSpec = tween(120), label = "btnScale")
+    val gradient = Brush.horizontalGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep))
 
     androidx.compose.material3.Surface(
         onClick = onClick,
         enabled = enabled && !loading,
         interactionSource = interactionSource,
         shape = RoundedCornerShape(50),
-        color = if (enabled) WaveText else WaveMutedFaint,
+        color = Color.Transparent,
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp)
             .scale(scale)
             .shadow(
-                elevation = if (enabled) 8.dp else 0.dp,
+                elevation = if (enabled) 14.dp else 0.dp,
                 shape = RoundedCornerShape(50),
-                ambientColor = Color.Black,
-                spotColor = Color.Black
+                ambientColor = WaveAccent,
+                spotColor = WaveAccent
             )
     ) {
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(if (enabled) gradient else Brush.horizontalGradient(listOf(WaveMuted, WaveMuted))),
+            contentAlignment = Alignment.Center
+        ) {
             if (loading) {
-                CircularProgressIndicator(modifier = Modifier.height(20.dp), color = Color.Black, strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.height(20.dp), color = Color.White, strokeWidth = 2.dp)
             } else {
-                Text(text, color = Color.Black, fontFamily = Inter, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
+                Text(text, color = Color.White, fontFamily = Inter, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
             }
         }
     }
