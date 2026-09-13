@@ -27,6 +27,9 @@
 		68C74571BE654D0CA1D2481E /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F851E9F2C544A53BCC2D22F /* ChatView.swift */; };
 		2C4CE01F2DDB4EE596F2A764 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 214A94224BDD49609B8F7387 /* RootView.swift */; };
 		8A55345C078B4F0EB1935CB0 /* NewChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 413C304C3EFB4CBCAE0ADEC8 /* NewChatView.swift */; };
+		AC32FAC403904BF3AAD261FD /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8123952AB6D47568D527CA6 /* Theme.swift */; };
+		684FDF78BB074DBEB6C64482 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = D61571DD87F34B5FABF6598E /* Formatters.swift */; };
+		56D142936219431D858B2796 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8796E2AA01994C84805666A6 /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +55,9 @@
 		0F851E9F2C544A53BCC2D22F /* ChatView.swift */ = {isa = PBXFileReference; name = "ChatView.swift"; path = "ChatView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		214A94224BDD49609B8F7387 /* RootView.swift */ = {isa = PBXFileReference; name = "RootView.swift"; path = "RootView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		413C304C3EFB4CBCAE0ADEC8 /* NewChatView.swift */ = {isa = PBXFileReference; name = "NewChatView.swift"; path = "NewChatView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		A8123952AB6D47568D527CA6 /* Theme.swift */ = {isa = PBXFileReference; name = "Theme.swift"; path = "Theme.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		D61571DD87F34B5FABF6598E /* Formatters.swift */ = {isa = PBXFileReference; name = "Formatters.swift"; path = "Formatters.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		8796E2AA01994C84805666A6 /* SettingsView.swift */ = {isa = PBXFileReference; name = "SettingsView.swift"; path = "SettingsView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,6 +112,9 @@
 				0F851E9F2C544A53BCC2D22F /* ChatView.swift */,
 				214A94224BDD49609B8F7387 /* RootView.swift */,
 				413C304C3EFB4CBCAE0ADEC8 /* NewChatView.swift */,
+				A8123952AB6D47568D527CA6 /* Theme.swift */,
+				D61571DD87F34B5FABF6598E /* Formatters.swift */,
+				8796E2AA01994C84805666A6 /* SettingsView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -204,6 +213,9 @@
 				68C74571BE654D0CA1D2481E /* ChatView.swift in Sources */,
 				2C4CE01F2DDB4EE596F2A764 /* RootView.swift in Sources */,
 				8A55345C078B4F0EB1935CB0 /* NewChatView.swift in Sources */,
+				AC32FAC403904BF3AAD261FD /* Theme.swift in Sources */,
+				684FDF78BB074DBEB6C64482 /* Formatters.swift in Sources */,
+				56D142936219431D858B2796 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

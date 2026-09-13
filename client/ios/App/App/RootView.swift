@@ -11,6 +11,7 @@ struct RootView: View {
                 LoginView()
             }
         }
+        .tint(Wave.accent)
         .preferredColorScheme(.dark)
         .onAppear {
             if let token = session.token {

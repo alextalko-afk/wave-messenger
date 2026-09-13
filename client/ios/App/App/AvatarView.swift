@@ -18,19 +18,29 @@ struct AvatarView: View {
     let name: String
     let colorHex: String?
     var size: CGFloat = 44
+    var online: Bool = false
 
     private var initial: String {
         String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased()
     }
 
     var body: some View {
-        Circle()
-            .fill(Color(hex: colorHex))
-            .frame(width: size, height: size)
-            .overlay(
-                Text(initial.isEmpty ? "?" : initial)
-                    .font(.system(size: size * 0.42, weight: .semibold))
-                    .foregroundColor(.white)
-            )
+        ZStack(alignment: .bottomTrailing) {
+            Circle()
+                .fill(Color(hex: colorHex))
+                .frame(width: size, height: size)
+                .overlay(
+                    Text(initial.isEmpty ? "?" : initial)
+                        .font(.system(size: size * 0.42, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+                )
+
+            if online {
+                Circle()
+                    .fill(Wave.online)
+                    .frame(width: max(size * 0.28, 10), height: max(size * 0.28, 10))
+                    .overlay(Circle().stroke(Wave.bg, lineWidth: 2))
+            }
+        }
     }
 }

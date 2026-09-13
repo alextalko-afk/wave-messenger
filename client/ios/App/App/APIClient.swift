@@ -87,6 +87,26 @@ final class APIClient {
     func createDirectConversation(userId: String) async throws -> DirectConversationResponse {
         try await request("api/conversations/direct", method: "POST", body: DirectConversationBody(userId: userId))
     }
+
+    func setPinned(conversationId: String, pinned: Bool) async throws {
+        let _: OkResponse = try await request("api/conversations/\(conversationId)/pin", method: "POST", body: PinBody(pinned: pinned))
+    }
+
+    func setMuted(conversationId: String, muted: Bool) async throws {
+        let _: OkResponse = try await request("api/conversations/\(conversationId)/mute", method: "POST", body: MuteBody(muted: muted))
+    }
+
+    func setMarkUnread(conversationId: String, unread: Bool) async throws {
+        let _: OkResponse = try await request("api/conversations/\(conversationId)/mark-unread", method: "POST", body: MarkUnreadBody(unread: unread))
+    }
+
+    func deleteConversation(conversationId: String) async throws {
+        let _: OkResponse = try await request("api/conversations/\(conversationId)", method: "DELETE")
+    }
+
+    func updateProfile(displayName: String?, bio: String?) async throws -> MeResponse {
+        try await request("api/auth/me", method: "PUT", body: UpdateProfileBody(displayName: displayName, bio: bio))
+    }
 }
 
 private struct AnyEncodable: Encodable {

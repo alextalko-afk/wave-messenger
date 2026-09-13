@@ -35,6 +35,13 @@ final class SessionStore: ObservableObject {
         isLoggedIn = true
     }
 
+    func updateUser(_ user: User) {
+        self.user = user
+        if let data = try? JSONEncoder().encode(user) {
+            defaults.set(data, forKey: userKey)
+        }
+    }
+
     func logout() {
         defaults.removeObject(forKey: tokenKey)
         defaults.removeObject(forKey: userKey)

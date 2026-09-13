@@ -1,9 +1,5 @@
 import SwiftUI
 
-private let waveBg = Color(red: 0x0A / 255, green: 0x0E / 255, blue: 0x14 / 255)
-private let wavePanel = Color(red: 0x12 / 255, green: 0x18 / 255, blue: 0x22 / 255)
-private let waveAccent = Color(red: 0x2A / 255, green: 0xAB / 255, blue: 0xEE / 255)
-
 struct LoginView: View {
     @State private var username = ""
     @State private var password = ""
@@ -13,65 +9,81 @@ struct LoginView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                waveBg.ignoresSafeArea()
-                VStack(spacing: 24) {
-                    Spacer()
+                Wave.bg.ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 28) {
+                        Spacer(minLength: 50)
 
-                    VStack(spacing: 4) {
-                        Text("Wave")
-                            .font(.largeTitle.bold())
-                            .foregroundColor(.white)
-                        Text("Быстрый и удобный мессенджер")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                    }
+                        VStack(spacing: 14) {
+                            RoundedRectangle(cornerRadius: 22)
+                                .fill(Wave.accentGradient)
+                                .frame(width: 76, height: 76)
+                                .overlay(
+                                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                                        .font(.system(size: 28))
+                                        .foregroundColor(.white)
+                                )
+                                .shadow(color: Wave.accent.opacity(0.35), radius: 20, y: 10)
 
-                    VStack(spacing: 14) {
-                        if let error {
-                            Text(error)
-                                .font(.footnote)
-                                .foregroundColor(.red)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text("Wave")
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundColor(Wave.textPrimary)
+                            Text("Быстрый и удобный мессенджер")
+                                .font(.subheadline)
+                                .foregroundColor(Wave.muted)
                         }
 
-                        TextField("Логин", text: $username)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .padding()
-                            .background(wavePanel)
-                            .cornerRadius(12)
-                            .foregroundColor(.white)
-
-                        SecureField("Пароль", text: $password)
-                            .padding()
-                            .background(wavePanel)
-                            .cornerRadius(12)
-                            .foregroundColor(.white)
-
-                        Button(action: login) {
-                            if busy {
-                                ProgressView().tint(.white)
-                            } else {
-                                Text("Войти").fontWeight(.semibold)
+                        VStack(spacing: 14) {
+                            if let error {
+                                Text(error)
+                                    .font(.footnote)
+                                    .foregroundColor(.red)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(waveAccent)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                        .disabled(username.isEmpty || password.isEmpty || busy)
-                    }
-                    .padding(20)
-                    .background(wavePanel.opacity(0.4))
-                    .cornerRadius(20)
-                    .padding(.horizontal, 24)
 
-                    Spacer()
-                    Spacer()
+                            TextField("Логин", text: $username)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .padding()
+                                .background(Wave.panel2)
+                                .cornerRadius(12)
+                                .foregroundColor(Wave.textPrimary)
+
+                            SecureField("Пароль", text: $password)
+                                .padding()
+                                .background(Wave.panel2)
+                                .cornerRadius(12)
+                                .foregroundColor(Wave.textPrimary)
+
+                            Button(action: login) {
+                                ZStack {
+                                    if busy {
+                                        ProgressView().tint(.white)
+                                    } else {
+                                        Text("Войти").fontWeight(.semibold)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Wave.accentGradient)
+                                .foregroundColor(.white)
+                                .cornerRadius(14)
+                            }
+                            .opacity(username.isEmpty || password.isEmpty || busy ? 0.5 : 1)
+                            .disabled(username.isEmpty || password.isEmpty || busy)
+                        }
+                        .padding(20)
+                        .background(Wave.panel)
+                        .cornerRadius(22)
+                        .overlay(RoundedRectangle(cornerRadius: 22).stroke(Wave.border, lineWidth: 1))
+                        .padding(.horizontal, 24)
+
+                        Spacer(minLength: 50)
+                    }
                 }
             }
         }
+        .tint(Wave.accent)
     }
 
     private func login() {

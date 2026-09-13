@@ -12,39 +12,50 @@ struct NewChatView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            ZStack {
+                Wave.bg.ignoresSafeArea()
+
                 if loading {
-                    ProgressView()
+                    ProgressView().tint(Wave.accent)
                 } else if let error {
                     Text(error).foregroundColor(.red)
                 } else if results.isEmpty {
                     Text(query.isEmpty ? "Введите логин или имя" : "Никого не найдено")
-                        .foregroundColor(.gray)
+                        .foregroundColor(Wave.muted)
                 } else {
                     List(results) { user in
                         Button {
                             create(with: user)
                         } label: {
                             HStack(spacing: 12) {
-                                AvatarView(name: user.displayName, colorHex: user.avatarColor)
+                                AvatarView(name: user.displayName, colorHex: user.avatarColor, online: user.online)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(user.displayName).font(.headline)
-                                    Text("@\(user.username)").font(.subheadline).foregroundColor(.gray)
+                                    Text(user.displayName)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(Wave.textPrimary)
+                                    Text("@\(user.username)")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Wave.muted)
                                 }
                                 Spacer()
                                 if creatingUserId == user.id {
-                                    ProgressView()
+                                    ProgressView().tint(Wave.accent)
                                 }
                             }
                         }
                         .disabled(creatingUserId != nil)
-                        .foregroundColor(.primary)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
                     .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                 }
             }
             .navigationTitle("Новый чат")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Wave.bg, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .searchable(text: $query, prompt: "Логин или имя")
             .onChange(of: query) { _ in Task { await search() } }
             .toolbar {
@@ -53,6 +64,7 @@ struct NewChatView: View {
                 }
             }
         }
+        .tint(Wave.accent)
     }
 
     private func search() async {

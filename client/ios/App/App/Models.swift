@@ -100,3 +100,24 @@ struct DirectConversationResponse: Codable {
 struct DirectConversationBody: Codable {
     let userId: String
 }
+
+struct OkResponse: Codable {
+    let ok: Bool
+}
+
+struct PinBody: Codable {
+    let pinned: Bool
+}
+
+struct MuteBody: Codable {
+    let muted: Bool
+}
+
+struct MarkUnreadBody: Codable {
+    let unread: Bool
+}
+
+struct UpdateProfileBody: Codable {
+    let displayName: String?
+    let bio: String?
+}
