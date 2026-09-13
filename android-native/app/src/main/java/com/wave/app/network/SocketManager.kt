@@ -27,7 +27,7 @@ object SocketManager {
     fun connect(token: String) {
         if (socket?.connected() == true) return
         val opts = IO.Options.builder()
-            .setAuth(mapOf<String, Any>("token" to token))
+            .setAuth(mapOf("token" to token))
             .setReconnection(true)
             .setForceNew(true)
             .build()
