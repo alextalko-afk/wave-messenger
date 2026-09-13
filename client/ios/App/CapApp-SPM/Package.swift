@@ -9,7 +9,7 @@ import PackageDescription
 // to bring in Socket.IO for the native rewrite instead.
 let package = Package(
     name: "CapApp-SPM",
-    platforms: [.iOS(.v15)],
+    platforms: [.iOS(.v16)],
     products: [
         .library(
             name: "CapApp-SPM",
