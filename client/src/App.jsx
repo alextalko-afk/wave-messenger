@@ -10,7 +10,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-bg text-muted">
+      <div className="h-dvh flex items-center justify-center bg-bg text-muted">
         Загрузка…
       </div>
     );

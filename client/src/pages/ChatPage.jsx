@@ -147,7 +147,7 @@ export default function ChatPage() {
   const active = conversations.find((c) => c.id === activeId);
 
   return (
-    <div className="safe-area h-screen w-screen flex overflow-hidden bg-bg text-text">
+    <div className="safe-area h-dvh w-screen flex overflow-hidden bg-bg text-text">
       <div
         className={`${showChatOnMobile ? 'hidden sm:flex' : 'flex'} w-full sm:w-auto border-r`}
         style={{ borderColor: 'var(--border)' }}

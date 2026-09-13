@@ -26,7 +26,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="safe-area h-screen w-screen flex items-center justify-center chat-bg text-text">
+    <div className="safe-area h-dvh w-screen flex items-center justify-center chat-bg text-text">
       <form onSubmit={handleSubmit} className="w-full max-w-[360px] px-6">
         <div className="flex flex-col items-center mb-8">
           <div
