@@ -52,12 +52,24 @@ jobs:
       # even on a public repo. A release asset doesn't, so re-publish the
       # same .ipa as a rolling "latest-ios" release each build - that gives
       # a stable, no-login link to hand straight to Sideloadly/AltServer.
+      #
+      # Update-in-place instead of delete+create: a delete that hits a
+      # transient GitHub API error (seen in practice as an HTTP 500 from
+      # the releases endpoint) leaves the old release behind, and the
+      # following create then fails with "a release with the same tag
+      # name already exists". Editing/uploading to the existing release
+      # avoids depending on delete succeeding at all.
       - name: Publish as a rolling release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete latest-ios --yes --cleanup-tag || true
-          gh release create latest-ios client/ios/App/Wave-unsigned.ipa \
-            --title "Wave iOS (unsigned)" \
-            --notes "Unsigned build from commit ${{ github.sha }}. Sign and install with Sideloadly or AltServer using your Apple ID." \
-            --latest=false
+          NOTES="Unsigned build from commit ${{ github.sha }}. Sign and install with Sideloadly or AltServer using your Apple ID."
+          if gh release view latest-ios >/dev/null 2>&1; then
+            gh release upload latest-ios client/ios/App/Wave-unsigned.ipa --clobber
+            gh release edit latest-ios --title "Wave iOS (unsigned)" --notes "$NOTES"
+          else
+            gh release create latest-ios client/ios/App/Wave-unsigned.ipa \
+              --title "Wave iOS (unsigned)" \
+              --notes "$NOTES" \
+              --latest=false
+          fi
