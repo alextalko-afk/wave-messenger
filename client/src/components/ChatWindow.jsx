@@ -336,7 +336,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
               <IconTrash size={18} />
             </button>
             <div
-              className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-3xl text-[15px]"
+              className="flex-1 min-w-0 flex items-center gap-2.5 px-4 py-2.5 rounded-3xl text-[15px]"
               style={{ background: 'var(--panel2)' }}
             >
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0" />
@@ -387,7 +387,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
                 }
               }}
               placeholder="Написать сообщение…"
-              className="flex-1 resize-none px-4 py-2.5 rounded-3xl outline-none max-h-32 text-[15px]"
+              className="flex-1 min-w-0 resize-none px-4 py-2.5 rounded-3xl outline-none max-h-32 text-[15px]"
               style={{ background: 'var(--panel2)' }}
             />
             <div className="relative shrink-0">
