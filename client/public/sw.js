@@ -1,4 +1,4 @@
-const CACHE = 'wave-shell-v1';
+const CACHE = 'wave-shell-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

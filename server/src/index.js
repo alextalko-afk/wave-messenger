@@ -57,8 +57,24 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 const clientDist = path.join(__dirname, '..', 'public');
 if (fs.existsSync(clientDist)) {
-  app.use(express.static(clientDist));
+  app.use(
+    express.static(clientDist, {
+      index: false,
+      setHeaders: (res, filePath) => {
+        // Hashed build assets (assets/*.js, *.css) are immutable and safe to
+        // cache forever; everything else (index.html, manifest, sw.js, icons)
+        // must always be revalidated so phones/PWAs pick up new deploys
+        // instead of running a stale cached bundle indefinitely.
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          res.setHeader('Cache-Control', 'no-cache');
+        }
+      },
+    })
+  );
   app.get(/^(?!\/api|\/uploads|\/socket\.io).*/, (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 }
