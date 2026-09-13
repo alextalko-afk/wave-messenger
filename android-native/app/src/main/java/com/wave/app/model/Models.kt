@@ -7,7 +7,8 @@ data class User(
     val avatarColor: String?,
     val bio: String? = null,
     val online: Boolean = false,
-    val lastSeen: Long? = null
+    val lastSeen: Long? = null,
+    val hasGoogle: Boolean = false
 )
 
 data class AuthResponse(

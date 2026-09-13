@@ -25,16 +25,15 @@ export function AuthProvider({ children }) {
     setUser(user);
   }
 
-  async function register(username, password, displayName) {
-    const { token, user } = await api.register({ username, password, displayName });
-    setToken(token);
-    setUser(user);
-  }
-
   async function loginWithGoogle(idToken) {
     const { token, user } = await api.googleAuth(idToken);
     setToken(token);
     setUser(user);
+  }
+
+  async function linkGoogle(idToken) {
+    const { user: updated } = await api.linkGoogle(idToken);
+    setUser(updated);
   }
 
   function logout() {
@@ -43,7 +42,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, register, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, loginWithGoogle, linkGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

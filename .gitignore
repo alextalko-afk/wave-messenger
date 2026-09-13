@@ -6,3 +6,7 @@ server/uploads/*
 server/.env
 dist/
 server/server.log
+client/ios/App/build/
+client/ios/**/xcuserdata/
+client/ios/**/DerivedData/
+*.ipa

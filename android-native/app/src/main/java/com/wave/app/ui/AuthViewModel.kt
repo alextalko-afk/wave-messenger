@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.wave.app.data.SessionStore
 import com.wave.app.network.ApiClient
 import com.wave.app.network.GoogleAuthBody
+import com.wave.app.network.LinkGoogleBody
 import com.wave.app.network.LoginBody
-import com.wave.app.network.RegisterBody
 import com.wave.app.network.SocketManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,26 +37,6 @@ class AuthViewModel(private val session: SessionStore) : ViewModel() {
         }
     }
 
-    fun register(username: String, password: String, displayName: String, onSuccess: () -> Unit) {
-        _error.value = null
-        _busy.value = true
-        viewModelScope.launch {
-            try {
-                val res = ApiClient.auth.register(
-                    RegisterBody(username.trim(), password, displayName.ifBlank { username.trim() })
-                )
-                session.token = res.token
-                session.user = res.user
-                SocketManager.connect(res.token)
-                onSuccess()
-            } catch (e: Exception) {
-                _error.value = friendlyError(e)
-            } finally {
-                _busy.value = false
-            }
-        }
-    }
-
     fun setErrorMessage(message: String) {
         _error.value = message
     }
@@ -75,6 +55,18 @@ class AuthViewModel(private val session: SessionStore) : ViewModel() {
                 _error.value = friendlyError(e)
             } finally {
                 _busy.value = false
+            }
+        }
+    }
+
+    fun linkGoogle(idToken: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val res = ApiClient.auth.linkGoogle(LinkGoogleBody(idToken))
+                session.user = res.user
+                onResult(null)
+            } catch (e: Exception) {
+                onResult(friendlyError(e))
             }
         }
     }

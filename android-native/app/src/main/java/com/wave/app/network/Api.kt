@@ -20,7 +20,6 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 data class LoginBody(val username: String, val password: String)
-data class RegisterBody(val username: String, val password: String, val displayName: String)
 data class DirectBody(val userId: String)
 data class GroupBody(val name: String, val memberIds: List<String>)
 data class PinBody(val pinned: Boolean)
@@ -34,6 +33,8 @@ data class PhoneVerifyBody(val phone: String, val code: String, val displayName:
 data class PhoneVerifyResponse(val token: String, val user: User, val isNewUser: Boolean = false)
 data class GoogleAuthBody(val idToken: String)
 data class GoogleAuthResponse(val token: String, val user: User, val isNewUser: Boolean = false)
+data class LinkGoogleBody(val idToken: String)
+data class LinkGoogleResponse(val user: User)
 data class ConversationsResponse(val conversations: List<Conversation>)
 data class MessagesResponse(val messages: List<Message>)
 data class ConversationResponse(val conversation: Conversation)
@@ -46,9 +47,6 @@ data class OkResponse(val ok: Boolean = true)
 interface AuthApi {
     @POST("api/auth/login")
     suspend fun login(@Body body: LoginBody): AuthResponse
-
-    @POST("api/auth/register")
-    suspend fun register(@Body body: RegisterBody): AuthResponse
 
     @GET("api/auth/me")
     suspend fun me(): MeResponse
@@ -67,6 +65,9 @@ interface AuthApi {
 
     @POST("api/auth/google")
     suspend fun googleAuth(@Body body: GoogleAuthBody): GoogleAuthResponse
+
+    @POST("api/auth/link-google")
+    suspend fun linkGoogle(@Body body: LinkGoogleBody): LinkGoogleResponse
 }
 
 interface ConversationsApi {

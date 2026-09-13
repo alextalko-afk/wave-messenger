@@ -38,32 +38,31 @@ function publicUser(u) {
     bio: u.bio,
     online: !!u.online,
     lastSeen: u.last_seen,
+    hasGoogle: !!u.google_id,
   };
 }
 
-router.post('/register', authLimiter, async (req, res) => {
-  const { username, password, displayName } = req.body || {};
-  if (!username || !password || username.length < 3 || password.length < 4) {
-    return res.status(400).json({ error: 'Логин от 3 символов, пароль от 4 символов' });
+async function verifyGoogleIdToken(idToken) {
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    const err = new Error('Google Sign-In не настроен на сервере');
+    err.status = 500;
+    throw err;
   }
-  const exists = await get('SELECT id FROM users WHERE username = ?', [username.toLowerCase()]);
-  if (exists) return res.status(409).json({ error: 'Такой логин уже занят' });
+  try {
+    const ticket = await googleClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
+    return ticket.getPayload();
+  } catch (e) {
+    if (e.status) throw e;
+    const err = new Error('Недействительный токен Google');
+    err.status = 401;
+    throw err;
+  }
+}
 
-  const id = nanoid();
-  const hash = bcrypt.hashSync(password, 10);
-  await run('INSERT INTO users (id, username, display_name, password_hash, avatar_color) VALUES (?, ?, ?, ?, ?)', [
-    id,
-    username.toLowerCase(),
-    displayName || username,
-    hash,
-    pickColor(),
-  ]);
-
-  const token = jwt.sign({ userId: id }, process.env.JWT_SECRET, { expiresIn: '30d' });
-  const user = await get('SELECT * FROM users WHERE id = ?', [id]);
-  res.json({ token, user: publicUser(user) });
-});
-
+// Password-based registration is intentionally gone: new accounts are only
+// created through /google (or /phone/verify). Existing password accounts
+// still log in via /login below and can link a Google account with
+// /link-google - nobody who already has an account loses access.
 router.post('/login', authLimiter, async (req, res) => {
   const { username, password } = req.body || {};
   const user = await get('SELECT * FROM users WHERE username = ?', [(username || '').toLowerCase()]);
@@ -178,16 +177,12 @@ router.post('/phone/verify', authLimiter, async (req, res) => {
 router.post('/google', authLimiter, async (req, res) => {
   const { idToken } = req.body || {};
   if (!idToken) return res.status(400).json({ error: 'Нет idToken' });
-  if (!process.env.GOOGLE_CLIENT_ID) {
-    return res.status(500).json({ error: 'Google Sign-In не настроен на сервере' });
-  }
 
   let payload;
   try {
-    const ticket = await googleClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
-    payload = ticket.getPayload();
-  } catch {
-    return res.status(401).json({ error: 'Недействительный токен Google' });
+    payload = await verifyGoogleIdToken(idToken);
+  } catch (e) {
+    return res.status(e.status || 401).json({ error: e.message });
   }
 
   const googleId = payload.sub;
@@ -211,6 +206,26 @@ router.post('/google', authLimiter, async (req, res) => {
 
   const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
   res.json({ token, user: publicUser(user), isNewUser });
+});
+
+router.post('/link-google', authMiddleware, authLimiter, async (req, res) => {
+  const { idToken } = req.body || {};
+  if (!idToken) return res.status(400).json({ error: 'Нет idToken' });
+
+  let payload;
+  try {
+    payload = await verifyGoogleIdToken(idToken);
+  } catch (e) {
+    return res.status(e.status || 401).json({ error: e.message });
+  }
+
+  const googleId = payload.sub;
+  const other = await get('SELECT id FROM users WHERE google_id = ? AND id != ?', [googleId, req.userId]);
+  if (other) return res.status(409).json({ error: 'Этот Google-аккаунт уже привязан к другому пользователю' });
+
+  await run('UPDATE users SET google_id = ? WHERE id = ?', [googleId, req.userId]);
+  const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
+  res.json({ user: publicUser(user) });
 });
 
 export { publicUser };

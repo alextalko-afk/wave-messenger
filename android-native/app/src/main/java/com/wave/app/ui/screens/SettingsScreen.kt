@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,12 +46,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.wave.app.data.AppIconVariant
+import com.wave.app.data.GoogleSignInResult
 import com.wave.app.data.SessionStore
 import com.wave.app.data.getCurrentAppIcon
+import com.wave.app.data.requestGoogleIdToken
 import com.wave.app.data.setAppIcon
 import com.wave.app.network.ApiClient
 import com.wave.app.network.ChangePasswordBody
+import com.wave.app.network.LinkGoogleBody
 import com.wave.app.network.UpdateMeBody
+import kotlinx.coroutines.launch
 import com.wave.app.ui.components.Avatar
 import com.wave.app.ui.components.WaveButton
 import com.wave.app.ui.components.WaveTextField
@@ -86,6 +91,38 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
     var passwordError by remember { mutableStateOf<String?>(null) }
 
     var iconVariant by remember { mutableStateOf(getCurrentAppIcon(context)) }
+
+    val scope = rememberCoroutineScope()
+    var googleLinked by remember { mutableStateOf(user?.hasGoogle ?: false) }
+    var googleBusy by remember { mutableStateOf(false) }
+    var googleError by remember { mutableStateOf<String?>(null) }
+
+    fun linkGoogleAccount() {
+        if (googleBusy || googleLinked) return
+        googleBusy = true
+        googleError = null
+        scope.launch {
+            when (val result = requestGoogleIdToken(context, filterByAuthorizedAccounts = false)) {
+                is GoogleSignInResult.Success -> {
+                    runCatching { ApiClient.auth.linkGoogle(LinkGoogleBody(result.idToken)) }
+                        .onSuccess { res ->
+                            session.user = res.user
+                            googleLinked = true
+                        }
+                        .onFailure { e ->
+                            googleError = (e as? retrofit2.HttpException)?.let {
+                                runCatching {
+                                    com.google.gson.JsonParser.parseString(it.response()?.errorBody()?.string()).asJsonObject.get("error")?.asString
+                                }.getOrNull()
+                            } ?: "Не удалось привязать аккаунт"
+                        }
+                }
+                is GoogleSignInResult.Failure -> googleError = result.message
+                GoogleSignInResult.Cancelled -> {}
+            }
+            googleBusy = false
+        }
+    }
 
     LaunchedEffect(profileSaved) {
         if (profileSaved) {
@@ -249,6 +286,29 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                         loading = savingPassword,
                         enabled = currentPassword.isNotBlank() && newPassword.isNotBlank() && confirmPassword.isNotBlank()
                     )
+                }
+
+                Spacer(modifier = Modifier.padding(top = 20.dp))
+
+                SectionCard(title = "Google-аккаунт") {
+                    if (googleError != null) {
+                        Text(googleError ?: "", color = Color(0xFFFF6B6B), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 8.dp))
+                    }
+                    if (googleLinked) {
+                        Text("Google-аккаунт привязан", color = WaveMuted, style = MaterialTheme.typography.bodyMedium)
+                    } else {
+                        Text(
+                            "Привяжите Google, чтобы входить в аккаунт в один клик",
+                            color = WaveMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        WaveButton(
+                            text = if (googleBusy) "Открываем Google…" else "Привязать Google",
+                            onClick = { linkGoogleAccount() },
+                            loading = googleBusy
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.padding(top = 20.dp))

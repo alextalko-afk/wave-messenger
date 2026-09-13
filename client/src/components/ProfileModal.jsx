@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { renderGoogleButton } from '../lib/googleAuth.js';
 import Avatar from './Avatar.jsx';
 
 function Switch({ on }) {
@@ -19,7 +20,7 @@ function Switch({ on }) {
 }
 
 export default function ProfileModal({ onClose }) {
-  const { user, setUser } = useAuth();
+  const { user, setUser, linkGoogle } = useAuth();
   const { accent, toggleAccent } = useTheme();
   const [displayName, setDisplayName] = useState(user.displayName);
   const [username, setUsername] = useState(user.username);
@@ -34,6 +35,24 @@ export default function ProfileModal({ onClose }) {
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSaved, setPasswordSaved] = useState(false);
+
+  const [googleError, setGoogleError] = useState('');
+  const googleButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (user.hasGoogle || !googleButtonRef.current) return;
+    renderGoogleButton(googleButtonRef.current, {
+      onCredential: async (idToken) => {
+        setGoogleError('');
+        try {
+          await linkGoogle(idToken);
+        } catch (err) {
+          setGoogleError(err.message);
+        }
+      },
+      onError: (message) => setGoogleError(message),
+    });
+  }, [user.hasGoogle]);
 
   async function handleSave() {
     if (!displayName.trim()) {
@@ -179,6 +198,23 @@ export default function ProfileModal({ onClose }) {
         >
           {passwordBusy ? 'Сохраняем…' : 'Сменить пароль'}
         </button>
+
+        <div className="my-5" style={{ borderTop: '1px solid var(--border)' }} />
+
+        <h3 className="text-sm font-semibold mb-3">Google-аккаунт</h3>
+        {googleError && (
+          <div className="mb-3 text-sm text-red-400 bg-red-500/10 rounded-xl px-3 py-2">{googleError}</div>
+        )}
+        {user.hasGoogle ? (
+          <div className="text-sm text-muted mb-1">Google-аккаунт привязан</div>
+        ) : (
+          <>
+            <div className="text-xs text-muted mb-2.5">
+              Привяжите Google, чтобы входить в аккаунт в один клик
+            </div>
+            <div ref={googleButtonRef} className="flex justify-center" />
+          </>
+        )}
 
         <div className="my-5" style={{ borderTop: '1px solid var(--border)' }} />
 

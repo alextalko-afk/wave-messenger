@@ -1,0 +1,62 @@
+name: Build unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'client/**'
+      - '.github/workflows/ios-build.yml'
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install web client dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Build web assets
+        working-directory: client
+        run: npm run build
+
+      - name: Sync Capacitor iOS project
+        working-directory: client
+        run: npx cap sync ios
+
+      # No signing identity here on purpose: this produces an unsigned .app.
+      # Sideloadly/AltServer do the actual code-signing locally on your own
+      # machine using your Apple ID, which is what lets a free Apple ID
+      # install it without a $99/year developer account.
+      - name: Build unsigned .app
+        working-directory: client/ios/App
+        run: |
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean build
+
+      - name: Package as .ipa
+        working-directory: client/ios/App
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -r Wave-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Wave-unsigned-ipa
+          path: client/ios/App/Wave-unsigned.ipa
