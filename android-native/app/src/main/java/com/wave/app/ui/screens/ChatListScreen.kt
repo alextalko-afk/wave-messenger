@@ -1,6 +1,7 @@
 package com.wave.app.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,16 +24,17 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -44,8 +46,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wave.app.model.Conversation
@@ -53,8 +56,11 @@ import com.wave.app.ui.ChatListViewModel
 import com.wave.app.ui.components.Avatar
 import com.wave.app.ui.components.formatTime
 import com.wave.app.ui.theme.WaveAccent
+import com.wave.app.ui.theme.WaveAccent2
+import com.wave.app.ui.theme.WaveAccentDeep
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
+import com.wave.app.ui.theme.WaveMutedFaint
 import com.wave.app.ui.theme.WavePanel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,19 +80,33 @@ fun ChatListScreen(
         containerColor = WaveBg,
         topBar = {
             TopAppBar(
-                title = { Text("Wave") },
+                title = { Text("Wave", style = MaterialTheme.typography.headlineLarge) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = WavePanel),
                 actions = {
                     IconButton(onClick = onLogout) {
-                        Icon(Icons.Default.Logout, contentDescription = "Выйти")
+                        Icon(Icons.Default.Logout, contentDescription = "Выйти", tint = WaveMuted)
                     }
                 }
             )
         },
         floatingActionButton = {
             Box {
-                FloatingActionButton(onClick = { fabMenuOpen = true }, containerColor = WaveAccent) {
-                    Icon(Icons.Default.Add, contentDescription = "Новый чат", tint = Color.White)
+                Surface(
+                    onClick = { fabMenuOpen = true },
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = Color.Transparent,
+                    modifier = Modifier
+                        .size(58.dp)
+                        .shadow(elevation = 16.dp, shape = androidx.compose.foundation.shape.CircleShape, ambientColor = WaveAccent, spotColor = WaveAccent)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Новый чат", tint = Color.White)
+                    }
                 }
                 DropdownMenu(expanded = fabMenuOpen, onDismissRequest = { fabMenuOpen = false }) {
                     DropdownMenuItem(
@@ -107,11 +127,22 @@ fun ChatListScreen(
             if (loading && conversations.isEmpty()) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (conversations.isEmpty()) {
-                Text(
-                    "Пока нет чатов",
-                    color = WaveMuted,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(WavePanel, shape = androidx.compose.foundation.shape.CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.ChatBubbleOutline, contentDescription = null, tint = WaveMutedFaint, modifier = Modifier.size(32.dp))
+                    }
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 16.dp))
+                    Text("Пока нет чатов", color = WaveMuted, style = MaterialTheme.typography.bodyLarge)
+                    Text("Нажмите + чтобы начать", color = WaveMutedFaint, style = MaterialTheme.typography.bodySmall)
+                }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(conversations, key = { it.id }) { conv ->
@@ -151,10 +182,15 @@ private fun ConversationRow(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Avatar(name = conv.name, colorHex = conv.avatarColor, size = 48)
-            Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
+            Avatar(name = conv.name, colorHex = conv.avatarColor, size = 52)
+            Column(modifier = Modifier.padding(start = 14.dp).weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(conv.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        conv.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     if (conv.muted) {
                         Icon(
                             Icons.Default.NotificationsOff,

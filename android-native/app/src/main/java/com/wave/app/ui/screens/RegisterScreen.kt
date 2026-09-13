@@ -20,11 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.wave.app.ui.AuthViewModel
 import com.wave.app.ui.components.WaveButton
 import com.wave.app.ui.components.WaveTextField
@@ -48,15 +47,17 @@ fun RegisterScreen(viewModel: AuthViewModel, onRegistered: () -> Unit, onGoLogin
             modifier = Modifier.fillMaxWidth().padding(28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Создать аккаунт", fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+            Text("Создать аккаунт", style = MaterialTheme.typography.displaySmall)
+            Spacer(modifier = Modifier.height(2.dp))
             Text("Это займёт пару секунд", color = WaveMuted, style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(WavePanel, shape = RoundedCornerShape(20.dp))
-                    .padding(20.dp)
+                    .shadow(elevation = 12.dp, shape = RoundedCornerShape(22.dp), ambientColor = Color.Black.copy(alpha = 0.5f), spotColor = Color.Black.copy(alpha = 0.6f))
+                    .background(WavePanel, shape = RoundedCornerShape(22.dp))
+                    .padding(22.dp)
             ) {
                 if (error != null) {
                     Text(

@@ -8,23 +8,31 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
-// Mirrors client/src/index.css's dark palette so the native app matches
-// the web/desktop clients.
-val WaveBg = Color(0xFF0E1621)
-val WavePanel = Color(0xFF17212B)
-val WavePanel2 = Color(0xFF1C2733)
-val WaveBorder = Color(0xFF101921)
+// A layered, near-black palette (Discord/Linear-style depth) rather than
+// one flat dark gray - each surface tone reads as a distinct plane.
+val WaveBg = Color(0xFF0A0E14)
+val WavePanel = Color(0xFF121822)
+val WavePanel2 = Color(0xFF1A2230)
+val WaveElevated = Color(0xFF202A38)
+val WaveBorder = Color(0xFF232C3A)
+
 val WaveAccent = Color(0xFF2AABEE)
-val WaveAccent2 = Color(0xFF229ED9)
-val WaveText = Color(0xFFF5F5F5)
-val WaveMuted = Color(0xFF6C7883)
-val WaveBubbleOut = Color(0xFF2B5278)
-val WaveBubbleIn = Color(0xFF182533)
-val WaveCheck = Color(0xFF6CC96A)
+val WaveAccent2 = Color(0xFF3E7BFA)
+val WaveAccentDeep = Color(0xFF6C5CE7)
+
+val WaveText = Color(0xFFF3F6FA)
+val WaveMuted = Color(0xFF8A93A6)
+val WaveMutedFaint = Color(0xFF5B6373)
+
+val WaveBubbleOut = Color(0xFF285D8C)
+val WaveBubbleIn = Color(0xFF161F2B)
+val WaveCheck = Color(0xFF5FD3A0)
+
+val WaveShadow = Color(0xFF000000)
 
 private val WaveColorScheme = darkColorScheme(
     primary = WaveAccent,
-    secondary = WaveAccent2,
+    secondary = WaveAccentDeep,
     background = WaveBg,
     surface = WavePanel,
     surfaceVariant = WavePanel2,
@@ -37,7 +45,7 @@ private val WaveColorScheme = darkColorScheme(
 fun WaveTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = WaveColorScheme,
-        typography = MaterialTheme.typography,
+        typography = WaveTypography,
     ) {
         // A safety-net Surface: without it, any screen that isn't built on
         // Scaffold (which sets its own contentColor) falls back to

@@ -22,6 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -33,6 +35,7 @@ import com.wave.app.ui.components.WaveButton
 import com.wave.app.ui.components.WaveTextField
 import com.wave.app.ui.theme.WaveAccent
 import com.wave.app.ui.theme.WaveAccent2
+import com.wave.app.ui.theme.WaveAccentDeep
 import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WavePanel
@@ -51,29 +54,43 @@ fun LoginScreen(viewModel: AuthViewModel, onLoggedIn: () -> Unit, onGoRegister: 
             modifier = Modifier.fillMaxWidth().padding(28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .background(Brush.linearGradient(listOf(WaveAccent, WaveAccent2)), shape = CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("W", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+            Box(contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .blur(40.dp, edgeTreatment = androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
+                        .background(WaveAccent.copy(alpha = 0.45f), shape = CircleShape)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(84.dp)
+                        .shadow(elevation = 24.dp, shape = CircleShape, ambientColor = WaveAccent, spotColor = WaveAccent)
+                        .background(
+                            Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep)),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("W", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.ExtraBold)
+                }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-            Text("Wave", fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(18.dp))
+            Text("Wave", style = MaterialTheme.typography.displaySmall)
+            Spacer(modifier = Modifier.height(2.dp))
             Text("Быстрый и удобный мессенджер", color = WaveMuted, style = MaterialTheme.typography.bodyMedium)
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(WavePanel, shape = RoundedCornerShape(20.dp))
-                    .padding(20.dp)
+                    .shadow(elevation = 12.dp, shape = RoundedCornerShape(22.dp), ambientColor = Color.Black.copy(alpha = 0.5f), spotColor = Color.Black.copy(alpha = 0.6f))
+                    .background(WavePanel, shape = RoundedCornerShape(22.dp))
+                    .padding(22.dp)
             ) {
-                Text("Вход в аккаунт", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Spacer(modifier = Modifier.height(16.dp))
+                Text("Вход в аккаунт", style = MaterialTheme.typography.titleLarge)
+                Spacer(modifier = Modifier.height(18.dp))
 
                 if (error != null) {
                     Text(
@@ -93,7 +110,7 @@ fun LoginScreen(viewModel: AuthViewModel, onLoggedIn: () -> Unit, onGoRegister: 
                     isPassword = true,
                     keyboardType = KeyboardType.Password
                 )
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 WaveButton(
                     text = "Войти",
                     onClick = { viewModel.login(username, password, onLoggedIn) },
@@ -102,8 +119,8 @@ fun LoginScreen(viewModel: AuthViewModel, onLoggedIn: () -> Unit, onGoRegister: 
                 )
             }
 
-            TextButton(onClick = onGoRegister, modifier = Modifier.padding(top = 14.dp)) {
-                Text("Нет аккаунта? Зарегистрироваться", color = WaveAccent)
+            TextButton(onClick = onGoRegister, modifier = Modifier.padding(top = 16.dp)) {
+                Text("Нет аккаунта? Зарегистрироваться", color = WaveAccent, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

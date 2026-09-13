@@ -35,7 +35,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -44,6 +48,7 @@ import coil.compose.AsyncImage
 import com.wave.app.data.isStickerContent
 import com.wave.app.model.Message
 import com.wave.app.network.resolveMediaUrl
+import com.wave.app.ui.theme.WaveAccentDeep
 import com.wave.app.ui.theme.WaveBubbleIn
 import com.wave.app.ui.theme.WaveBubbleOut
 import com.wave.app.ui.theme.WaveCheck
@@ -60,7 +65,8 @@ fun MessageBubbleView(
     showSender: Boolean,
     isRead: Boolean,
     onEdit: (String, String) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var viewerUrl by remember { mutableStateOf<String?>(null) }
     var viewerIsVideo by remember { mutableStateOf(false) }
@@ -75,7 +81,7 @@ fun MessageBubbleView(
     val isSticker = message.fileUrl == null && !editing && isStickerContent(message.content)
 
     if (message.deleted) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start) {
+        Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
@@ -89,7 +95,7 @@ fun MessageBubbleView(
     }
 
     if (isSticker) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start) {
+        Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start) {
             Column(
                 horizontalAlignment = if (isMine) Alignment.End else Alignment.Start,
                 modifier = Modifier.combinedClickable(onClick = {}, onLongClick = { if (isMine) menuOpen = true })
@@ -103,7 +109,7 @@ fun MessageBubbleView(
     }
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
     ) {
         Box {
@@ -113,11 +119,17 @@ fun MessageBubbleView(
                 bottomStart = if (isMine) 16.dp else 4.dp,
                 bottomEnd = if (isMine) 4.dp else 16.dp
             )
+            val bubbleBrush = if (isMine) {
+                Brush.linearGradient(listOf(WaveBubbleOut, lerp(WaveBubbleOut, WaveAccentDeep, 0.35f)))
+            } else {
+                SolidColor(WaveBubbleIn)
+            }
             Column(
                 modifier = Modifier
                     .widthIn(max = 280.dp)
+                    .shadow(elevation = 3.dp, shape = bubbleShape, ambientColor = Color.Black.copy(alpha = 0.3f), spotColor = Color.Black.copy(alpha = 0.4f))
                     .clip(bubbleShape)
-                    .background(if (isMine) WaveBubbleOut else WaveBubbleIn)
+                    .background(bubbleBrush)
                     .combinedClickable(onClick = {}, onLongClick = { if (isMine) menuOpen = true })
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {

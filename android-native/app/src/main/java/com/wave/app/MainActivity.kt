@@ -3,6 +3,12 @@ package com.wave.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,6 +29,7 @@ import com.wave.app.ui.theme.WaveTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         val session = (application as WaveApplication).session
 
@@ -36,7 +43,17 @@ class MainActivity : ComponentActivity() {
                     session.token?.let { SocketManager.connect(it) }
                 }
 
-                NavHost(navController = navController, startDestination = startDestination) {
+                val motionSpec = tween<androidx.compose.ui.unit.IntOffset>(320, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                val fadeSpec = tween<Float>(280)
+
+                NavHost(
+                    navController = navController,
+                    startDestination = startDestination,
+                    enterTransition = { slideInHorizontally(motionSpec) { it / 4 } + fadeIn(fadeSpec) },
+                    exitTransition = { fadeOut(fadeSpec) },
+                    popEnterTransition = { fadeIn(fadeSpec) },
+                    popExitTransition = { slideOutHorizontally(motionSpec) { it / 4 } + fadeOut(fadeSpec) }
+                ) {
                     composable("login") {
                         val vm: AuthViewModel = viewModel(factory = factory)
                         LoginScreen(

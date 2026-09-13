@@ -57,6 +57,7 @@ import com.wave.app.ui.ChatViewModel
 import com.wave.app.ui.ChatViewModelFactory
 import com.wave.app.ui.components.Avatar
 import com.wave.app.ui.components.EmojiPickerSheet
+import com.wave.app.ui.components.GradientCircleButton
 import com.wave.app.ui.components.MessageBubbleView
 import com.wave.app.ui.theme.WaveAccent
 import com.wave.app.ui.theme.WaveBg
@@ -67,7 +68,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun ChatScreen(
     session: SessionStore,
@@ -167,7 +168,19 @@ fun ChatScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickableNoRipple { onOpenInfo() }
                     ) {
-                        Avatar(name = conversation.name, colorHex = conversation.avatarColor, size = 36)
+                        Box {
+                            Avatar(name = conversation.name, colorHex = conversation.avatarColor, size = 36)
+                            if (!conversation.isGroup && conversation.otherUser?.online == true) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(11.dp)
+                                        .align(Alignment.BottomEnd)
+                                        .background(WavePanel, shape = androidx.compose.foundation.shape.CircleShape)
+                                        .padding(1.5.dp)
+                                        .background(com.wave.app.ui.theme.WaveCheck, shape = androidx.compose.foundation.shape.CircleShape)
+                                )
+                            }
+                        }
                         Column(modifier = Modifier.padding(start = 10.dp)) {
                             Text(conversation.name, style = MaterialTheme.typography.titleMedium)
                             val subtitle = when {
@@ -240,24 +253,28 @@ fun ChatScreen(
                             modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
                         )
                         if (text.isNotBlank()) {
-                            IconButton(onClick = { viewModel.sendText(text); text = "" }) {
-                                Icon(Icons.Default.Send, contentDescription = "Отправить", tint = WaveAccent)
-                            }
+                            GradientCircleButton(
+                                icon = Icons.Default.Send,
+                                contentDescription = "Отправить",
+                                onClick = { viewModel.sendText(text); text = "" }
+                            )
                         } else {
-                            IconButton(onClick = {
-                                val granted = androidx.core.content.ContextCompat.checkSelfPermission(
-                                    context, Manifest.permission.RECORD_AUDIO
-                                ) == PackageManager.PERMISSION_GRANTED
-                                if (granted) {
-                                    startRecording(context, recorderHolder, recordFileHolder)
-                                    isRecording = true
-                                    recordSeconds = 0
-                                } else {
-                                    requestAudioPermission.launch(Manifest.permission.RECORD_AUDIO)
+                            GradientCircleButton(
+                                icon = Icons.Default.Mic,
+                                contentDescription = "Голосовое сообщение",
+                                onClick = {
+                                    val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                                        context, Manifest.permission.RECORD_AUDIO
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (granted) {
+                                        startRecording(context, recorderHolder, recordFileHolder)
+                                        isRecording = true
+                                        recordSeconds = 0
+                                    } else {
+                                        requestAudioPermission.launch(Manifest.permission.RECORD_AUDIO)
+                                    }
                                 }
-                            }) {
-                                Icon(Icons.Default.Mic, contentDescription = "Голосовое сообщение", tint = WaveAccent)
-                            }
+                            )
                         }
                     }
                 }
@@ -281,6 +298,7 @@ fun ChatScreen(
                         val isMine = message.senderId == viewModel.myUserId
                         val isRead = isMine && message.createdAt <= otherReadAt
                         MessageBubbleView(
+                            modifier = Modifier.animateItemPlacement(),
                             message = message,
                             isMine = isMine,
                             showSender = conversation.isGroup && !isMine,
