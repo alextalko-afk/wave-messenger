@@ -76,13 +76,13 @@ html, body, #root {
 }
 
 .safe-area {
-  /* Android WebView has no native env(safe-area-inset-*) support; Capacitor's
-     SystemBars plugin injects --safe-area-inset-* custom properties instead.
-     iOS/web browsers support env() directly, so fall back to that. */
-  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
-  padding-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
-  padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
-  padding-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  /* --native-inset-* is injected by our own MainActivity (guaranteed to run).
+     --safe-area-inset-* is Capacitor's own (unreliable in testing).
+     env() is the standard mechanism (iOS/web only, Android WebView ignores it). */
+  padding-top: var(--native-inset-top, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  padding-right: var(--native-inset-right, var(--safe-area-inset-right, env(safe-area-inset-right, 0px)));
+  padding-bottom: var(--native-inset-bottom, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  padding-left: var(--native-inset-left, var(--safe-area-inset-left, env(safe-area-inset-left, 0px)));
 }
 
 body {

@@ -20,17 +20,26 @@ export default function DebugInsets() {
     const varTop = getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-top');
     const varBottom = getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom');
 
-    setInfo({
-      envTop,
-      envBottom,
-      varTop: varTop || '(empty)',
-      varBottom: varBottom || '(empty)',
-      innerHeight: window.innerHeight,
-      docClientHeight: document.documentElement.clientHeight,
-      outerHeight: window.outerHeight,
-      screenHeight: window.screen.height,
-      dpr: window.devicePixelRatio,
-    });
+    function readNative() {
+      const cs = getComputedStyle(document.documentElement);
+      setInfo({
+        envTop,
+        envBottom,
+        varTop: varTop || '(empty)',
+        varBottom: varBottom || '(empty)',
+        nativeTop: cs.getPropertyValue('--native-inset-top') || '(empty)',
+        nativeBottom: cs.getPropertyValue('--native-inset-bottom') || '(empty)',
+        innerHeight: window.innerHeight,
+        docClientHeight: document.documentElement.clientHeight,
+        outerHeight: window.outerHeight,
+        screenHeight: window.screen.height,
+        dpr: window.devicePixelRatio,
+      });
+    }
+
+    readNative();
+    const interval = setInterval(readNative, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   if (!info) return null;
@@ -52,7 +61,8 @@ export default function DebugInsets() {
         lineHeight: 1.4,
       }}
     >
-      env-top:{info.envTop} env-bottom:{info.envBottom} | var-top:{info.varTop} var-bottom:{info.varBottom}
+      env-top:{info.envTop} env-bottom:{info.envBottom} | var-top:{info.varTop} var-bottom:{info.varBottom} | native-top:
+      {info.nativeTop} native-bottom:{info.nativeBottom}
       <br />
       innerH:{info.innerHeight} clientH:{info.docClientHeight} outerH:{info.outerHeight} screenH:{info.screenHeight} dpr:{info.dpr}
     </div>
