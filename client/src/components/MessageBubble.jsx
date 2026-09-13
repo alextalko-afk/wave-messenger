@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { formatTime } from '../lib/format.js';
 import { isStickerContent } from '../lib/emoji.js';
-import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile } from './Icons.jsx';
+import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile, IconClose, IconDownload } from './Icons.jsx';
 import VoiceMessage from './VoiceMessage.jsx';
 
 export default function MessageBubble({ message, isMine, showSender, isRead, showTail, onEdit, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const isImage = message.fileType?.startsWith('image/');
+  const isVideo = message.fileType?.startsWith('video/');
   const isAudio = message.fileType?.startsWith('audio/');
   const isSticker = !message.fileUrl && !editing && isStickerContent(message.content);
 
@@ -99,10 +101,24 @@ export default function MessageBubble({ message, isMine, showSender, isRead, sho
         )}
 
         {message.fileUrl && isImage && (
-          <img src={message.fileUrl} alt={message.fileName} className="rounded-lg mb-1 max-h-72 object-cover -mx-0.5" />
+          <img
+            src={message.fileUrl}
+            alt={message.fileName}
+            onClick={() => setLightboxOpen(true)}
+            className="rounded-lg mb-1 max-h-72 object-cover -mx-0.5 cursor-pointer"
+          />
+        )}
+        {message.fileUrl && isVideo && (
+          <video
+            src={message.fileUrl}
+            controls
+            playsInline
+            className="rounded-lg mb-1 max-h-72 w-full -mx-0.5"
+            style={{ background: '#000' }}
+          />
         )}
         {message.fileUrl && isAudio && <VoiceMessage url={message.fileUrl} isMine={isMine} />}
-        {message.fileUrl && !isImage && !isAudio && (
+        {message.fileUrl && !isImage && !isVideo && !isAudio && (
           <a
             href={message.fileUrl}
             target="_blank"
@@ -151,6 +167,35 @@ export default function MessageBubble({ message, isMine, showSender, isRead, sho
 
         {editDeleteMenu}
       </div>
+
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center text-white bg-white/10 hover:bg-white/20"
+          >
+            <IconClose size={18} />
+          </button>
+          <a
+            href={message.fileUrl}
+            download={message.fileName || true}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-4 right-16 w-10 h-10 rounded-full flex items-center justify-center text-white bg-white/10 hover:bg-white/20"
+            title="Скачать"
+          >
+            <IconDownload size={18} />
+          </a>
+          <img
+            src={message.fileUrl}
+            alt={message.fileName}
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-full max-h-full object-contain pop-in"
+          />
+        </div>
+      )}
     </div>
   );
 }
