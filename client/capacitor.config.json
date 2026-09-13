@@ -7,12 +7,12 @@
     "cleartext": false
   },
   "android": {
-    "backgroundColor": "#ff0000"
+    "backgroundColor": "#0e1621"
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 3000,
-      "backgroundColor": "#ff0000",
+      "launchShowDuration": 800,
+      "backgroundColor": "#0e1621",
       "showSpinner": false
     },
     "SystemBars": {
