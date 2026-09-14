@@ -34,7 +34,10 @@ final class APIClient {
         method: String = "GET",
         body: Encodable? = nil
     ) async throws -> T {
-        var request = URLRequest(url: APIClient.baseURL.appendingPathComponent(path))
+        guard let url = URL(string: path, relativeTo: APIClient.baseURL) else {
+            throw APIError.network
+        }
+        var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let token {
