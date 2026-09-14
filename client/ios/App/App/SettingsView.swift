@@ -244,7 +244,7 @@ struct SettingsView: View {
         } label: {
             VStack(spacing: 6) {
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(option == .mono ? Color(white: 0.5) : Wave.accentGradient)
+                    .fill(option == .mono ? AnyShapeStyle(Color(white: 0.5)) : AnyShapeStyle(Wave.accentGradient))
                     .frame(width: 64, height: 64)
                     .overlay(
                         Image(systemName: "bubble.left.and.bubble.right.fill")
