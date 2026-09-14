@@ -161,3 +161,22 @@ struct PresenceUpdateEvent: Codable {
     let online: Bool
     let lastSeen: Int?
 }
+
+struct ConversationStats: Codable {
+    let photos: Int
+    let voice: Int
+    let files: Int
+    let sharedGroups: Int
+}
+
+struct MediaItem: Codable, Identifiable {
+    let id: String
+    let fileUrl: String?
+    let fileName: String?
+    let fileType: String?
+    let createdAt: Int
+}
+
+struct MediaResponse: Codable {
+    let items: [MediaItem]
+}

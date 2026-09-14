@@ -1,9 +1,13 @@
 import SwiftUI
 import PhotosUI
+import UniformTypeIdentifiers
+import AVKit
 import UIKit
 
 struct ChatView: View {
     let conversation: Conversation
+
+    @Environment(\.dismiss) private var dismiss
 
     @State private var messages: [Message] = []
     @State private var draft = ""
@@ -17,8 +21,17 @@ struct ChatView: View {
     @State private var otherReadAt = 0
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var uploadingAttachment = false
+    @State private var showingInfo = false
+    @State private var showingCamera = false
+    @State private var forwardingMessage: Message?
+
+    @StateObject private var voiceRecorder = VoiceRecorder()
 
     private var myId: String? { SessionStore.shared.user?.id }
+
+    private var micBackground: AnyShapeStyle {
+        voiceRecorder.isRecording ? AnyShapeStyle(Color.red) : AnyShapeStyle(Wave.accentGradient)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -52,6 +65,9 @@ struct ChatView: View {
                                 .contextMenu {
                                     Button { startReplying(message) } label: {
                                         Label("Ответить", systemImage: "arrowshape.turn.up.left")
+                                    }
+                                    Button { forwardingMessage = message } label: {
+                                        Label("Переслать", systemImage: "arrowshape.turn.up.forward")
                                     }
                                     if let text = message.content, !text.isEmpty {
                                         Button {
@@ -101,7 +117,20 @@ struct ChatView: View {
                     }
                 }
 
-                if !typingUsers.isEmpty {
+                if voiceRecorder.isRecording {
+                    HStack(spacing: 8) {
+                        Circle().fill(Color.red).frame(width: 8, height: 8)
+                        Text(String(format: "Запись… %.0fс", voiceRecorder.duration))
+                            .font(.system(size: 12))
+                            .foregroundColor(Wave.muted)
+                        Spacer()
+                        Text("Отпустите, чтобы отправить")
+                            .font(.system(size: 11))
+                            .foregroundColor(Wave.mutedFaint)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.top, 4)
+                } else if !typingUsers.isEmpty {
                     Text("\(typingUsers.values.joined(separator: ", ")) печатает…")
                         .font(.system(size: 12))
                         .foregroundColor(Wave.muted)
@@ -111,7 +140,14 @@ struct ChatView: View {
                 }
 
                 HStack(spacing: 10) {
-                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    Menu {
+                        Button { showingCamera = true } label: {
+                            Label("Камера", systemImage: "camera")
+                        }
+                        PhotosPicker(selection: $selectedPhotoItem, matching: .any(of: [.images, .videos])) {
+                            Label("Фото или видео", systemImage: "photo.on.rectangle")
+                        }
+                    } label: {
                         Image(systemName: "paperclip")
                             .font(.system(size: 18))
                             .foregroundColor(Wave.muted)
@@ -128,6 +164,22 @@ struct ChatView: View {
 
                     if uploadingAttachment {
                         ProgressView().tint(Wave.accent).frame(width: 36, height: 36)
+                    } else if draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && editingMessage == nil {
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 36, height: 36)
+                            .background(micBackground)
+                            .clipShape(Circle())
+                            .scaleEffect(voiceRecorder.isRecording ? 1.15 : 1)
+                            .animation(.easeInOut(duration: 0.15), value: voiceRecorder.isRecording)
+                            .onLongPressGesture(minimumDuration: 0.15, pressing: { pressing in
+                                if pressing {
+                                    voiceRecorder.requestPermissionAndStart()
+                                } else if voiceRecorder.isRecording {
+                                    finishRecording()
+                                }
+                            }, perform: {})
                     } else {
                         Button(action: send) {
                             Image(systemName: editingMessage != nil ? "checkmark" : "arrow.up")
@@ -149,19 +201,28 @@ struct ChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                HStack(spacing: 8) {
-                    AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 32, online: otherOnline)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(conversation.name)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(Wave.textPrimary)
-                        if conversation.otherUser != nil {
-                            Text(otherOnline ? "в сети" : "не в сети")
-                                .font(.system(size: 11))
-                                .foregroundColor(otherOnline ? Wave.online : Wave.muted)
+                Button {
+                    showingInfo = true
+                } label: {
+                    HStack(spacing: 8) {
+                        AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 32, online: otherOnline)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(conversation.name)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(Wave.textPrimary)
+                            if conversation.otherUser != nil {
+                                Text(otherOnline ? "в сети" : "не в сети")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(otherOnline ? Wave.online : Wave.muted)
+                            } else if let members = conversation.members {
+                                Text("\(members.count) участников")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(Wave.muted)
+                            }
                         }
                     }
                 }
+                .buttonStyle(.plain)
             }
         }
         .toolbarBackground(Wave.bg, for: .navigationBar)
@@ -238,6 +299,22 @@ struct ChatView: View {
         .onChange(of: selectedPhotoItem) { newItem in
             if let newItem {
                 sendAttachment(newItem)
+            }
+        }
+        .sheet(isPresented: $showingInfo) {
+            ConversationInfoView(
+                conversation: conversation,
+                onCleared: { messages = [] },
+                onLeft: { dismiss() }
+            )
+        }
+        .fullScreenCover(isPresented: $showingCamera) {
+            CameraCapture { image in handleCapturedImage(image) }
+                .ignoresSafeArea()
+        }
+        .sheet(item: $forwardingMessage) { message in
+            ForwardPickerView { target in
+                forward(message, to: target)
             }
         }
     }
@@ -323,38 +400,97 @@ struct ChatView: View {
         }
     }
 
-    private func sendAttachment(_ item: PhotosPickerItem) {
+    private func forward(_ message: Message, to target: Conversation) {
+        AppSocketManager.shared.sendMessage(
+            conversationId: target.id,
+            content: message.content ?? "",
+            fileUrl: message.fileUrl,
+            fileName: message.fileName,
+            fileType: message.fileType
+        ) { result in
+            DispatchQueue.main.async {
+                if case .success(let sent) = result, target.id == conversation.id, !messages.contains(where: { $0.id == sent.id }) {
+                    messages.append(sent)
+                }
+            }
+        }
+    }
+
+    private func sendUploadedFile(_ uploaded: UploadResponse) {
+        AppSocketManager.shared.sendMessage(
+            conversationId: conversation.id,
+            content: "",
+            fileUrl: uploaded.url,
+            fileName: uploaded.name,
+            fileType: uploaded.type
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let message):
+                    if !messages.contains(where: { $0.id == message.id }) {
+                        messages.append(message)
+                    }
+                case .failure(let err):
+                    error = err.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func handleCapturedImage(_ image: UIImage) {
+        guard let data = image.jpegData(compressionQuality: 0.8) else { return }
+        uploadingAttachment = true
         Task {
-            guard let data = try? await item.loadTransferable(type: Data.self) else { return }
-            await MainActor.run { uploadingAttachment = true }
             do {
                 let uploaded = try await APIClient.shared.uploadFile(data: data, filename: "photo.jpg", mimeType: "image/jpeg")
-                await MainActor.run {
-                    uploadingAttachment = false
-                    selectedPhotoItem = nil
-                }
-                AppSocketManager.shared.sendMessage(
-                    conversationId: conversation.id,
-                    content: "",
-                    fileUrl: uploaded.url,
-                    fileName: uploaded.name,
-                    fileType: uploaded.type
-                ) { result in
-                    DispatchQueue.main.async {
-                        switch result {
-                        case .success(let message):
-                            if !messages.contains(where: { $0.id == message.id }) {
-                                messages.append(message)
-                            }
-                        case .failure(let err):
-                            error = err.localizedDescription
-                        }
-                    }
-                }
+                await MainActor.run { uploadingAttachment = false }
+                sendUploadedFile(uploaded)
             } catch {
                 await MainActor.run {
                     uploadingAttachment = false
-                    selectedPhotoItem = nil
+                    self.error = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func finishRecording() {
+        guard let url = voiceRecorder.stop() else { return }
+        guard let data = try? Data(contentsOf: url) else { return }
+        uploadingAttachment = true
+        Task {
+            do {
+                let uploaded = try await APIClient.shared.uploadFile(data: data, filename: "voice.m4a", mimeType: "audio/m4a")
+                await MainActor.run { uploadingAttachment = false }
+                sendUploadedFile(uploaded)
+            } catch {
+                await MainActor.run {
+                    uploadingAttachment = false
+                    self.error = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func sendAttachment(_ item: PhotosPickerItem) {
+        Task {
+            guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+            let utType = item.supportedContentTypes.first
+            let mimeType = utType?.preferredMIMEType ?? "application/octet-stream"
+            let ext = utType?.preferredFilenameExtension ?? "dat"
+            let filename = "attachment.\(ext)"
+
+            await MainActor.run {
+                uploadingAttachment = true
+                selectedPhotoItem = nil
+            }
+            do {
+                let uploaded = try await APIClient.shared.uploadFile(data: data, filename: filename, mimeType: mimeType)
+                await MainActor.run { uploadingAttachment = false }
+                sendUploadedFile(uploaded)
+            } catch {
+                await MainActor.run {
+                    uploadingAttachment = false
                     self.error = error.localizedDescription
                 }
             }
@@ -410,11 +546,70 @@ struct ChatView: View {
     }
 }
 
+private struct VideoBubbleView: View {
+    let url: URL
+    @State private var player: AVPlayer?
+
+    var body: some View {
+        Group {
+            if let player {
+                VideoPlayer(player: player)
+            } else {
+                Color.black
+            }
+        }
+        .frame(width: 220, height: 200)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .onAppear {
+            if player == nil { player = AVPlayer(url: url) }
+        }
+    }
+}
+
+private struct FullscreenImageView: View {
+    let url: URL
+    @Environment(\.dismiss) private var dismiss
+    @State private var scale: CGFloat = 1
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            AsyncImage(url: url) { phase in
+                if case .success(let image) = phase {
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .scaleEffect(scale)
+                        .gesture(MagnificationGesture().onChanged { value in scale = max(1, value) })
+                } else {
+                    ProgressView().tint(.white)
+                }
+            }
+            VStack {
+                HStack {
+                    Spacer()
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(10)
+                            .background(Circle().fill(Color.black.opacity(0.5)))
+                    }
+                    .padding()
+                }
+                Spacer()
+            }
+        }
+    }
+}
+
 private struct MessageBubble: View {
     let message: Message
     let isMine: Bool
     let replySource: Message?
     let isRead: Bool
+
+    @State private var showingFullscreen = false
 
     var body: some View {
         HStack {
@@ -436,6 +631,10 @@ private struct MessageBubble: View {
                         Text("Сообщение удалено")
                             .font(.system(size: 15).italic())
                             .foregroundColor(isMine ? .white.opacity(0.7) : Wave.muted)
+                    } else if let url = APIClient.absoluteURL(for: message.fileUrl), (message.fileType ?? "").hasPrefix("audio") {
+                        VoicePlayerView(url: url, isMine: isMine)
+                    } else if let url = APIClient.absoluteURL(for: message.fileUrl), (message.fileType ?? "").hasPrefix("video") {
+                        VideoBubbleView(url: url)
                     } else {
                         if let url = APIClient.absoluteURL(for: message.fileUrl), (message.fileType ?? "").hasPrefix("image") {
                             AsyncImage(url: url) { phase in
@@ -450,6 +649,10 @@ private struct MessageBubble: View {
                             }
                             .frame(width: 200, height: 200)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .onTapGesture { showingFullscreen = true }
+                            .fullScreenCover(isPresented: $showingFullscreen) {
+                                FullscreenImageView(url: url)
+                            }
                         }
                         if let content = message.content, !content.isEmpty {
                             Text(content)

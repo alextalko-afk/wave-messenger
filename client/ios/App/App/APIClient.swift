@@ -151,6 +151,18 @@ final class APIClient {
     func updateProfile(displayName: String?, bio: String?) async throws -> MeResponse {
         try await request("api/auth/me", method: "PUT", body: UpdateProfileBody(displayName: displayName, bio: bio))
     }
+
+    func conversationStats(conversationId: String) async throws -> ConversationStats {
+        try await request("api/conversations/\(conversationId)/stats")
+    }
+
+    func media(conversationId: String, type: String) async throws -> MediaResponse {
+        try await request("api/conversations/\(conversationId)/media?type=\(type)")
+    }
+
+    func clearChat(conversationId: String) async throws {
+        let _: OkResponse = try await request("api/conversations/\(conversationId)/clear", method: "POST")
+    }
 }
 
 private struct AnyEncodable: Encodable {

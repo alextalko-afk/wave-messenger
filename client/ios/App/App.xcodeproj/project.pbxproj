@@ -31,6 +31,11 @@
 		684FDF78BB074DBEB6C64482 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = D61571DD87F34B5FABF6598E /* Formatters.swift */; };
 		56D142936219431D858B2796 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8796E2AA01994C84805666A6 /* SettingsView.swift */; };
 		5399708607D34270BD918DDA /* NewGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1815CD6251E4B8C91E7223F /* NewGroupView.swift */; };
+		D05A6263477944F7B71FFA92 /* VoiceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16EA3A20207145B695A2EC9C /* VoiceRecorder.swift */; };
+		25CEE696D70E4429A553D8D7 /* VoicePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBE8B45E542645D5952060DF /* VoicePlayerView.swift */; };
+		096CE424650D4C2593FEA2A1 /* CameraCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE488D035D5446296119A54 /* CameraCapture.swift */; };
+		92D392960BD4419399F81808 /* ConversationInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AC69C264A2439EB1D9D84D /* ConversationInfoView.swift */; };
+		3964078E5ED048279672FE21 /* ForwardPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16ECCA206D4247F9BC0B3D64 /* ForwardPickerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -60,6 +65,11 @@
 		D61571DD87F34B5FABF6598E /* Formatters.swift */ = {isa = PBXFileReference; name = "Formatters.swift"; path = "Formatters.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		8796E2AA01994C84805666A6 /* SettingsView.swift */ = {isa = PBXFileReference; name = "SettingsView.swift"; path = "SettingsView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		B1815CD6251E4B8C91E7223F /* NewGroupView.swift */ = {isa = PBXFileReference; name = "NewGroupView.swift"; path = "NewGroupView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		16EA3A20207145B695A2EC9C /* VoiceRecorder.swift */ = {isa = PBXFileReference; name = "VoiceRecorder.swift"; path = "VoiceRecorder.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		BBE8B45E542645D5952060DF /* VoicePlayerView.swift */ = {isa = PBXFileReference; name = "VoicePlayerView.swift"; path = "VoicePlayerView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		0FE488D035D5446296119A54 /* CameraCapture.swift */ = {isa = PBXFileReference; name = "CameraCapture.swift"; path = "CameraCapture.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		00AC69C264A2439EB1D9D84D /* ConversationInfoView.swift */ = {isa = PBXFileReference; name = "ConversationInfoView.swift"; path = "ConversationInfoView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		16ECCA206D4247F9BC0B3D64 /* ForwardPickerView.swift */ = {isa = PBXFileReference; name = "ForwardPickerView.swift"; path = "ForwardPickerView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,6 +128,11 @@
 				D61571DD87F34B5FABF6598E /* Formatters.swift */,
 				8796E2AA01994C84805666A6 /* SettingsView.swift */,
 				B1815CD6251E4B8C91E7223F /* NewGroupView.swift */,
+				16EA3A20207145B695A2EC9C /* VoiceRecorder.swift */,
+				BBE8B45E542645D5952060DF /* VoicePlayerView.swift */,
+				0FE488D035D5446296119A54 /* CameraCapture.swift */,
+				00AC69C264A2439EB1D9D84D /* ConversationInfoView.swift */,
+				16ECCA206D4247F9BC0B3D64 /* ForwardPickerView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -220,6 +235,11 @@
 				684FDF78BB074DBEB6C64482 /* Formatters.swift in Sources */,
 				56D142936219431D858B2796 /* SettingsView.swift in Sources */,
 				5399708607D34270BD918DDA /* NewGroupView.swift in Sources */,
+				D05A6263477944F7B71FFA92 /* VoiceRecorder.swift in Sources */,
+				25CEE696D70E4429A553D8D7 /* VoicePlayerView.swift in Sources */,
+				096CE424650D4C2593FEA2A1 /* CameraCapture.swift in Sources */,
+				92D392960BD4419399F81808 /* ConversationInfoView.swift in Sources */,
+				3964078E5ED048279672FE21 /* ForwardPickerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
