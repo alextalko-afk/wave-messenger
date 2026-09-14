@@ -15,6 +15,9 @@ struct RootView: View {
         .id(themeManager.mode)
         .tint(Wave.accent)
         .preferredColorScheme(.dark)
+        .overlay {
+            CallOverlayView()
+        }
         .onAppear {
             if let token = session.token {
                 AppSocketManager.shared.connect(token: token)

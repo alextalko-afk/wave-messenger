@@ -238,6 +238,23 @@ struct ChatView: View {
                 }
                 .buttonStyle(.plain)
             }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if conversation.otherUser != nil {
+                    HStack(spacing: 16) {
+                        Button {
+                            CallManager.shared.startCall(conversation: conversation, kind: .audio)
+                        } label: {
+                            Image(systemName: "phone.fill")
+                        }
+                        Button {
+                            CallManager.shared.startCall(conversation: conversation, kind: .video)
+                        } label: {
+                            Image(systemName: "video.fill")
+                        }
+                    }
+                    .foregroundColor(Wave.accent)
+                }
+            }
         }
         .toolbarBackground(Wave.bg, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)

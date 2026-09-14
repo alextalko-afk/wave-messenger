@@ -231,6 +231,50 @@ io.on('connection', (socket) => {
     }
   });
 
+  // WebRTC call signaling: the server never inspects SDP/ICE contents, it
+  // just relays them to every active socket of the target user (mirroring
+  // how message delivery already works via onlineUsers). No call state is
+  // persisted server-side - clients own the call lifecycle.
+  socket.on('call:invite', ({ conversationId, targetUserId, callId, kind, sdp, fromDisplayName, fromAvatarColor }) => {
+    const sockets = onlineUsers.get(targetUserId);
+    if (!sockets) return;
+    for (const sid of sockets) {
+      io.to(sid).emit('call:invite', { conversationId, callId, kind, sdp, fromUserId: userId, fromDisplayName, fromAvatarColor });
+    }
+  });
+
+  socket.on('call:answer', ({ targetUserId, callId, sdp }) => {
+    const sockets = onlineUsers.get(targetUserId);
+    if (!sockets) return;
+    for (const sid of sockets) {
+      io.to(sid).emit('call:answer', { callId, sdp, fromUserId: userId });
+    }
+  });
+
+  socket.on('call:ice-candidate', ({ targetUserId, callId, candidate }) => {
+    const sockets = onlineUsers.get(targetUserId);
+    if (!sockets) return;
+    for (const sid of sockets) {
+      io.to(sid).emit('call:ice-candidate', { callId, candidate, fromUserId: userId });
+    }
+  });
+
+  socket.on('call:reject', ({ targetUserId, callId }) => {
+    const sockets = onlineUsers.get(targetUserId);
+    if (!sockets) return;
+    for (const sid of sockets) {
+      io.to(sid).emit('call:reject', { callId, fromUserId: userId });
+    }
+  });
+
+  socket.on('call:end', ({ targetUserId, callId }) => {
+    const sockets = onlineUsers.get(targetUserId);
+    if (!sockets) return;
+    for (const sid of sockets) {
+      io.to(sid).emit('call:end', { callId, fromUserId: userId });
+    }
+  });
+
   socket.on('disconnect', () => {
     const set = onlineUsers.get(userId);
     if (set) {

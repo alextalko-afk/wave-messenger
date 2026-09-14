@@ -5,6 +5,7 @@ struct WaveApp: App {
     init() {
         GoogleAuthManager.configure()
         _ = ThemeManager.shared
+        CallManager.shared.registerSignaling()
     }
 
     var body: some Scene {

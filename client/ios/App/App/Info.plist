@@ -25,9 +25,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Нужен доступ к микрофону, чтобы отправлять голосовые сообщения</string>
+	<string>Нужен доступ к микрофону, чтобы отправлять голосовые сообщения и совершать звонки</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Нужен доступ к камере, чтобы отправлять фото из чата</string>
+	<string>Нужен доступ к камере, чтобы отправлять фото и совершать видеозвонки</string>
 	<key>CFBundleIcons</key>
 	<dict>
 		<key>CFBundleAlternateIcons</key>

@@ -1,5 +1,6 @@
 import Foundation
 import SocketIO
+import WebRTC
 
 final class AppSocketManager {
     static let shared = AppSocketManager()
@@ -14,6 +15,11 @@ final class AppSocketManager {
     var onTypingUpdate: ((TypingUpdateEvent) -> Void)?
     var onMessageRead: ((MessageReadEvent) -> Void)?
     var onPresenceUpdate: ((PresenceUpdateEvent) -> Void)?
+    var onCallInvite: ((CallInviteEvent) -> Void)?
+    var onCallAnswer: ((CallAnswerEvent) -> Void)?
+    var onCallIceCandidate: ((CallIceCandidateEvent) -> Void)?
+    var onCallReject: ((CallRejectEvent) -> Void)?
+    var onCallEnd: ((CallEndEvent) -> Void)?
 
     private let decoder = JSONDecoder()
 
@@ -74,6 +80,41 @@ final class AppSocketManager {
             guard let self, let dict = data.first else { return }
             if let event = self.decode(PresenceUpdateEvent.self, from: dict) {
                 DispatchQueue.main.async { self.onPresenceUpdate?(event) }
+            }
+        }
+
+        socket.on("call:invite") { [weak self] data, _ in
+            guard let self, let dict = data.first else { return }
+            if let event = self.decode(CallInviteEvent.self, from: dict) {
+                DispatchQueue.main.async { self.onCallInvite?(event) }
+            }
+        }
+
+        socket.on("call:answer") { [weak self] data, _ in
+            guard let self, let dict = data.first else { return }
+            if let event = self.decode(CallAnswerEvent.self, from: dict) {
+                DispatchQueue.main.async { self.onCallAnswer?(event) }
+            }
+        }
+
+        socket.on("call:ice-candidate") { [weak self] data, _ in
+            guard let self, let dict = data.first else { return }
+            if let event = self.decode(CallIceCandidateEvent.self, from: dict) {
+                DispatchQueue.main.async { self.onCallIceCandidate?(event) }
+            }
+        }
+
+        socket.on("call:reject") { [weak self] data, _ in
+            guard let self, let dict = data.first else { return }
+            if let event = self.decode(CallRejectEvent.self, from: dict) {
+                DispatchQueue.main.async { self.onCallReject?(event) }
+            }
+        }
+
+        socket.on("call:end") { [weak self] data, _ in
+            guard let self, let dict = data.first else { return }
+            if let event = self.decode(CallEndEvent.self, from: dict) {
+                DispatchQueue.main.async { self.onCallEnd?(event) }
             }
         }
 
@@ -181,6 +222,50 @@ final class AppSocketManager {
 
     func notifyConversationCreated(conversationId: String, memberIds: [String]) {
         socket?.emit("conversation:created", ["conversationId": conversationId, "memberIds": memberIds])
+    }
+
+    // MARK: Call signaling
+
+    func sendCallInvite(conversationId: String, targetUserId: String, callId: String, kind: String, sdp: RTCSessionDescription) {
+        let user = SessionStore.shared.user
+        socket?.emit("call:invite", [
+            "conversationId": conversationId,
+            "targetUserId": targetUserId,
+            "callId": callId,
+            "kind": kind,
+            "sdp": ["type": sdp.type.wireValue, "sdp": sdp.sdp],
+            "fromDisplayName": user?.displayName ?? "",
+            "fromAvatarColor": user?.avatarColor ?? "",
+        ])
+    }
+
+    func sendCallAnswer(targetUserId: String, callId: String, sdp: RTCSessionDescription) {
+        socket?.emit("call:answer", [
+            "targetUserId": targetUserId,
+            "callId": callId,
+            "sdp": ["type": sdp.type.wireValue, "sdp": sdp.sdp],
+        ])
+    }
+
+    func sendCallIceCandidate(targetUserId: String, callId: String, candidate: RTCIceCandidate) {
+        var candidateDict: [String: Any] = [
+            "sdpMLineIndex": candidate.sdpMLineIndex,
+            "candidate": candidate.sdp,
+        ]
+        if let mid = candidate.sdpMid { candidateDict["sdpMid"] = mid }
+        socket?.emit("call:ice-candidate", [
+            "targetUserId": targetUserId,
+            "callId": callId,
+            "candidate": candidateDict,
+        ])
+    }
+
+    func sendCallReject(targetUserId: String, callId: String) {
+        socket?.emit("call:reject", ["targetUserId": targetUserId, "callId": callId])
+    }
+
+    func sendCallEnd(targetUserId: String, callId: String) {
+        socket?.emit("call:end", ["targetUserId": targetUserId, "callId": callId])
     }
 
     private func decode<T: Decodable>(_ type: T.Type, from any: Any) -> T? {

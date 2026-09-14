@@ -42,6 +42,9 @@
 		AF46573789C146A58C5C3D8E /* ContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094CFC3563A14D1B995199E3 /* ContactsView.swift */; };
 		87D59A00CA0346D68F3597AC /* CallsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9D172D8F9446A7A162CF3C /* CallsView.swift */; };
 		7DD7D9143D0F4788A46D7201 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 184905A84D874740BD54121C /* MainTabView.swift */; };
+		8899142131E04A8C90B105D8 /* WebRTCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60578992FAE041108E14C0EB /* WebRTCClient.swift */; };
+		2CD4989368BD45C0A194EE24 /* CallManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67A436C404AC4D6194689945 /* CallManager.swift */; };
+		F5289350E7D94144A91BBA58 /* CallOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3542DCE0C539469E8A934A6C /* CallOverlayView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -82,6 +85,9 @@
 		094CFC3563A14D1B995199E3 /* ContactsView.swift */ = {isa = PBXFileReference; name = "ContactsView.swift"; path = "ContactsView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		FD9D172D8F9446A7A162CF3C /* CallsView.swift */ = {isa = PBXFileReference; name = "CallsView.swift"; path = "CallsView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		184905A84D874740BD54121C /* MainTabView.swift */ = {isa = PBXFileReference; name = "MainTabView.swift"; path = "MainTabView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		60578992FAE041108E14C0EB /* WebRTCClient.swift */ = {isa = PBXFileReference; name = "WebRTCClient.swift"; path = "WebRTCClient.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		67A436C404AC4D6194689945 /* CallManager.swift */ = {isa = PBXFileReference; name = "CallManager.swift"; path = "CallManager.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		3542DCE0C539469E8A934A6C /* CallOverlayView.swift */ = {isa = PBXFileReference; name = "CallOverlayView.swift"; path = "CallOverlayView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -151,6 +157,9 @@
 				094CFC3563A14D1B995199E3 /* ContactsView.swift */,
 				FD9D172D8F9446A7A162CF3C /* CallsView.swift */,
 				184905A84D874740BD54121C /* MainTabView.swift */,
+				60578992FAE041108E14C0EB /* WebRTCClient.swift */,
+				67A436C404AC4D6194689945 /* CallManager.swift */,
+				3542DCE0C539469E8A934A6C /* CallOverlayView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -264,6 +273,9 @@
 				AF46573789C146A58C5C3D8E /* ContactsView.swift in Sources */,
 				87D59A00CA0346D68F3597AC /* CallsView.swift in Sources */,
 				7DD7D9143D0F4788A46D7201 /* MainTabView.swift in Sources */,
+				8899142131E04A8C90B105D8 /* WebRTCClient.swift in Sources */,
+				2CD4989368BD45C0A194EE24 /* CallManager.swift in Sources */,
+				F5289350E7D94144A91BBA58 /* CallOverlayView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

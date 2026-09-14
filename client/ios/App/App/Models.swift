@@ -181,3 +181,46 @@ struct MediaItem: Codable, Identifiable {
 struct MediaResponse: Codable {
     let items: [MediaItem]
 }
+
+struct SDPPayload: Codable {
+    let type: String
+    let sdp: String
+}
+
+struct ICECandidatePayload: Codable {
+    let sdpMid: String?
+    let sdpMLineIndex: Int32
+    let candidate: String
+}
+
+struct CallInviteEvent: Codable {
+    let conversationId: String
+    let callId: String
+    let kind: String
+    let sdp: SDPPayload
+    let fromUserId: String
+    let fromDisplayName: String?
+    let fromAvatarColor: String?
+}
+
+struct CallAnswerEvent: Codable {
+    let callId: String
+    let sdp: SDPPayload
+    let fromUserId: String
+}
+
+struct CallIceCandidateEvent: Codable {
+    let callId: String
+    let candidate: ICECandidatePayload
+    let fromUserId: String
+}
+
+struct CallRejectEvent: Codable {
+    let callId: String
+    let fromUserId: String
+}
+
+struct CallEndEvent: Codable {
+    let callId: String
+    let fromUserId: String
+}
