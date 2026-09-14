@@ -66,6 +66,19 @@ export default function ProfileModal({ onClose }) {
     }
   }
 
+  async function handleAvatarDelete() {
+    setAvatarBusy(true);
+    setAvatarError('');
+    try {
+      const { user: updated } = await api.deleteAvatar();
+      setUser(updated);
+    } catch (err) {
+      setAvatarError(err.message);
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
   useEffect(() => {
     if (user.hasGoogle || !googleButtonRef.current) return;
     renderGoogleButton(googleButtonRef.current, {
@@ -166,6 +179,14 @@ export default function ProfileModal({ onClose }) {
           />
           {avatarBusy && <div className="mt-1.5 text-xs text-muted">Загружаем…</div>}
           {avatarError && <div className="mt-1.5 text-xs text-red-400">{avatarError}</div>}
+          {user.avatarUrl && !avatarBusy && (
+            <button
+              onClick={handleAvatarDelete}
+              className="mt-1.5 text-xs text-red-400 hover:underline"
+            >
+              Удалить фото
+            </button>
+          )}
         </div>
 
         {error && <div className="mb-3 text-sm text-red-400 bg-red-500/10 rounded-xl px-3 py-2">{error}</div>}

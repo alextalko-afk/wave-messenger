@@ -54,4 +54,11 @@ router.post('/avatar', authMiddleware, upload.single('file'), async (req, res) =
   res.json({ user: publicUser(user) });
 });
 
+router.delete('/avatar', authMiddleware, async (req, res) => {
+  await run('UPDATE users SET avatar_url = NULL WHERE id = ?', [req.userId]);
+  const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
+  res.json({ user: publicUser(user) });
+});
+
+export { upload, useCloudinary };
 export default router;

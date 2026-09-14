@@ -50,8 +50,8 @@ export default function CallOverlay() {
     if (!call.error) return null;
     return (
       <div
-        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-sm text-white shadow-lg"
-        style={{ background: '#e74c3c' }}
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-sm text-white shadow-lg text-center"
+        style={{ background: '#e74c3c', maxWidth: 320 }}
       >
         {call.error}
       </div>

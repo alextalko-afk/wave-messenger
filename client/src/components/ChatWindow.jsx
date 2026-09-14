@@ -509,6 +509,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
         onClose={() => setInfoOpen(false)}
         onOpenConversation={onOpenConversation}
         onAction={onConversationAction}
+        onConversationUpdate={onConversationUpdate}
       />
     </div>
   );

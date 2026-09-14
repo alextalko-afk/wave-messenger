@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import { get, all, run, batch } from '../db/index.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { publicUser } from './auth.js';
+import { upload, useCloudinary } from './upload.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -47,7 +48,7 @@ async function serializeConversation(conv, userId) {
     isGroup: !!conv.is_group,
     name: conv.is_group ? conv.name : other?.displayName || 'Диалог',
     avatarColor: conv.is_group ? conv.avatar_color : other?.avatarColor || '#7c5cff',
-    avatarUrl: conv.is_group ? null : other?.avatarUrl || null,
+    avatarUrl: conv.is_group ? conv.avatar_url || null : other?.avatarUrl || null,
     members,
     otherUser: other || null,
     lastMessage: last
@@ -125,6 +126,42 @@ router.post('/group', async (req, res) => {
   }
   await batch(statements);
   const conv = await get('SELECT * FROM conversations WHERE id = ?', [id]);
+  res.json({ conversation: await serializeConversation(conv, req.userId) });
+});
+
+async function requireGroupAdmin(req, res) {
+  const conv = await get('SELECT is_group FROM conversations WHERE id = ?', [req.params.id]);
+  if (!conv || !conv.is_group) {
+    res.status(404).json({ error: 'Группа не найдена' });
+    return false;
+  }
+  const member = await get('SELECT role FROM conversation_members WHERE conversation_id = ? AND user_id = ?', [
+    req.params.id,
+    req.userId,
+  ]);
+  if (!member || member.role !== 'admin') {
+    res.status(403).json({ error: 'Только администратор группы может менять аватар' });
+    return false;
+  }
+  return true;
+}
+
+router.post('/:id/avatar', upload.single('file'), async (req, res) => {
+  if (!(await requireGroupAdmin(req, res))) return;
+  if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
+  if (!req.file.mimetype?.startsWith('image/')) {
+    return res.status(400).json({ error: 'Аватар должен быть изображением' });
+  }
+  const url = useCloudinary ? req.file.path : `/uploads/${req.file.filename}`;
+  await run('UPDATE conversations SET avatar_url = ? WHERE id = ?', [url, req.params.id]);
+  const conv = await get('SELECT * FROM conversations WHERE id = ?', [req.params.id]);
+  res.json({ conversation: await serializeConversation(conv, req.userId) });
+});
+
+router.delete('/:id/avatar', async (req, res) => {
+  if (!(await requireGroupAdmin(req, res))) return;
+  await run('UPDATE conversations SET avatar_url = NULL WHERE id = ?', [req.params.id]);
+  const conv = await get('SELECT * FROM conversations WHERE id = ?', [req.params.id]);
   res.json({ conversation: await serializeConversation(conv, req.userId) });
 });
 

@@ -6,7 +6,9 @@ import { WebRTCClient } from '../lib/webrtc.js';
 const CallContext = createContext(null);
 
 function mediaErrorMessage(err) {
-  if (err?.name === 'NotAllowedError') return 'Нет доступа к микрофону/камере';
+  if (err?.name === 'NotAllowedError') {
+    return 'Нет доступа к микрофону/камере — разрешите его в настройках сайта в браузере (значок замка рядом с адресом)';
+  }
   if (err?.name === 'NotFoundError') return 'Микрофон или камера не найдены';
   return 'Не удалось начать звонок';
 }
@@ -60,7 +62,7 @@ export function CallProvider({ children }) {
       }
       resetState();
       setError(message);
-      setTimeout(() => setError(null), 4000);
+      setTimeout(() => setError(null), 6000);
     },
     [socket, resetState]
   );

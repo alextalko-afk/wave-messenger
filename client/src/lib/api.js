@@ -57,4 +57,11 @@ export const api = {
     form.append('file', file);
     return request('/upload/avatar', { method: 'POST', body: form });
   },
+  deleteAvatar: () => request('/upload/avatar', { method: 'DELETE' }),
+  uploadGroupAvatar: (conversationId, file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request(`/conversations/${conversationId}/avatar`, { method: 'POST', body: form });
+  },
+  deleteGroupAvatar: (conversationId) => request(`/conversations/${conversationId}/avatar`, { method: 'DELETE' }),
 };

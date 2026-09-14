@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
 import Avatar from './Avatar.jsx';
+import AvatarLightbox from './AvatarLightbox.jsx';
 import { useCall } from '../context/CallContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
+import { resizeImageFile } from '../lib/imageResize.js';
 import VoiceMessage from './VoiceMessage.jsx';
 import { formatLastSeen, formatDayLabel, pluralRu } from '../lib/format.js';
 import {
@@ -62,8 +65,45 @@ function ActionButton({ icon, label, onClick, disabled, title }) {
   );
 }
 
-export default function ProfileInfoPanel({ conversation, open, onClose, onOpenConversation, onAction }) {
+export default function ProfileInfoPanel({ conversation, open, onClose, onOpenConversation, onAction, onConversationUpdate }) {
   const call = useCall();
+  const { user } = useAuth();
+  const [lightboxSrc, setLightboxSrc] = useState(null);
+  const [groupAvatarBusy, setGroupAvatarBusy] = useState(false);
+  const [groupAvatarError, setGroupAvatarError] = useState('');
+  const groupAvatarInputRef = useRef(null);
+  const isGroupAdmin =
+    conversation.isGroup && conversation.members?.some((m) => m.id === user.id && m.role === 'admin');
+
+  async function handleGroupAvatarPick(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setGroupAvatarBusy(true);
+    setGroupAvatarError('');
+    try {
+      const resized = await resizeImageFile(file);
+      const { conversation: updated } = await api.uploadGroupAvatar(conversation.id, resized);
+      onConversationUpdate?.(conversation.id, { avatarUrl: updated.avatarUrl });
+    } catch (err) {
+      setGroupAvatarError(err.message);
+    } finally {
+      setGroupAvatarBusy(false);
+    }
+  }
+
+  async function handleGroupAvatarDelete() {
+    setGroupAvatarBusy(true);
+    setGroupAvatarError('');
+    try {
+      const { conversation: updated } = await api.deleteGroupAvatar(conversation.id);
+      onConversationUpdate?.(conversation.id, { avatarUrl: updated.avatarUrl });
+    } catch (err) {
+      setGroupAvatarError(err.message);
+    } finally {
+      setGroupAvatarBusy(false);
+    }
+  }
   const [stats, setStats] = useState(null);
   const [subView, setSubView] = useState(null); // 'photos' | 'files' | 'voice' | 'groups' | 'member'
   const [subItems, setSubItems] = useState(null);
@@ -125,6 +165,7 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
     : formatLastSeen(conversation.otherUser?.lastSeen);
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
         className="w-full max-w-[380px] max-h-[85vh] rounded-2xl flex flex-col overflow-hidden pop-in"
@@ -155,7 +196,13 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
               {subView === 'member' && activeMember && (
                 <>
                   <div className="flex flex-col items-center px-4 pt-5 pb-4">
-                    <Avatar name={activeMember.displayName} seed={activeMember.id} size={88} online={activeMember.online} src={activeMember.avatarUrl} />
+                    <button
+                      onClick={() => activeMember.avatarUrl && setLightboxSrc(activeMember.avatarUrl)}
+                      className="rounded-full"
+                      style={{ cursor: activeMember.avatarUrl ? 'pointer' : 'default' }}
+                    >
+                      <Avatar name={activeMember.displayName} seed={activeMember.id} size={88} online={activeMember.online} src={activeMember.avatarUrl} />
+                    </button>
                     <div className="mt-3 font-semibold text-lg text-center truncate max-w-full">
                       {activeMember.displayName}
                     </div>
@@ -265,7 +312,43 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
               >
                 <IconClose size={17} />
               </button>
-              <Avatar name={conversation.name} seed={conversation.id} size={88} isGroup={conversation.isGroup} />
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    if (isGroupAdmin) groupAvatarInputRef.current?.click();
+                    else if (conversation.avatarUrl) setLightboxSrc(conversation.avatarUrl);
+                  }}
+                  disabled={groupAvatarBusy}
+                  className="rounded-full disabled:opacity-60"
+                  style={{ cursor: isGroupAdmin || conversation.avatarUrl ? 'pointer' : 'default' }}
+                >
+                  <Avatar name={conversation.name} seed={conversation.id} size={88} isGroup={conversation.isGroup} src={conversation.avatarUrl} />
+                  {isGroupAdmin && (
+                    <span
+                      className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full flex items-center justify-center"
+                      style={{ background: 'var(--accent)', border: '2px solid var(--overlay)' }}
+                    >
+                      <IconEdit size={13} className="text-white" />
+                    </span>
+                  )}
+                </button>
+                {isGroupAdmin && (
+                  <input
+                    ref={groupAvatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleGroupAvatarPick}
+                  />
+                )}
+              </div>
+              {isGroupAdmin && groupAvatarBusy && <div className="text-xs text-muted mt-1">Загружаем…</div>}
+              {isGroupAdmin && groupAvatarError && <div className="text-xs text-red-400 mt-1">{groupAvatarError}</div>}
+              {isGroupAdmin && conversation.avatarUrl && !groupAvatarBusy && (
+                <button onClick={handleGroupAvatarDelete} className="text-xs text-red-400 hover:underline mt-1">
+                  Удалить фото группы
+                </button>
+              )}
               <div className="mt-3 font-semibold text-lg text-center truncate max-w-full">{conversation.name}</div>
               <div className="text-sm text-muted mt-0.5">{subtitle}</div>
 
@@ -389,7 +472,7 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
                       onClick={() => openMember(m)}
                       className="w-full flex items-center gap-3 px-4 py-2 hover:bg-hover text-left"
                     >
-                      <Avatar name={m.displayName} seed={m.id} size={40} online={m.online} />
+                      <Avatar name={m.displayName} seed={m.id} size={40} online={m.online} src={m.avatarUrl} />
                       <div className="min-w-0">
                         <div className="text-sm truncate">{m.displayName}</div>
                         <div className="text-xs text-muted truncate">@{m.username}</div>
@@ -403,5 +486,7 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
         )}
       </div>
     </div>
+    <AvatarLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+    </>
   );
 }
