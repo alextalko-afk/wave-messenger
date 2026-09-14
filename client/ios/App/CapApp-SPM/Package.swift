@@ -16,13 +16,15 @@ let package = Package(
             targets: ["CapApp-SPM"])
     ],
     dependencies: [
-        .package(url: "https://github.com/socketio/socket.io-client-swift", .upToNextMinor(from: "16.1.1"))
+        .package(url: "https://github.com/socketio/socket.io-client-swift", .upToNextMinor(from: "16.1.1")),
+        .package(url: "https://github.com/google/GoogleSignIn-iOS", from: "7.1.0")
     ],
     targets: [
         .target(
             name: "CapApp-SPM",
             dependencies: [
-                .product(name: "SocketIO", package: "socket.io-client-swift")
+                .product(name: "SocketIO", package: "socket.io-client-swift"),
+                .product(name: "GoogleSignIn", package: "GoogleSignIn-iOS")
             ]
         )
     ]

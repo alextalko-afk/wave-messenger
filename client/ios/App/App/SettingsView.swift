@@ -9,6 +9,8 @@ struct SettingsView: View {
     @State private var saving = false
     @State private var error: String?
     @State private var saved = false
+    @State private var linkingGoogle = false
+    @State private var googleError: String?
 
     var body: some View {
         NavigationStack {
@@ -76,6 +78,46 @@ struct SettingsView: View {
                         .cornerRadius(18)
                         .padding(.horizontal, 16)
 
+                        if session.user?.hasGoogle != true {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Google-аккаунт")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(Wave.textPrimary)
+                                Text("Привяжите Google, чтобы входить в один тап и не терять доступ к аккаунту.")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Wave.muted)
+
+                                if let googleError {
+                                    Text(googleError).font(.system(size: 12)).foregroundColor(.red)
+                                }
+
+                                Button(action: linkGoogle) {
+                                    ZStack {
+                                        if linkingGoogle {
+                                            ProgressView().tint(Wave.textPrimary)
+                                        } else {
+                                            Text("Привязать Google")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundColor(Wave.textPrimary)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Wave.bg)
+                                    .clipShape(RoundedRectangle(cornerRadius: 50))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 50)
+                                            .stroke(Wave.muted.opacity(0.35), lineWidth: 1)
+                                    )
+                                }
+                                .disabled(linkingGoogle)
+                            }
+                            .padding(16)
+                            .background(Wave.panel.opacity(0.6))
+                            .cornerRadius(18)
+                            .padding(.horizontal, 16)
+                        }
+
                         Button {
                             session.logout()
                             dismiss()
@@ -128,6 +170,35 @@ struct SettingsView: View {
                 await MainActor.run {
                     self.error = error.localizedDescription
                     saving = false
+                }
+            }
+        }
+    }
+
+    private func linkGoogle() {
+        googleError = nil
+        linkingGoogle = true
+        GoogleAuthManager.signIn { result in
+            switch result {
+            case .success(let idToken):
+                Task {
+                    do {
+                        let res = try await APIClient.shared.linkGoogle(idToken: idToken)
+                        await MainActor.run {
+                            session.updateUser(res.user)
+                            linkingGoogle = false
+                        }
+                    } catch {
+                        await MainActor.run {
+                            googleError = error.localizedDescription
+                            linkingGoogle = false
+                        }
+                    }
+                }
+            case .failure(let err):
+                DispatchQueue.main.async {
+                    googleError = err.localizedDescription
+                    linkingGoogle = false
                 }
             }
         }

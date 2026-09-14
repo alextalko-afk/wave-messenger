@@ -73,6 +73,16 @@ struct AuthResponse: Codable {
     let user: User
 }
 
+struct GoogleAuthBody: Codable {
+    let idToken: String
+}
+
+struct GoogleAuthResponse: Codable {
+    let token: String
+    let user: User
+    let isNewUser: Bool
+}
+
 struct MeResponse: Codable {
     let user: User
 }

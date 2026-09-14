@@ -36,6 +36,7 @@
 		096CE424650D4C2593FEA2A1 /* CameraCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE488D035D5446296119A54 /* CameraCapture.swift */; };
 		92D392960BD4419399F81808 /* ConversationInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AC69C264A2439EB1D9D84D /* ConversationInfoView.swift */; };
 		3964078E5ED048279672FE21 /* ForwardPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16ECCA206D4247F9BC0B3D64 /* ForwardPickerView.swift */; };
+		8A2BFF76CD53426A903A0732 /* GoogleAuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E767B9E29C204C639502ED5F /* GoogleAuthManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -70,6 +71,7 @@
 		0FE488D035D5446296119A54 /* CameraCapture.swift */ = {isa = PBXFileReference; name = "CameraCapture.swift"; path = "CameraCapture.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		00AC69C264A2439EB1D9D84D /* ConversationInfoView.swift */ = {isa = PBXFileReference; name = "ConversationInfoView.swift"; path = "ConversationInfoView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		16ECCA206D4247F9BC0B3D64 /* ForwardPickerView.swift */ = {isa = PBXFileReference; name = "ForwardPickerView.swift"; path = "ForwardPickerView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		E767B9E29C204C639502ED5F /* GoogleAuthManager.swift */ = {isa = PBXFileReference; name = "GoogleAuthManager.swift"; path = "GoogleAuthManager.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -133,6 +135,7 @@
 				0FE488D035D5446296119A54 /* CameraCapture.swift */,
 				00AC69C264A2439EB1D9D84D /* ConversationInfoView.swift */,
 				16ECCA206D4247F9BC0B3D64 /* ForwardPickerView.swift */,
+				E767B9E29C204C639502ED5F /* GoogleAuthManager.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -240,6 +243,7 @@
 				096CE424650D4C2593FEA2A1 /* CameraCapture.swift in Sources */,
 				92D392960BD4419399F81808 /* ConversationInfoView.swift in Sources */,
 				3964078E5ED048279672FE21 /* ForwardPickerView.swift in Sources */,
+				8A2BFF76CD53426A903A0732 /* GoogleAuthManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

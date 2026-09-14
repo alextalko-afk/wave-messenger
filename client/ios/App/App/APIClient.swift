@@ -67,6 +67,14 @@ final class APIClient {
         try await request("api/auth/login", method: "POST", body: LoginBody(username: username, password: password))
     }
 
+    func googleAuth(idToken: String) async throws -> GoogleAuthResponse {
+        try await request("api/auth/google", method: "POST", body: GoogleAuthBody(idToken: idToken))
+    }
+
+    func linkGoogle(idToken: String) async throws -> MeResponse {
+        try await request("api/auth/link-google", method: "POST", body: GoogleAuthBody(idToken: idToken))
+    }
+
     func me() async throws -> MeResponse {
         try await request("api/auth/me")
     }

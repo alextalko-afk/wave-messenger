@@ -9,6 +9,7 @@ struct ChatListView: View {
     @State private var showingNewChat = false
     @State private var showingNewGroup = false
     @State private var showingSettings = false
+    @State private var searching = false
     @State private var searchText = ""
 
     private var filtered: [Conversation] {
@@ -46,73 +47,54 @@ struct ChatListView: View {
                         .cornerRadius(12)
                         .padding(.top, 6)
                     }
+                } else if filtered.isEmpty {
+                    Text("Ничего не найдено").foregroundColor(Wave.muted)
                 } else {
-                    VStack(spacing: 0) {
-                        searchField
-
-                        if filtered.isEmpty {
-                            Spacer()
-                            Text("Ничего не найдено").foregroundColor(Wave.muted)
-                            Spacer()
-                        } else {
-                            List(filtered) { conversation in
-                                NavigationLink(value: conversation) {
-                                    ConversationRow(conversation: conversation)
-                                }
-                                .listRowBackground(Wave.bg)
-                                .listRowSeparatorTint(Wave.border)
-                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 0))
-                                .swipeActions(edge: .trailing) {
-                                    Button(role: .destructive) { delete(conversation) } label: {
-                                        Label("Удалить", systemImage: "trash")
-                                    }
-                                    Button { toggleMute(conversation) } label: {
-                                        Label(conversation.muted ? "Вкл. звук" : "Без звука", systemImage: conversation.muted ? "bell.fill" : "bell.slash.fill")
-                                    }
-                                    .tint(.orange)
-                                }
-                                .swipeActions(edge: .leading) {
-                                    Button { togglePin(conversation) } label: {
-                                        Label(conversation.pinned ? "Открепить" : "Закрепить", systemImage: "pin.fill")
-                                    }
-                                    .tint(Wave.accent2)
-                                }
-                                .contextMenu {
-                                    Button { togglePin(conversation) } label: {
-                                        Label(conversation.pinned ? "Открепить" : "Закрепить", systemImage: "pin")
-                                    }
-                                    Button { toggleMute(conversation) } label: {
-                                        Label(conversation.muted ? "Включить уведомления" : "Отключить уведомления", systemImage: conversation.muted ? "bell" : "bell.slash")
-                                    }
-                                    Button { toggleMarkUnread(conversation) } label: {
-                                        Label("Отметить непрочитанным", systemImage: "envelope.badge")
-                                    }
-                                    Button(role: .destructive) { delete(conversation) } label: {
-                                        Label("Удалить", systemImage: "trash")
-                                    }
-                                }
+                    List(filtered) { conversation in
+                        NavigationLink(value: conversation) {
+                            ConversationRow(conversation: conversation)
+                        }
+                        .listRowBackground(Wave.bg)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) { delete(conversation) } label: {
+                                Label("Удалить", systemImage: "trash")
                             }
-                            .listStyle(.plain)
-                            .scrollContentBackground(.hidden)
-                            .background(Wave.bg)
-                            .refreshable { await load() }
+                            Button { toggleMute(conversation) } label: {
+                                Label(conversation.muted ? "Вкл. звук" : "Без звука", systemImage: conversation.muted ? "bell.fill" : "bell.slash.fill")
+                            }
+                            .tint(.orange)
+                        }
+                        .swipeActions(edge: .leading) {
+                            Button { togglePin(conversation) } label: {
+                                Label(conversation.pinned ? "Открепить" : "Закрепить", systemImage: "pin.fill")
+                            }
+                            .tint(Wave.accent2)
+                        }
+                        .contextMenu {
+                            Button { togglePin(conversation) } label: {
+                                Label(conversation.pinned ? "Открепить" : "Закрепить", systemImage: "pin")
+                            }
+                            Button { toggleMute(conversation) } label: {
+                                Label(conversation.muted ? "Включить уведомления" : "Отключить уведомления", systemImage: conversation.muted ? "bell" : "bell.slash")
+                            }
+                            Button { toggleMarkUnread(conversation) } label: {
+                                Label("Отметить непрочитанным", systemImage: "envelope.badge")
+                            }
+                            Button(role: .destructive) { delete(conversation) } label: {
+                                Label("Удалить", systemImage: "trash")
+                            }
                         }
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .background(Wave.bg)
+                    .refreshable { await load() }
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Чаты")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(Wave.textPrimary)
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button { showingSettings = true } label: {
-                        Image(systemName: "gearshape.fill")
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
+            .overlay(alignment: .bottomTrailing) {
+                if !searching {
                     Menu {
                         Button { showingNewChat = true } label: {
                             Label("Новый чат", systemImage: "person")
@@ -121,11 +103,63 @@ struct ChatListView: View {
                             Label("Новая группа", systemImage: "person.3")
                         }
                     } label: {
-                        Image(systemName: "square.and.pencil")
+                        Image(systemName: "plus")
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 58, height: 58)
+                            .background(Wave.accentGradient)
+                            .clipShape(Circle())
+                            .shadow(color: Wave.accent.opacity(0.45), radius: 12, y: 6)
+                    }
+                    .padding(20)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    if searching {
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass").foregroundColor(Wave.muted).font(.system(size: 14))
+                            TextField("Поиск", text: $searchText)
+                                .foregroundColor(Wave.textPrimary)
+                                .autocorrectionDisabled()
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(Wave.panel2)
+                        .cornerRadius(14)
+                    } else {
+                        Text("Wave")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(Wave.textPrimary)
+                    }
+                }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if searching {
+                        Button {
+                            searching = false
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "arrow.left")
+                        }
+                        .foregroundColor(Wave.muted)
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if !searching {
+                        HStack(spacing: 18) {
+                            Button { searching = true } label: {
+                                Image(systemName: "magnifyingglass")
+                            }
+                            Button { showingSettings = true } label: {
+                                Image(systemName: "gearshape")
+                            }
+                        }
+                        .foregroundColor(Wave.muted)
                     }
                 }
             }
-            .toolbarBackground(Wave.bg, for: .navigationBar)
+            .toolbarBackground(Wave.panel, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .navigationDestination(for: Conversation.self) { conversation in
@@ -158,30 +192,6 @@ struct ChatListView: View {
             }
         }
         .tint(Wave.accent)
-    }
-
-    private var searchField: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(Wave.muted)
-                .font(.system(size: 15))
-            TextField("Поиск", text: $searchText)
-                .foregroundColor(Wave.textPrimary)
-                .autocorrectionDisabled()
-            if !searchText.isEmpty {
-                Button {
-                    searchText = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundColor(Wave.muted)
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Wave.panel2)
-        .cornerRadius(12)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
     }
 
     private func upsert(_ conversation: Conversation) {
@@ -252,49 +262,46 @@ private struct ConversationRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 56, online: conversation.otherUser?.online ?? false)
+            AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 52, online: conversation.otherUser?.online ?? false)
 
-            VStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    if conversation.pinned {
-                        Image(systemName: "pin.fill").font(.system(size: 10)).foregroundColor(Wave.muted)
-                    }
                     Text(conversation.name)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(Wave.textPrimary)
                         .lineLimit(1)
-                    Spacer()
-                    if let last = conversation.lastMessage {
-                        Text(WaveFormat.short(last.createdAt))
-                            .font(.system(size: 13))
-                            .foregroundColor(Wave.mutedFaint)
+                    if conversation.muted {
+                        Image(systemName: "bell.slash.fill").font(.system(size: 12)).foregroundColor(Wave.muted)
                     }
                 }
+                Text(lastMessagePreview)
+                    .font(.system(size: 14))
+                    .foregroundColor(Wave.muted)
+                    .lineLimit(1)
+            }
 
-                HStack(spacing: 6) {
-                    Text(lastMessagePreview)
-                        .font(.system(size: 14))
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                if conversation.pinned {
+                    Image(systemName: "pin.fill").font(.system(size: 12)).foregroundColor(Wave.muted)
+                }
+                if let last = conversation.lastMessage {
+                    Text(WaveFormat.short(last.createdAt))
+                        .font(.system(size: 11))
                         .foregroundColor(Wave.muted)
-                        .lineLimit(1)
-
-                    Spacer()
-
-                    if conversation.muted {
-                        Image(systemName: "bell.slash.fill").font(.system(size: 12)).foregroundColor(Wave.mutedFaint)
-                    }
-                    if conversation.unreadCount > 0 {
-                        Text("\(conversation.unreadCount)")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(minWidth: 20, minHeight: 20)
-                            .background(conversation.muted ? Wave.mutedFaint : Wave.accent)
-                            .clipShape(Circle())
-                    }
+                }
+                if conversation.unreadCount > 0 {
+                    Text("\(conversation.unreadCount)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(minWidth: 18, minHeight: 18)
+                        .background(Wave.accent)
+                        .clipShape(Circle())
                 }
             }
         }
-        .padding(.vertical, 8)
-        .padding(.trailing, 16)
+        .padding(.vertical, 10)
     }
 
     private var lastMessagePreview: String {
