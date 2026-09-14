@@ -63,16 +63,6 @@ struct Message: Codable, Identifiable, Equatable {
     let createdAt: Int
 }
 
-struct LoginBody: Codable {
-    let username: String
-    let password: String
-}
-
-struct AuthResponse: Codable {
-    let token: String
-    let user: User
-}
-
 struct GoogleAuthBody: Codable {
     let idToken: String
 }

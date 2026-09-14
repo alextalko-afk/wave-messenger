@@ -63,10 +63,6 @@ final class APIClient {
         return try decoder.decode(T.self, from: data)
     }
 
-    func login(username: String, password: String) async throws -> AuthResponse {
-        try await request("api/auth/login", method: "POST", body: LoginBody(username: username, password: password))
-    }
-
     func googleAuth(idToken: String) async throws -> GoogleAuthResponse {
         try await request("api/auth/google", method: "POST", body: GoogleAuthBody(idToken: idToken))
     }

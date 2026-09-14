@@ -1,10 +1,7 @@
 import SwiftUI
 
 struct LoginView: View {
-    @State private var username = ""
-    @State private var password = ""
     @State private var error: String?
-    @State private var busy = false
     @State private var googleBusy = false
 
     var body: some View {
@@ -42,26 +39,12 @@ struct LoginView: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
 
-                            TextField("Логин", text: $username)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .padding()
-                                .background(Wave.panel2)
-                                .cornerRadius(12)
-                                .foregroundColor(Wave.textPrimary)
-
-                            SecureField("Пароль", text: $password)
-                                .padding()
-                                .background(Wave.panel2)
-                                .cornerRadius(12)
-                                .foregroundColor(Wave.textPrimary)
-
-                            Button(action: login) {
+                            Button(action: signInWithGoogle) {
                                 ZStack {
-                                    if busy {
+                                    if googleBusy {
                                         ProgressView().tint(.white)
                                     } else {
-                                        Text("Войти").fontWeight(.semibold)
+                                        Text("Войти через Google").fontWeight(.semibold)
                                     }
                                 }
                                 .frame(maxWidth: .infinity)
@@ -70,34 +53,7 @@ struct LoginView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(14)
                             }
-                            .opacity(username.isEmpty || password.isEmpty || busy ? 0.5 : 1)
-                            .disabled(username.isEmpty || password.isEmpty || busy)
-
-                            HStack(spacing: 8) {
-                                Rectangle().fill(Wave.border).frame(height: 1)
-                                Text("или").font(.system(size: 12)).foregroundColor(Wave.muted)
-                                Rectangle().fill(Wave.border).frame(height: 1)
-                            }
-
-                            Button(action: signInWithGoogle) {
-                                ZStack {
-                                    if googleBusy {
-                                        ProgressView().tint(Wave.textPrimary)
-                                    } else {
-                                        Text("Войти через Google")
-                                            .font(.system(size: 15.5, weight: .medium))
-                                            .foregroundColor(Wave.textPrimary)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Wave.bg)
-                                .clipShape(RoundedRectangle(cornerRadius: 50))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 50)
-                                        .stroke(Wave.muted.opacity(0.35), lineWidth: 1)
-                                )
-                            }
+                            .opacity(googleBusy ? 0.6 : 1)
                             .disabled(googleBusy)
                         }
                         .padding(20)
@@ -112,26 +68,6 @@ struct LoginView: View {
             }
         }
         .tint(Wave.accent)
-    }
-
-    private func login() {
-        error = nil
-        busy = true
-        Task {
-            do {
-                let res = try await APIClient.shared.login(username: username, password: password)
-                await MainActor.run {
-                    SessionStore.shared.login(token: res.token, user: res.user)
-                    AppSocketManager.shared.connect(token: res.token)
-                    busy = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.error = error.localizedDescription
-                    self.busy = false
-                }
-            }
-        }
     }
 
     private func signInWithGoogle() {
