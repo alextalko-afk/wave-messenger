@@ -135,6 +135,7 @@ struct MarkUnreadBody: Codable {
 struct UpdateProfileBody: Codable {
     let displayName: String?
     let bio: String?
+    let username: String?
 }
 
 struct UploadResponse: Codable {

@@ -4,6 +4,7 @@ import SwiftUI
 struct WaveApp: App {
     init() {
         GoogleAuthManager.configure()
+        _ = ThemeManager.shared
     }
 
     var body: some Scene {

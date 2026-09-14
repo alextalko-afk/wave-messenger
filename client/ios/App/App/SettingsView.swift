@@ -1,16 +1,41 @@
 import SwiftUI
+import UIKit
+
+enum AppIconOption: String, CaseIterable, Identifiable {
+    case `default`
+    case mono
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .default: return "Обычная"
+        case .mono: return "Ч/б"
+        }
+    }
+
+    var iconName: String? {
+        switch self {
+        case .default: return nil
+        case .mono: return "Mono"
+        }
+    }
+}
 
 struct SettingsView: View {
     @ObservedObject private var session = SessionStore.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var displayName = ""
+    @State private var username = ""
     @State private var bio = ""
     @State private var saving = false
     @State private var error: String?
     @State private var saved = false
     @State private var linkingGoogle = false
     @State private var googleError: String?
+    @State private var selectedIcon: AppIconOption = .default
 
     var body: some View {
         NavigationStack {
@@ -34,6 +59,17 @@ struct SettingsView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Имя").font(.system(size: 12)).foregroundColor(Wave.muted)
                                 TextField("Имя", text: $displayName)
+                                    .padding(12)
+                                    .background(Wave.panel2)
+                                    .cornerRadius(10)
+                                    .foregroundColor(Wave.textPrimary)
+                            }
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Логин").font(.system(size: 12)).foregroundColor(Wave.muted)
+                                TextField("Логин", text: $username)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
                                     .padding(12)
                                     .background(Wave.panel2)
                                     .cornerRadius(10)
@@ -70,8 +106,34 @@ struct SettingsView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(12)
                             }
-                            .opacity(saving || displayName.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1)
-                            .disabled(saving || displayName.trimmingCharacters(in: .whitespaces).isEmpty)
+                            .opacity(saving || displayName.trimmingCharacters(in: .whitespaces).isEmpty || username.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1)
+                            .disabled(saving || displayName.trimmingCharacters(in: .whitespaces).isEmpty || username.trimmingCharacters(in: .whitespaces).isEmpty)
+                        }
+                        .padding(16)
+                        .background(Wave.panel.opacity(0.6))
+                        .cornerRadius(18)
+                        .padding(.horizontal, 16)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Тема").font(.system(size: 15, weight: .semibold)).foregroundColor(Wave.textPrimary)
+                            HStack(spacing: 14) {
+                                ForEach(ThemeMode.allCases) { mode in
+                                    themeSwatch(mode)
+                                }
+                            }
+                        }
+                        .padding(16)
+                        .background(Wave.panel.opacity(0.6))
+                        .cornerRadius(18)
+                        .padding(.horizontal, 16)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Иконка приложения").font(.system(size: 15, weight: .semibold)).foregroundColor(Wave.textPrimary)
+                            HStack(spacing: 14) {
+                                ForEach(AppIconOption.allCases) { option in
+                                    iconSwatch(option)
+                                }
+                            }
                         }
                         .padding(16)
                         .background(Wave.panel.opacity(0.6))
@@ -148,10 +210,63 @@ struct SettingsView: View {
             }
             .onAppear {
                 displayName = session.user?.displayName ?? ""
+                username = session.user?.username ?? ""
                 bio = session.user?.bio ?? ""
+                selectedIcon = UIApplication.shared.alternateIconName == AppIconOption.mono.iconName ? .mono : .default
             }
         }
         .tint(Wave.accent)
+    }
+
+    private func themeSwatch(_ mode: ThemeMode) -> some View {
+        let colors: [Color] = mode == .mono
+            ? [.white, Color(white: 0.85), Color(white: 0.7)]
+            : [Wave.accent, Wave.accent2, Wave.accentDeep]
+        return Button {
+            themeManager.mode = mode
+        } label: {
+            VStack(spacing: 6) {
+                LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .frame(width: 64, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(themeManager.mode == mode ? Wave.accent : Color.clear, lineWidth: 3)
+                    )
+                Text(mode.title).font(.system(size: 11)).foregroundColor(Wave.muted)
+            }
+        }
+    }
+
+    private func iconSwatch(_ option: AppIconOption) -> some View {
+        Button {
+            setIcon(option)
+        } label: {
+            VStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(option == .mono ? Color(white: 0.5) : Wave.accentGradient)
+                    .frame(width: 64, height: 64)
+                    .overlay(
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.white)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(selectedIcon == option ? Wave.accent : Color.clear, lineWidth: 3)
+                    )
+                Text(option.title).font(.system(size: 11)).foregroundColor(Wave.muted)
+            }
+        }
+    }
+
+    private func setIcon(_ option: AppIconOption) {
+        guard UIApplication.shared.supportsAlternateIcons else { return }
+        UIApplication.shared.setAlternateIconName(option.iconName) { error in
+            if error == nil {
+                DispatchQueue.main.async { selectedIcon = option }
+            }
+        }
     }
 
     private func save() {
@@ -160,7 +275,7 @@ struct SettingsView: View {
         saved = false
         Task {
             do {
-                let res = try await APIClient.shared.updateProfile(displayName: displayName, bio: bio)
+                let res = try await APIClient.shared.updateProfile(displayName: displayName, bio: bio, username: username)
                 await MainActor.run {
                     session.updateUser(res.user)
                     saving = false

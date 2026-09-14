@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootView: View {
     @ObservedObject private var session = SessionStore.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         Group {
@@ -11,6 +12,7 @@ struct RootView: View {
                 LoginView()
             }
         }
+        .id(themeManager.mode)
         .tint(Wave.accent)
         .preferredColorScheme(.dark)
         .onAppear {

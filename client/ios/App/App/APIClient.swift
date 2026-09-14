@@ -92,8 +92,15 @@ final class APIClient {
     }
 
     func searchUsers(query: String) async throws -> UsersSearchResponse {
+        // Usernames are always shown with a leading "@" in the UI, so
+        // people naturally type it when searching - strip it since the
+        // backend matches the stored username without one.
+        var cleaned = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned.hasPrefix("@") {
+            cleaned.removeFirst()
+        }
         var components = URLComponents()
-        components.queryItems = [URLQueryItem(name: "q", value: query)]
+        components.queryItems = [URLQueryItem(name: "q", value: cleaned)]
         let queryString = components.percentEncodedQuery ?? ""
         return try await request("api/users/search?\(queryString)")
     }
@@ -156,8 +163,8 @@ final class APIClient {
         let _: OkResponse = try await request("api/conversations/\(conversationId)", method: "DELETE")
     }
 
-    func updateProfile(displayName: String?, bio: String?) async throws -> MeResponse {
-        try await request("api/auth/me", method: "PUT", body: UpdateProfileBody(displayName: displayName, bio: bio))
+    func updateProfile(displayName: String?, bio: String?, username: String? = nil) async throws -> MeResponse {
+        try await request("api/auth/me", method: "PUT", body: UpdateProfileBody(displayName: displayName, bio: bio, username: username))
     }
 
     func conversationStats(conversationId: String) async throws -> ConversationStats {

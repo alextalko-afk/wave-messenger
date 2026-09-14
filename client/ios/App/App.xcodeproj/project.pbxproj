@@ -37,6 +37,8 @@
 		92D392960BD4419399F81808 /* ConversationInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AC69C264A2439EB1D9D84D /* ConversationInfoView.swift */; };
 		3964078E5ED048279672FE21 /* ForwardPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16ECCA206D4247F9BC0B3D64 /* ForwardPickerView.swift */; };
 		8A2BFF76CD53426A903A0732 /* GoogleAuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E767B9E29C204C639502ED5F /* GoogleAuthManager.swift */; };
+		5962059F7BD34CFC9AA3A951 /* AppIconMono120.png in Resources */ = {isa = PBXBuildFile; fileRef = 80028890EF1C40268D2BB057 /* AppIconMono120.png */; };
+		3243A7E504564AF0A32F8A7D /* AppIconMono180.png in Resources */ = {isa = PBXBuildFile; fileRef = C389C2BB1CBD49238B4BD9F3 /* AppIconMono180.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -72,6 +74,8 @@
 		00AC69C264A2439EB1D9D84D /* ConversationInfoView.swift */ = {isa = PBXFileReference; name = "ConversationInfoView.swift"; path = "ConversationInfoView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		16ECCA206D4247F9BC0B3D64 /* ForwardPickerView.swift */ = {isa = PBXFileReference; name = "ForwardPickerView.swift"; path = "ForwardPickerView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		E767B9E29C204C639502ED5F /* GoogleAuthManager.swift */ = {isa = PBXFileReference; name = "GoogleAuthManager.swift"; path = "GoogleAuthManager.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		80028890EF1C40268D2BB057 /* AppIconMono120.png */ = {isa = PBXFileReference; name = "AppIconMono120.png"; path = "AlternateIcons/AppIconMono120.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		C389C2BB1CBD49238B4BD9F3 /* AppIconMono180.png */ = {isa = PBXFileReference; name = "AppIconMono180.png"; path = "AlternateIcons/AppIconMono180.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,6 +140,8 @@
 				00AC69C264A2439EB1D9D84D /* ConversationInfoView.swift */,
 				16ECCA206D4247F9BC0B3D64 /* ForwardPickerView.swift */,
 				E767B9E29C204C639502ED5F /* GoogleAuthManager.swift */,
+				80028890EF1C40268D2BB057 /* AppIconMono120.png */,
+				C389C2BB1CBD49238B4BD9F3 /* AppIconMono180.png */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -211,6 +217,8 @@
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
+				5962059F7BD34CFC9AA3A951 /* AppIconMono120.png in Resources */,
+				3243A7E504564AF0A32F8A7D /* AppIconMono180.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

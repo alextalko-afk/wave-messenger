@@ -28,6 +28,22 @@
 	<string>Нужен доступ к микрофону, чтобы отправлять голосовые сообщения</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Нужен доступ к камере, чтобы отправлять фото из чата</string>
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundleAlternateIcons</key>
+		<dict>
+			<key>Mono</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>AppIconMono120</string>
+					<string>AppIconMono180</string>
+				</array>
+				<key>UIPrerenderedIcon</key>
+				<false/>
+			</dict>
+		</dict>
+	</dict>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
