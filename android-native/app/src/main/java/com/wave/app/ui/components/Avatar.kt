@@ -14,13 +14,16 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.wave.app.network.resolveMediaUrl
 import com.wave.app.ui.theme.Inter
 
 @Composable
-fun Avatar(name: String, colorHex: String?, size: Int = 44) {
+fun Avatar(name: String, colorHex: String?, size: Int = 44, avatarUrl: String? = null) {
     val base = remember(colorHex) {
         runCatching { Color(android.graphics.Color.parseColor(colorHex ?: "#7c5cff")) }
             .getOrDefault(Color(0xFF7C5CFF))
@@ -28,6 +31,18 @@ fun Avatar(name: String, colorHex: String?, size: Int = 44) {
     val light = remember(base) { lerp(base, Color.White, 0.16f) }
     val deep = remember(base) { lerp(base, Color.Black, 0.28f) }
     val initial = name.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+
+    if (!avatarUrl.isNullOrEmpty()) {
+        AsyncImage(
+            model = resolveMediaUrl(avatarUrl),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(size.dp)
+                .clip(CircleShape)
+        )
+        return
+    }
 
     Box(
         modifier = Modifier

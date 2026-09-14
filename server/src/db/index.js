@@ -91,6 +91,7 @@ await ensureColumn('conversation_members', 'manually_unread', 'INTEGER DEFAULT 0
 await ensureColumn('conversation_members', 'cleared_before', 'INTEGER DEFAULT 0');
 await ensureColumn('users', 'phone', 'TEXT');
 await ensureColumn('users', 'google_id', 'TEXT');
+await ensureColumn('users', 'avatar_url', 'TEXT');
 
 export async function get(sql, args = []) {
   const res = await client.execute({ sql, args });

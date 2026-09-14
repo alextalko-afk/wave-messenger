@@ -155,13 +155,14 @@ io.on('connection', (socket) => {
         [id, conversationId, userId, content?.trim() || '', fileUrl || null, fileName || null, fileType || null, replyToId || null]
       );
 
-      const sender = await get('SELECT display_name, avatar_color FROM users WHERE id = ?', [userId]);
+      const sender = await get('SELECT display_name, avatar_color, avatar_url FROM users WHERE id = ?', [userId]);
       const message = {
         id,
         conversationId,
         senderId: userId,
         senderName: sender.display_name,
         senderColor: sender.avatar_color,
+        senderAvatarUrl: sender.avatar_url || null,
         content: content?.trim() || '',
         fileUrl: fileUrl || null,
         fileName: fileName || null,
@@ -235,11 +236,11 @@ io.on('connection', (socket) => {
   // just relays them to every active socket of the target user (mirroring
   // how message delivery already works via onlineUsers). No call state is
   // persisted server-side - clients own the call lifecycle.
-  socket.on('call:invite', ({ conversationId, targetUserId, callId, kind, sdp, fromDisplayName, fromAvatarColor }) => {
+  socket.on('call:invite', ({ conversationId, targetUserId, callId, kind, sdp, fromDisplayName, fromAvatarColor, fromAvatarUrl }) => {
     const sockets = onlineUsers.get(targetUserId);
     if (!sockets) return;
     for (const sid of sockets) {
-      io.to(sid).emit('call:invite', { conversationId, callId, kind, sdp, fromUserId: userId, fromDisplayName, fromAvatarColor });
+      io.to(sid).emit('call:invite', { conversationId, callId, kind, sdp, fromUserId: userId, fromDisplayName, fromAvatarColor, fromAvatarUrl });
     }
   });
 

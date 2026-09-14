@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSocket } from '../context/SocketContext.jsx';
+import { useCall } from '../context/CallContext.jsx';
 import Avatar from './Avatar.jsx';
 import MessageBubble from './MessageBubble.jsx';
 import ProfileInfoPanel from './ProfileInfoPanel.jsx';
 import EmojiPopover from './EmojiPopover.jsx';
 import { formatDayLabel, formatLastSeen } from '../lib/format.js';
-import { IconBack, IconPaperclip, IconSend, IconMic, IconTrash, IconCheck, IconChatLogo, IconSmile, IconSticker, IconFile, IconClose } from './Icons.jsx';
+import { IconBack, IconPaperclip, IconSend, IconMic, IconTrash, IconCheck, IconChatLogo, IconSmile, IconSticker, IconFile, IconClose, IconPhone, IconVideo } from './Icons.jsx';
 
 function formatClock(sec) {
   const m = Math.floor(sec / 60);
@@ -18,6 +19,7 @@ function formatClock(sec) {
 export default function ChatWindow({ conversation, onBack, onConversationUpdate, onOpenConversation, onConversationAction }) {
   const { user } = useAuth();
   const socket = useSocket();
+  const call = useCall();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -264,6 +266,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
             size={42}
             online={conversation.otherUser?.online}
             isGroup={conversation.isGroup}
+            src={conversation.avatarUrl}
           />
           <div className="flex-1 min-w-0">
             <div className="font-semibold truncate text-[15px]">{conversation.name}</div>
@@ -283,6 +286,26 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
             </div>
           </div>
         </button>
+        {conversation.otherUser && (
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => call.startCall(conversation, 'audio')}
+              disabled={call.state.status !== 'idle'}
+              className="w-9 h-9 rounded-full hover:bg-hover flex items-center justify-center text-accent disabled:opacity-40"
+              title="Аудиозвонок"
+            >
+              <IconPhone size={19} />
+            </button>
+            <button
+              onClick={() => call.startCall(conversation, 'video')}
+              disabled={call.state.status !== 'idle'}
+              className="w-9 h-9 rounded-full hover:bg-hover flex items-center justify-center text-accent disabled:opacity-40"
+              title="Видеозвонок"
+            >
+              <IconVideo size={19} />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 sm:px-10 py-3">

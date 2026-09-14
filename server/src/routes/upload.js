@@ -6,6 +6,8 @@ import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import { authMiddleware } from '../middleware/auth.js';
 import { uploadsDir } from '../paths.js';
+import { run, get } from '../db/index.js';
+import { publicUser } from './auth.js';
 
 const useCloudinary = !!process.env.CLOUDINARY_CLOUD_NAME;
 
@@ -39,6 +41,17 @@ router.post('/', authMiddleware, upload.single('file'), (req, res) => {
     name: req.file.originalname,
     type: req.file.mimetype,
   });
+});
+
+router.post('/avatar', authMiddleware, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
+  if (!req.file.mimetype?.startsWith('image/')) {
+    return res.status(400).json({ error: 'Аватар должен быть изображением' });
+  }
+  const url = useCloudinary ? req.file.path : `/uploads/${req.file.filename}`;
+  await run('UPDATE users SET avatar_url = ? WHERE id = ?', [url, req.userId]);
+  const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
+  res.json({ user: publicUser(user) });
 });
 
 export default router;

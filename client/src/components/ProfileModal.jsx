@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { renderGoogleButton } from '../lib/googleAuth.js';
 import Avatar from './Avatar.jsx';
+import { IconEdit } from './Icons.jsx';
 
 function Switch({ on }) {
   return (
@@ -38,6 +39,30 @@ export default function ProfileModal({ onClose }) {
 
   const [googleError, setGoogleError] = useState('');
   const googleButtonRef = useRef(null);
+
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+  const avatarInputRef = useRef(null);
+
+  async function handleAvatarPick(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('Выберите изображение');
+      return;
+    }
+    setAvatarBusy(true);
+    setAvatarError('');
+    try {
+      const { user: updated } = await api.uploadAvatar(file);
+      setUser(updated);
+    } catch (err) {
+      setAvatarError(err.message);
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (user.hasGoogle || !googleButtonRef.current) return;
@@ -115,8 +140,30 @@ export default function ProfileModal({ onClose }) {
       >
         <h2 className="text-lg font-semibold mb-4 text-center">Настройки</h2>
 
-        <div className="flex justify-center mb-5">
-          <Avatar name={displayName || user.displayName} seed={user.id} size={80} />
+        <div className="flex flex-col items-center mb-5">
+          <button
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={avatarBusy}
+            className="relative rounded-full disabled:opacity-60"
+            title="Изменить фото"
+          >
+            <Avatar name={displayName || user.displayName} seed={user.id} size={80} src={user.avatarUrl} />
+            <span
+              className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full flex items-center justify-center"
+              style={{ background: 'var(--accent)', border: '2px solid var(--overlay)' }}
+            >
+              <IconEdit size={13} className="text-white" />
+            </span>
+          </button>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarPick}
+          />
+          {avatarBusy && <div className="mt-1.5 text-xs text-muted">Загружаем…</div>}
+          {avatarError && <div className="mt-1.5 text-xs text-red-400">{avatarError}</div>}
         </div>
 
         {error && <div className="mb-3 text-sm text-red-400 bg-red-500/10 rounded-xl px-3 py-2">{error}</div>}

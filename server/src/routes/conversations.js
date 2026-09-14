@@ -47,6 +47,7 @@ async function serializeConversation(conv, userId) {
     isGroup: !!conv.is_group,
     name: conv.is_group ? conv.name : other?.displayName || 'Диалог',
     avatarColor: conv.is_group ? conv.avatar_color : other?.avatarColor || '#7c5cff',
+    avatarUrl: conv.is_group ? null : other?.avatarUrl || null,
     members,
     otherUser: other || null,
     lastMessage: last
@@ -137,7 +138,7 @@ router.get('/:id/messages', async (req, res) => {
   const before = req.query.before ? Number(req.query.before) : Date.now() / 1000 + 1000000;
   const clearedBefore = member.cleared_before || 0;
   const rows = await all(
-    `SELECT m.*, u.display_name as sender_name, u.avatar_color as sender_color FROM messages m
+    `SELECT m.*, u.display_name as sender_name, u.avatar_color as sender_color, u.avatar_url as sender_avatar_url FROM messages m
      JOIN users u ON u.id = m.sender_id
      WHERE m.conversation_id = ? AND m.created_at < ? AND m.created_at > ? ORDER BY m.created_at DESC LIMIT 50`,
     [req.params.id, before, clearedBefore]
@@ -150,6 +151,7 @@ router.get('/:id/messages', async (req, res) => {
       senderId: m.sender_id,
       senderName: m.sender_name,
       senderColor: m.sender_color,
+      senderAvatarUrl: m.sender_avatar_url || null,
       content: m.deleted ? '' : m.content,
       fileUrl: m.deleted ? null : m.file_url,
       fileName: m.file_name,

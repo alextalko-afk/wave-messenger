@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import Avatar from './Avatar.jsx';
+import { useCall } from '../context/CallContext.jsx';
 import VoiceMessage from './VoiceMessage.jsx';
 import { formatLastSeen, formatDayLabel, pluralRu } from '../lib/format.js';
 import {
@@ -62,6 +63,7 @@ function ActionButton({ icon, label, onClick, disabled, title }) {
 }
 
 export default function ProfileInfoPanel({ conversation, open, onClose, onOpenConversation, onAction }) {
+  const call = useCall();
   const [stats, setStats] = useState(null);
   const [subView, setSubView] = useState(null); // 'photos' | 'files' | 'voice' | 'groups' | 'member'
   const [subItems, setSubItems] = useState(null);
@@ -153,7 +155,7 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
               {subView === 'member' && activeMember && (
                 <>
                   <div className="flex flex-col items-center px-4 pt-5 pb-4">
-                    <Avatar name={activeMember.displayName} seed={activeMember.id} size={88} online={activeMember.online} />
+                    <Avatar name={activeMember.displayName} seed={activeMember.id} size={88} online={activeMember.online} src={activeMember.avatarUrl} />
                     <div className="mt-3 font-semibold text-lg text-center truncate max-w-full">
                       {activeMember.displayName}
                     </div>
@@ -274,12 +276,17 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
                   label="Звук"
                   onClick={() => runAction('mute')}
                 />
-                <ActionButton
-                  icon={<IconPhone size={19} />}
-                  label="Звонок"
-                  disabled
-                  title="Звонки скоро появятся"
-                />
+                {conversation.otherUser && (
+                  <ActionButton
+                    icon={<IconPhone size={19} />}
+                    label="Звонок"
+                    disabled={call.state.status !== 'idle'}
+                    onClick={() => {
+                      call.startCall(conversation, 'audio');
+                      onClose();
+                    }}
+                  />
+                )}
                 <div className="flex-1 relative">
                   <ActionButton icon={<IconMoreDots size={19} />} label="Ещё" onClick={() => setMoreOpen((v) => !v)} />
                   {moreOpen && (

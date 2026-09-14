@@ -5,6 +5,7 @@ data class User(
     val username: String,
     val displayName: String,
     val avatarColor: String?,
+    val avatarUrl: String? = null,
     val bio: String? = null,
     val online: Boolean = false,
     val lastSeen: Long? = null,
@@ -30,6 +31,7 @@ data class Conversation(
     val isGroup: Boolean,
     val name: String,
     val avatarColor: String?,
+    val avatarUrl: String? = null,
     val members: List<User> = emptyList(),
     val otherUser: User?,
     val lastMessage: LastMessage?,
@@ -45,6 +47,7 @@ data class Message(
     val senderId: String,
     val senderName: String?,
     val senderColor: String?,
+    val senderAvatarUrl: String? = null,
     val content: String,
     val fileUrl: String?,
     val fileName: String?,
@@ -82,3 +85,5 @@ data class SharedGroup(
     val avatarColor: String?,
     val memberCount: Int
 )
+
+data class AvatarUploadResponse(val user: User)

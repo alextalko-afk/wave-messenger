@@ -127,7 +127,7 @@ fun NewGroupScreen(onBack: () -> Unit, onCreated: (Conversation) -> Unit) {
                                     .padding(horizontal = 16.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Avatar(name = user.displayName, colorHex = user.avatarColor, size = 44)
+                                Avatar(name = user.displayName, colorHex = user.avatarColor, size = 44, avatarUrl = user.avatarUrl)
                                 Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
                                     Text(user.displayName)
                                     Text("@${user.username}", color = WaveMuted)

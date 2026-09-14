@@ -204,7 +204,7 @@ fun ChatListScreen(
                                     .padding(horizontal = 16.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Avatar(name = user.displayName, colorHex = user.avatarColor, size = 46)
+                                Avatar(name = user.displayName, colorHex = user.avatarColor, size = 46, avatarUrl = user.avatarUrl)
                                 Column(modifier = Modifier.padding(start = 12.dp)) {
                                     Text(user.displayName, style = MaterialTheme.typography.titleMedium)
                                     Text("@${user.username}", color = WaveMuted, style = MaterialTheme.typography.bodyMedium)
@@ -271,7 +271,7 @@ private fun ConversationRow(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Avatar(name = conv.name, colorHex = conv.avatarColor, size = 52)
+            Avatar(name = conv.name, colorHex = conv.avatarColor, size = 52, avatarUrl = conv.avatarUrl)
             Column(modifier = Modifier.padding(start = 14.dp).weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(

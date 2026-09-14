@@ -20,11 +20,13 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -49,6 +51,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.wave.app.call.CallKind
+import com.wave.app.call.CallManager
 import com.wave.app.data.SessionStore
 import com.wave.app.data.uriToMultipart
 import com.wave.app.model.Conversation
@@ -112,6 +116,28 @@ fun ChatScreen(
         pendingAttachment = PendingAttachment(uri = uri, mimeType = mimeType)
     }
 
+    var pendingCallKind by remember { mutableStateOf<CallKind?>(null) }
+    val requestCallPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
+        val kind = pendingCallKind
+        pendingCallKind = null
+        if (kind != null && granted.values.all { it }) {
+            CallManager.startCall(conversation, kind)
+        }
+    }
+    fun startCallWithPermissions(kind: CallKind) {
+        val needed = mutableListOf(Manifest.permission.RECORD_AUDIO)
+        if (kind == CallKind.VIDEO) needed.add(Manifest.permission.CAMERA)
+        val allGranted = needed.all {
+            androidx.core.content.ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
+        if (allGranted) {
+            CallManager.startCall(conversation, kind)
+        } else {
+            pendingCallKind = kind
+            requestCallPermissions.launch(needed.toTypedArray())
+        }
+    }
+
     LaunchedEffect(isRecording) {
         while (isRecording) {
             kotlinx.coroutines.delay(1000)
@@ -169,7 +195,7 @@ fun ChatScreen(
                         modifier = Modifier.clickableNoRipple { onOpenInfo() }
                     ) {
                         Box {
-                            Avatar(name = conversation.name, colorHex = conversation.avatarColor, size = 36)
+                            Avatar(name = conversation.name, colorHex = conversation.avatarColor, size = 36, avatarUrl = conversation.avatarUrl)
                             if (!conversation.isGroup && conversation.otherUser?.online == true) {
                                 Box(
                                     modifier = Modifier
@@ -200,6 +226,16 @@ fun ChatScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                    }
+                },
+                actions = {
+                    if (conversation.otherUser != null) {
+                        IconButton(onClick = { startCallWithPermissions(CallKind.AUDIO) }) {
+                            Icon(Icons.Default.Call, contentDescription = "Аудиозвонок", tint = WaveAccent)
+                        }
+                        IconButton(onClick = { startCallWithPermissions(CallKind.VIDEO) }) {
+                            Icon(Icons.Default.Videocam, contentDescription = "Видеозвонок", tint = WaveAccent)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = WavePanel)

@@ -1,6 +1,7 @@
 package com.wave.app.network
 
 import com.wave.app.model.AuthResponse
+import com.wave.app.model.AvatarUploadResponse
 import com.wave.app.model.Conversation
 import com.wave.app.model.ConversationStats
 import com.wave.app.model.MediaItem
@@ -120,4 +121,8 @@ interface UploadApi {
     @Multipart
     @POST("api/upload")
     suspend fun upload(@Part file: MultipartBody.Part): UploadResponse
+
+    @Multipart
+    @POST("api/upload/avatar")
+    suspend fun uploadAvatar(@Part file: MultipartBody.Part): AvatarUploadResponse
 }

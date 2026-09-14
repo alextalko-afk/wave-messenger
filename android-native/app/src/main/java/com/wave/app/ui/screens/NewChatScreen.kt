@@ -105,7 +105,7 @@ fun NewChatScreen(onBack: () -> Unit, onOpen: (Conversation) -> Unit) {
                                     .padding(horizontal = 16.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Avatar(name = user.displayName, colorHex = user.avatarColor, size = 46)
+                                Avatar(name = user.displayName, colorHex = user.avatarColor, size = 46, avatarUrl = user.avatarUrl)
                                 Column(modifier = Modifier.padding(start = 12.dp)) {
                                     Text(user.displayName)
                                     Text("@${user.username}", color = WaveMuted)

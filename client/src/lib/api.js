@@ -51,4 +51,9 @@ export const api = {
     form.append('file', file);
     return request('/upload', { method: 'POST', body: form });
   },
+  uploadAvatar: (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request('/upload/avatar', { method: 'POST', body: form });
+  },
 };

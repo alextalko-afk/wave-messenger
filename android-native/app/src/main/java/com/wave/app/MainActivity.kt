@@ -9,6 +9,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -18,6 +21,7 @@ import com.wave.app.ui.AuthViewModel
 import com.wave.app.ui.ChatListViewModel
 import com.wave.app.ui.SelectedConversation
 import com.wave.app.ui.ViewModelFactory
+import com.wave.app.ui.screens.CallOverlay
 import com.wave.app.ui.screens.ChatInfoScreen
 import com.wave.app.ui.screens.ChatListScreen
 import com.wave.app.ui.screens.ChatScreen
@@ -49,6 +53,7 @@ class MainActivity : ComponentActivity() {
                 val motionSpec = tween<androidx.compose.ui.unit.IntOffset>(320, easing = androidx.compose.animation.core.FastOutSlowInEasing)
                 val fadeSpec = tween<Float>(280)
 
+                Box(modifier = Modifier.fillMaxSize()) {
                 NavHost(
                     navController = navController,
                     startDestination = startDestination,
@@ -156,6 +161,8 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                }
+                CallOverlay()
                 }
             }
         }

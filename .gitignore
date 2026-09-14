@@ -10,3 +10,4 @@ client/ios/App/build/
 client/ios/**/xcuserdata/
 client/ios/**/DerivedData/
 *.ipa
+desktop/release/

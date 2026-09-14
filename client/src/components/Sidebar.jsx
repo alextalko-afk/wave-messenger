@@ -173,7 +173,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
         </div>
 
         <div className="px-4 pt-2 pb-4">
-          <Avatar name={user.displayName} seed={user.id} size={60} />
+          <Avatar name={user.displayName} seed={user.id} size={60} src={user.avatarUrl} />
           <div className="mt-2.5 font-semibold text-[15px] truncate">{user.displayName}</div>
           <div className="text-xs text-muted truncate">@{user.username}</div>
         </div>
@@ -272,6 +272,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
                 size={52}
                 online={c.otherUser?.online}
                 isGroup={c.isGroup}
+                src={c.avatarUrl}
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
@@ -323,7 +324,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
                 onClick={() => openUser(u)}
                 className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-left mb-0.5 hover:bg-[var(--hover)] disabled:opacity-60"
               >
-                <Avatar name={u.displayName} seed={u.id} size={52} online={u.online} />
+                <Avatar name={u.displayName} seed={u.id} size={52} online={u.online} src={u.avatarUrl} />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate text-[15px]">{u.displayName}</div>
                   <div className="text-sm text-muted truncate">@{u.username}</div>

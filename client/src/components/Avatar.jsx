@@ -1,7 +1,7 @@
 import { gradientFor } from '../lib/avatarPalette.js';
 import { IconGroup } from './Icons.jsx';
 
-export default function Avatar({ name, seed, size = 40, online, isGroup }) {
+export default function Avatar({ name, seed, size = 40, online, isGroup, src }) {
   const initials = (name || '?')
     .trim()
     .split(/\s+/)
@@ -11,18 +11,27 @@ export default function Avatar({ name, seed, size = 40, online, isGroup }) {
 
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <div
-        className="rounded-full flex items-center justify-center text-white font-medium select-none"
-        style={{
-          width: size,
-          height: size,
-          background: gradientFor(seed || name),
-          fontSize: size * 0.4,
-          letterSpacing: '-0.02em',
-        }}
-      >
-        {isGroup ? <IconGroup size={size * 0.45} /> : initials}
-      </div>
+      {src ? (
+        <img
+          src={src}
+          alt=""
+          className="rounded-full object-cover select-none"
+          style={{ width: size, height: size }}
+        />
+      ) : (
+        <div
+          className="rounded-full flex items-center justify-center text-white font-medium select-none"
+          style={{
+            width: size,
+            height: size,
+            background: gradientFor(seed || name),
+            fontSize: size * 0.4,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          {isGroup ? <IconGroup size={size * 0.45} /> : initials}
+        </div>
+      )}
       {online && (
         <span
           className="absolute rounded-full"

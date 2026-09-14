@@ -8,6 +8,22 @@ import io.socket.client.IO
 import io.socket.client.Socket
 import org.json.JSONObject
 
+data class SdpPayload(val type: String, val sdp: String)
+data class IceCandidatePayload(val sdpMid: String?, val sdpMLineIndex: Int, val candidate: String)
+data class CallInviteEvent(
+    val conversationId: String,
+    val callId: String,
+    val kind: String,
+    val sdp: SdpPayload,
+    val fromUserId: String,
+    val fromDisplayName: String?,
+    val fromAvatarColor: String?,
+    val fromAvatarUrl: String?
+)
+data class CallAnswerEvent(val callId: String, val sdp: SdpPayload, val fromUserId: String)
+data class CallIceCandidateEvent(val callId: String, val candidate: IceCandidatePayload, val fromUserId: String)
+data class CallEndEvent(val callId: String, val fromUserId: String)
+
 /**
  * Thin wrapper around socket.io-client mirroring the events the web
  * client uses (see server/src/index.js): message:send/new/updated/deleted,
@@ -24,6 +40,11 @@ object SocketManager {
     var onMessageRead: ((conversationId: String, userId: String, readAt: Long) -> Unit)? = null
     var onPresenceUpdate: ((userId: String, online: Boolean, lastSeen: Long?) -> Unit)? = null
     var onTyping: ((conversationId: String, userId: String, name: String?, typing: Boolean) -> Unit)? = null
+    var onCallInvite: ((CallInviteEvent) -> Unit)? = null
+    var onCallAnswer: ((CallAnswerEvent) -> Unit)? = null
+    var onCallIceCandidate: ((CallIceCandidateEvent) -> Unit)? = null
+    var onCallReject: ((CallEndEvent) -> Unit)? = null
+    var onCallEnd: ((CallEndEvent) -> Unit)? = null
 
     fun connect(token: String) {
         // Guard on existence, not connected() - connect() is called from
@@ -87,8 +108,133 @@ object SocketManager {
                     )
                 }
             }
+            s.on("call:invite") { args ->
+                runCatching {
+                    val obj = args[0] as JSONObject
+                    val sdpObj = obj.getJSONObject("sdp")
+                    onCallInvite?.invoke(
+                        CallInviteEvent(
+                            conversationId = obj.getString("conversationId"),
+                            callId = obj.getString("callId"),
+                            kind = obj.getString("kind"),
+                            sdp = SdpPayload(sdpObj.getString("type"), sdpObj.getString("sdp")),
+                            fromUserId = obj.getString("fromUserId"),
+                            fromDisplayName = if (obj.isNull("fromDisplayName")) null else obj.optString("fromDisplayName"),
+                            fromAvatarColor = if (obj.isNull("fromAvatarColor")) null else obj.optString("fromAvatarColor"),
+                            fromAvatarUrl = if (obj.isNull("fromAvatarUrl")) null else obj.optString("fromAvatarUrl")
+                        )
+                    )
+                }
+            }
+            s.on("call:answer") { args ->
+                runCatching {
+                    val obj = args[0] as JSONObject
+                    val sdpObj = obj.getJSONObject("sdp")
+                    onCallAnswer?.invoke(
+                        CallAnswerEvent(
+                            callId = obj.getString("callId"),
+                            sdp = SdpPayload(sdpObj.getString("type"), sdpObj.getString("sdp")),
+                            fromUserId = obj.getString("fromUserId")
+                        )
+                    )
+                }
+            }
+            s.on("call:ice-candidate") { args ->
+                runCatching {
+                    val obj = args[0] as JSONObject
+                    val candObj = obj.getJSONObject("candidate")
+                    onCallIceCandidate?.invoke(
+                        CallIceCandidateEvent(
+                            callId = obj.getString("callId"),
+                            candidate = IceCandidatePayload(
+                                sdpMid = if (candObj.isNull("sdpMid")) null else candObj.optString("sdpMid"),
+                                sdpMLineIndex = candObj.optInt("sdpMLineIndex", 0),
+                                candidate = candObj.getString("candidate")
+                            ),
+                            fromUserId = obj.getString("fromUserId")
+                        )
+                    )
+                }
+            }
+            s.on("call:reject") { args ->
+                runCatching {
+                    val obj = args[0] as JSONObject
+                    onCallReject?.invoke(CallEndEvent(obj.getString("callId"), obj.getString("fromUserId")))
+                }
+            }
+            s.on("call:end") { args ->
+                runCatching {
+                    val obj = args[0] as JSONObject
+                    onCallEnd?.invoke(CallEndEvent(obj.getString("callId"), obj.getString("fromUserId")))
+                }
+            }
             s.connect()
         }
+    }
+
+    fun sendCallInvite(
+        conversationId: String,
+        targetUserId: String,
+        callId: String,
+        kind: String,
+        sdp: org.webrtc.SessionDescription,
+        fromDisplayName: String?,
+        fromAvatarColor: String?,
+        fromAvatarUrl: String?
+    ) {
+        val payload = JSONObject().apply {
+            put("conversationId", conversationId)
+            put("targetUserId", targetUserId)
+            put("callId", callId)
+            put("kind", kind)
+            put("sdp", JSONObject().apply {
+                put("type", sdp.type.canonicalForm())
+                put("sdp", sdp.description)
+            })
+            put("fromDisplayName", fromDisplayName ?: "")
+            put("fromAvatarColor", fromAvatarColor ?: "")
+            put("fromAvatarUrl", fromAvatarUrl ?: "")
+        }
+        socket?.emit("call:invite", payload)
+    }
+
+    fun sendCallAnswer(targetUserId: String, callId: String, sdp: org.webrtc.SessionDescription) {
+        val payload = JSONObject().apply {
+            put("targetUserId", targetUserId)
+            put("callId", callId)
+            put("sdp", JSONObject().apply {
+                put("type", sdp.type.canonicalForm())
+                put("sdp", sdp.description)
+            })
+        }
+        socket?.emit("call:answer", payload)
+    }
+
+    fun sendCallIceCandidate(targetUserId: String, callId: String, candidate: org.webrtc.IceCandidate) {
+        val payload = JSONObject().apply {
+            put("targetUserId", targetUserId)
+            put("callId", callId)
+            put("candidate", JSONObject().apply {
+                put("sdpMid", candidate.sdpMid)
+                put("sdpMLineIndex", candidate.sdpMLineIndex)
+                put("candidate", candidate.sdp)
+            })
+        }
+        socket?.emit("call:ice-candidate", payload)
+    }
+
+    fun sendCallReject(targetUserId: String, callId: String) {
+        socket?.emit("call:reject", JSONObject().apply {
+            put("targetUserId", targetUserId)
+            put("callId", callId)
+        })
+    }
+
+    fun sendCallEnd(targetUserId: String, callId: String) {
+        socket?.emit("call:end", JSONObject().apply {
+            put("targetUserId", targetUserId)
+            put("callId", callId)
+        })
     }
 
     fun disconnect() {

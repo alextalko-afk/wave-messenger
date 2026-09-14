@@ -95,7 +95,7 @@ fun ChatInfoScreen(conversation: Conversation, onBack: () -> Unit, onOpenConvers
                     modifier = Modifier.fillMaxWidth().padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Avatar(name = conversation.name, colorHex = conversation.avatarColor, size = 96)
+                    Avatar(name = conversation.name, colorHex = conversation.avatarColor, size = 96, avatarUrl = conversation.avatarUrl)
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 12.dp))
                     Text(conversation.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                     if (conversation.isGroup) {
@@ -139,7 +139,7 @@ fun ChatInfoScreen(conversation: Conversation, onBack: () -> Unit, onOpenConvers
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Avatar(name = member.displayName, colorHex = member.avatarColor, size = 40)
+                        Avatar(name = member.displayName, colorHex = member.avatarColor, size = 40, avatarUrl = member.avatarUrl)
                         Column(modifier = Modifier.padding(start = 12.dp)) {
                             Text(member.displayName)
                             Text("@${member.username}", color = WaveMuted, style = MaterialTheme.typography.labelSmall)
@@ -176,7 +176,7 @@ fun ChatInfoScreen(conversation: Conversation, onBack: () -> Unit, onOpenConvers
                 modifier = Modifier.fillMaxWidth().padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Avatar(name = member.displayName, colorHex = member.avatarColor, size = 88)
+                Avatar(name = member.displayName, colorHex = member.avatarColor, size = 88, avatarUrl = member.avatarUrl)
                 androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 12.dp))
                 Text(member.displayName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Text("@${member.username}", color = WaveMuted)

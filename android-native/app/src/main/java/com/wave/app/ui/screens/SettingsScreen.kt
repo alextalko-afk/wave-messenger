@@ -1,5 +1,7 @@
 package com.wave.app.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -91,8 +94,29 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
     var passwordError by remember { mutableStateOf<String?>(null) }
 
     var iconVariant by remember { mutableStateOf(getCurrentAppIcon(context)) }
-
     val scope = rememberCoroutineScope()
+
+    var avatarUrl by remember { mutableStateOf(user?.avatarUrl) }
+    var avatarBusy by remember { mutableStateOf(false) }
+    var avatarError by remember { mutableStateOf<String?>(null) }
+    val pickAvatar = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        avatarBusy = true
+        avatarError = null
+        scope.launch {
+            runCatching {
+                val part = com.wave.app.data.uriToMultipart(context, uri)
+                ApiClient.upload.uploadAvatar(part)
+            }.onSuccess { res ->
+                session.user = res.user
+                avatarUrl = res.user.avatarUrl
+            }.onFailure {
+                avatarError = "Не удалось загрузить фото"
+            }
+            avatarBusy = false
+        }
+    }
+
     var googleLinked by remember { mutableStateOf(user?.hasGoogle ?: false) }
     var googleBusy by remember { mutableStateOf(false) }
     var googleError by remember { mutableStateOf<String?>(null) }
@@ -217,9 +241,34 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
         ) {
             item {
                 Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Avatar(name = user?.displayName ?: "?", colorHex = user?.avatarColor, size = 88)
+                    Box(
+                        modifier = Modifier.clickable(enabled = !avatarBusy) { pickAvatar.launch("image/*") },
+                        contentAlignment = Alignment.BottomEnd
+                    ) {
+                        Avatar(name = user?.displayName ?: "?", colorHex = user?.avatarColor, size = 88, avatarUrl = avatarUrl)
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(WaveAccent, shape = CircleShape)
+                                .border(2.dp, WaveBg, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Изменить фото",
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.padding(top = 8.dp))
                     Text("@${user?.username ?: ""}", color = WaveMuted, style = MaterialTheme.typography.bodyMedium)
+                    if (avatarBusy) {
+                        Text("Загружаем…", color = WaveMuted, style = MaterialTheme.typography.labelSmall)
+                    }
+                    if (avatarError != null) {
+                        Text(avatarError ?: "", color = Color(0xFFFF6B6B), style = MaterialTheme.typography.labelSmall)
+                    }
                 }
 
                 Spacer(modifier = Modifier.padding(top = 28.dp))
