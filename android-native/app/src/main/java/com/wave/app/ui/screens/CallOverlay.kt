@@ -47,8 +47,6 @@ import com.wave.app.call.CallManager
 import com.wave.app.call.CallState
 import com.wave.app.call.WebRTCClient
 import com.wave.app.ui.components.Avatar
-import com.wave.app.ui.theme.WaveBg
-import com.wave.app.ui.theme.WaveMuted
 import org.webrtc.VideoTrack
 import org.webrtc.SurfaceViewRenderer
 
@@ -95,7 +93,21 @@ private fun ControlButton(icon: androidx.compose.ui.graphics.vector.ImageVector,
 @Composable
 fun CallOverlay() {
     val state = CallManager.state
-    if (state == CallState.Idle) return
+    if (state == CallState.Idle) {
+        val error = CallManager.lastError ?: return
+        Box(modifier = Modifier.fillMaxSize().padding(top = 60.dp), contentAlignment = Alignment.TopCenter) {
+            Text(
+                error,
+                color = Color.White,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier
+                    .padding(horizontal = 40.dp)
+                    .background(Color(0xFFE74C3C), shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            )
+        }
+        return
+    }
 
     val context = LocalContext.current
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -107,7 +119,12 @@ fun CallOverlay() {
     }
 
     val permissionsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
-        if (granted.values.all { it }) CallManager.acceptCall()
+        if (granted.values.all { it }) {
+            CallManager.acceptCall()
+        } else {
+            CallManager.showError("Нет доступа к микрофону/камере. Разрешите в Настройках приложения.")
+            CallManager.rejectCall()
+        }
     }
 
     fun acceptWithPermissions() {
@@ -149,7 +166,10 @@ fun CallOverlay() {
         else -> ""
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(WaveBg)) {
+    // Deliberately always-dark regardless of the app's light/dark setting,
+    // matching how FaceTime/WhatsApp/Telegram treat their call UI as an
+    // immersive surface distinct from the rest of the app.
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         if (showVideo && CallManager.remoteVideoTrack != null) {
             VideoRendererView(track = CallManager.remoteVideoTrack, modifier = Modifier.fillMaxSize())
         }
@@ -159,7 +179,7 @@ fun CallOverlay() {
             Spacer(modifier = Modifier.padding(top = 14.dp))
             Text(peer?.displayName ?: "", color = Color.White, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.padding(top = 4.dp))
-            Text(statusText, color = WaveMuted, style = MaterialTheme.typography.bodyMedium)
+            Text(statusText, color = Color(0xFFA6A6AA), style = MaterialTheme.typography.bodyMedium)
 
             Spacer(modifier = Modifier.weight(1f))
 

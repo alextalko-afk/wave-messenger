@@ -69,7 +69,9 @@ import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WaveOnAccent
 import com.wave.app.ui.theme.WavePanel
+import com.wave.app.ui.theme.WaveText
 import com.wave.app.ui.theme.WaveThemeVariant
+import com.wave.app.ui.theme.currentWaveAppearance
 import com.wave.app.ui.theme.currentWaveThemeVariant
 import com.wave.app.ui.theme.setWaveTheme
 
@@ -113,6 +115,20 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
             }.onFailure {
                 avatarError = "Не удалось загрузить фото"
             }
+            avatarBusy = false
+        }
+    }
+
+    fun deleteAvatar() {
+        avatarBusy = true
+        avatarError = null
+        scope.launch {
+            runCatching { ApiClient.upload.deleteAvatar() }
+                .onSuccess { res ->
+                    session.user = res.user
+                    avatarUrl = res.user.avatarUrl
+                }
+                .onFailure { avatarError = "Не удалось удалить фото" }
             avatarBusy = false
         }
     }
@@ -268,6 +284,16 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                     }
                     if (avatarError != null) {
                         Text(avatarError ?: "", color = Color(0xFFFF6B6B), style = MaterialTheme.typography.labelSmall)
+                    }
+                    if (avatarUrl != null && !avatarBusy) {
+                        Text(
+                            "Удалить фото",
+                            color = Color(0xFFFF6B6B),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .clickable { deleteAvatar() }
+                        )
                     }
                 }
 
@@ -433,6 +459,28 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                                 Icon(Icons.Default.ChatBubble, contentDescription = null, tint = Color.White)
                             }
                         }
+                    }
+                }
+
+                Spacer(modifier = Modifier.padding(top = 20.dp))
+
+                SectionCard(title = "Оформление") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Светлая тема", color = WaveText)
+                        androidx.compose.material3.Switch(
+                            checked = currentWaveAppearance == com.wave.app.ui.theme.WaveAppearance.LIGHT,
+                            onCheckedChange = { checked ->
+                                com.wave.app.ui.theme.setWaveAppearance(
+                                    context,
+                                    if (checked) com.wave.app.ui.theme.WaveAppearance.LIGHT else com.wave.app.ui.theme.WaveAppearance.DARK
+                                )
+                            },
+                            colors = androidx.compose.material3.SwitchDefaults.colors(checkedTrackColor = WaveAccent)
+                        )
                     }
                 }
 

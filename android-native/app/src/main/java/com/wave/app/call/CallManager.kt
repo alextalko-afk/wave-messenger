@@ -48,6 +48,15 @@ object CallManager : WebRTCClientListener {
     var isMuted by mutableStateOf(false)
     var isSpeakerOn by mutableStateOf(true)
     var isVideoEnabled by mutableStateOf(true)
+    var lastError by mutableStateOf<String?>(null)
+        private set
+
+    fun showError(message: String) {
+        lastError = message
+        mainHandler.postDelayed({
+            if (lastError == message) lastError = null
+        }, 6000)
+    }
 
     private lateinit var appContext: Context
     private var webRTCClient: WebRTCClient? = null

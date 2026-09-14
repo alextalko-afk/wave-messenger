@@ -27,6 +27,10 @@ class SessionStore(context: Context) {
         get() = prefs.getString("theme_variant", null)
         set(value) = prefs.edit().putString("theme_variant", value).apply()
 
+    var appearanceMode: String?
+        get() = prefs.getString("appearance_mode", null)
+        set(value) = prefs.edit().putString("appearance_mode", value).apply()
+
     fun clear() {
         prefs.edit().clear().apply()
     }

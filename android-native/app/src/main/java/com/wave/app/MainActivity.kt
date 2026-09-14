@@ -31,7 +31,9 @@ import com.wave.app.ui.screens.NewChatScreen
 import com.wave.app.ui.screens.NewGroupScreen
 import com.wave.app.ui.screens.RegisterScreen
 import com.wave.app.ui.screens.SettingsScreen
+import com.wave.app.ui.theme.WaveAppearance
 import com.wave.app.ui.theme.WaveTheme
+import com.wave.app.ui.theme.currentWaveAppearance
 import com.wave.app.ui.theme.loadWaveTheme
 
 class MainActivity : ComponentActivity() {
@@ -42,6 +44,11 @@ class MainActivity : ComponentActivity() {
         loadWaveTheme(this)
 
         setContent {
+            val isLightAppearance = currentWaveAppearance == WaveAppearance.LIGHT
+            androidx.compose.runtime.SideEffect {
+                androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+                    isLightAppearance
+            }
             WaveTheme {
                 val navController = rememberNavController()
                 val factory = ViewModelFactory(session)
@@ -155,6 +162,7 @@ class MainActivity : ComponentActivity() {
                         val conv = SelectedConversation.current
                         if (conv != null) {
                             ChatInfoScreen(
+                                session = session,
                                 conversation = conv,
                                 onBack = { navController.popBackStack() },
                                 onOpenConversation = { newConv ->

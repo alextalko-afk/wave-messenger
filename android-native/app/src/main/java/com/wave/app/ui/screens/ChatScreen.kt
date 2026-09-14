@@ -120,8 +120,12 @@ fun ChatScreen(
     val requestCallPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
         val kind = pendingCallKind
         pendingCallKind = null
-        if (kind != null && granted.values.all { it }) {
-            CallManager.startCall(conversation, kind)
+        if (kind != null) {
+            if (granted.values.all { it }) {
+                CallManager.startCall(conversation, kind)
+            } else {
+                CallManager.showError("Нет доступа к микрофону/камере. Разрешите в Настройках приложения.")
+            }
         }
     }
     fun startCallWithPermissions(kind: CallKind) {

@@ -111,6 +111,13 @@ interface ConversationsApi {
 
     @DELETE("api/conversations/{id}")
     suspend fun delete(@Path("id") id: String): OkResponse
+
+    @Multipart
+    @POST("api/conversations/{id}/avatar")
+    suspend fun uploadGroupAvatar(@Path("id") id: String, @Part file: MultipartBody.Part): ConversationResponse
+
+    @DELETE("api/conversations/{id}/avatar")
+    suspend fun deleteGroupAvatar(@Path("id") id: String): ConversationResponse
 }
 
 interface UsersApi {
@@ -133,4 +140,7 @@ interface UploadApi {
     @Multipart
     @POST("api/upload/avatar")
     suspend fun uploadAvatar(@Part file: MultipartBody.Part): AvatarUploadResponse
+
+    @DELETE("api/upload/avatar")
+    suspend fun deleteAvatar(): AvatarUploadResponse
 }
