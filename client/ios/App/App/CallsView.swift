@@ -115,7 +115,7 @@ struct CallsView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(Wave.panel, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarColorScheme(Wave.colorScheme, for: .navigationBar)
             .task { load() }
         }
         .tint(Wave.accent)

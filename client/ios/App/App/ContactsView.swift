@@ -62,7 +62,7 @@ struct ContactsView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(Wave.panel, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarColorScheme(Wave.colorScheme, for: .navigationBar)
             .navigationDestination(for: Conversation.self) { conversation in
                 ChatView(conversation: conversation)
                     .toolbar(.hidden, for: .tabBar)

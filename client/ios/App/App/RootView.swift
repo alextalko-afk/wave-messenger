@@ -12,9 +12,9 @@ struct RootView: View {
                 LoginView()
             }
         }
-        .id(themeManager.mode)
+        .id("\(themeManager.mode.rawValue)-\(themeManager.appearance.rawValue)")
         .tint(Wave.accent)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(themeManager.appearance == .light ? .light : .dark)
         .overlay {
             CallOverlayView()
         }

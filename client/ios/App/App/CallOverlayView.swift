@@ -20,9 +20,23 @@ struct CallOverlayView: View {
 
     var body: some View {
         Group {
-            if isActive {
+            if let error = callManager.lastError, !isActive {
+                VStack {
+                    Text(error)
+                        .font(.system(size: 13))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Color.red)
+                        .cornerRadius(12)
+                        .padding(.horizontal, 40)
+                        .padding(.top, 60)
+                    Spacer()
+                }
+            } else if isActive {
                 ZStack {
-                    Wave.bg.ignoresSafeArea()
+                    Color.black.ignoresSafeArea()
 
                     if kind == .video, let remoteTrack = callManager.remoteVideoTrack {
                         VideoRendererView(track: remoteTrack)
@@ -39,7 +53,7 @@ struct CallOverlayView: View {
                                 .foregroundColor(.white)
                             Text(statusText)
                                 .font(.system(size: 15))
-                                .foregroundColor(Wave.muted)
+                                .foregroundColor(Color(white: 0.65))
                         }
 
                         Spacer()
@@ -50,7 +64,7 @@ struct CallOverlayView: View {
                                 VideoRendererView(track: localTrack)
                                     .frame(width: 100, height: 140)
                                     .clipShape(RoundedRectangle(cornerRadius: 14))
-                                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Wave.border, lineWidth: 1))
+                                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.15), lineWidth: 1))
                                     .padding(.trailing, 20)
                             }
                         }
@@ -69,18 +83,18 @@ struct CallOverlayView: View {
                             HStack(spacing: 28) {
                                 controlButton(
                                     icon: callManager.isMuted ? "mic.slash.fill" : "mic.fill",
-                                    background: Wave.panel2
+                                    background: Color(red: 0.16, green: 0.16, blue: 0.18)
                                 ) { callManager.toggleMute() }
 
                                 controlButton(
                                     icon: callManager.isSpeakerOn ? "speaker.wave.2.fill" : "speaker.fill",
-                                    background: Wave.panel2
+                                    background: Color(red: 0.16, green: 0.16, blue: 0.18)
                                 ) { callManager.toggleSpeaker() }
 
                                 if kind == .video {
                                     controlButton(
                                         icon: callManager.isVideoEnabled ? "video.fill" : "video.slash.fill",
-                                        background: Wave.panel2
+                                        background: Color(red: 0.16, green: 0.16, blue: 0.18)
                                     ) { callManager.toggleVideo() }
                                 }
 

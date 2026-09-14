@@ -1,5 +1,6 @@
 import Foundation
 import WebRTC
+import AVFoundation
 
 enum CallKind: String {
     case audio
@@ -73,10 +74,61 @@ final class CallManager: NSObject, ObservableObject {
         }
     }
 
+    private func showError(_ message: String) {
+        lastError = message
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
+            if self?.lastError == message {
+                self?.lastError = nil
+            }
+        }
+    }
+
+    // MARK: Permissions
+
+    private func checkCallPermissions(needsVideo: Bool, completion: @escaping (Bool) -> Void) {
+        AVAudioSession.sharedInstance().requestRecordPermission { [weak self] audioGranted in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                guard audioGranted else {
+                    self.showError("Нет доступа к микрофону. Разрешите его в Настройки → Wave → Микрофон.")
+                    completion(false)
+                    return
+                }
+                guard needsVideo else {
+                    completion(true)
+                    return
+                }
+                switch AVCaptureDevice.authorizationStatus(for: .video) {
+                case .authorized:
+                    completion(true)
+                case .notDetermined:
+                    AVCaptureDevice.requestAccess(for: .video) { videoGranted in
+                        DispatchQueue.main.async {
+                            if !videoGranted {
+                                self.showError("Нет доступа к камере. Разрешите его в Настройки → Wave → Камера.")
+                            }
+                            completion(videoGranted)
+                        }
+                    }
+                default:
+                    self.lastError = "Нет доступа к камере. Разрешите его в Настройки → Wave → Камера."
+                    completion(false)
+                }
+            }
+        }
+    }
+
     // MARK: Outgoing
 
     func startCall(conversation: Conversation, kind: CallKind) {
         guard case .idle = state, let otherUser = conversation.otherUser else { return }
+        checkCallPermissions(needsVideo: kind == .video) { [weak self] granted in
+            guard let self, granted else { return }
+            self.beginOutgoingCall(conversation: conversation, otherUser: otherUser, kind: kind)
+        }
+    }
+
+    private func beginOutgoingCall(conversation: Conversation, otherUser: Member, kind: CallKind) {
         let callId = UUID().uuidString
         currentCallId = callId
         targetUserId = otherUser.id
@@ -111,6 +163,18 @@ final class CallManager: NSObject, ObservableObject {
     // MARK: Incoming
 
     func acceptCall() {
+        guard case .incoming(_, _, _, let kind) = state else { return }
+        checkCallPermissions(needsVideo: kind == .video) { [weak self] granted in
+            guard let self else { return }
+            if granted {
+                self.beginAcceptCall()
+            } else {
+                self.rejectCall()
+            }
+        }
+    }
+
+    private func beginAcceptCall() {
         guard case .incoming(let callId, let peer, _, let kind) = state, let sdp = pendingInviteSDP else { return }
         targetUserId = peer.id
         currentCallId = callId

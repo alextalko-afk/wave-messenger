@@ -55,7 +55,7 @@ struct NewChatView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Wave.bg, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarColorScheme(Wave.colorScheme, for: .navigationBar)
             .searchable(text: $query, prompt: "Логин или имя")
             .onChange(of: query) { _ in Task { await search() } }
             .toolbar {

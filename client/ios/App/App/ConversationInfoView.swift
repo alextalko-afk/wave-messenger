@@ -1,16 +1,28 @@
 import SwiftUI
+import PhotosUI
 
 struct ConversationInfoView: View {
     let conversation: Conversation
     let onCleared: () -> Void
     let onLeft: () -> Void
 
+    @ObservedObject private var session = SessionStore.shared
     @Environment(\.dismiss) private var dismiss
     @State private var stats: ConversationStats?
     @State private var photos: [MediaItem] = []
     @State private var showingClearConfirm = false
     @State private var showingLeaveConfirm = false
     @State private var isMuted = false
+    @State private var avatarUrl: String?
+    @State private var avatarBusy = false
+    @State private var avatarError: String?
+    @State private var pickedAvatarItem: PhotosPickerItem?
+    @State private var lightboxURL: URL?
+
+    private var isAdmin: Bool {
+        guard conversation.isGroup, let members = conversation.members, let myId = session.user?.id else { return false }
+        return members.first(where: { $0.id == myId })?.role == "admin"
+    }
 
     var body: some View {
         NavigationStack {
@@ -19,7 +31,48 @@ struct ConversationInfoView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         VStack(spacing: 8) {
-                            AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 100, online: conversation.otherUser?.online ?? false, avatarUrl: conversation.avatarUrl)
+                            ZStack(alignment: .bottomTrailing) {
+                                Button {
+                                    if isAdmin {
+                                        // handled by PhotosPicker overlay below
+                                    } else if let url = APIClient.absoluteURL(for: avatarUrl) {
+                                        lightboxURL = url
+                                    }
+                                } label: {
+                                    AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 100, online: conversation.otherUser?.online ?? false, avatarUrl: avatarUrl)
+                                }
+                                .disabled(isAdmin)
+                                .opacity(avatarBusy ? 0.5 : 1)
+
+                                if isAdmin {
+                                    PhotosPicker(selection: $pickedAvatarItem, matching: .images) {
+                                        ZStack {
+                                            Circle().fill(Wave.accent)
+                                            Image(systemName: "pencil")
+                                                .font(.system(size: 12, weight: .bold))
+                                                .foregroundColor(.white)
+                                        }
+                                        .frame(width: 28, height: 28)
+                                        .overlay(Circle().stroke(Wave.bg, lineWidth: 2))
+                                    }
+                                    .disabled(avatarBusy)
+                                }
+                            }
+                            .onChange(of: pickedAvatarItem) { newItem in
+                                guard let newItem else { return }
+                                uploadGroupAvatar(from: newItem)
+                            }
+                            if isAdmin && avatarBusy {
+                                Text("Загружаем…").font(.system(size: 12)).foregroundColor(Wave.muted)
+                            }
+                            if isAdmin, let avatarError {
+                                Text(avatarError).font(.system(size: 12)).foregroundColor(.red)
+                            }
+                            if isAdmin && avatarUrl != nil && !avatarBusy {
+                                Button("Удалить фото группы") { deleteGroupAvatar() }
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.red)
+                            }
                             Text(conversation.name)
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(Wave.textPrimary)
@@ -59,7 +112,13 @@ struct ConversationInfoView: View {
                                 Text("Участники").font(.system(size: 13, weight: .semibold)).foregroundColor(Wave.muted)
                                 ForEach(members) { member in
                                     HStack(spacing: 12) {
-                                        AvatarView(name: member.displayName, colorHex: member.avatarColor, size: 40, online: member.online, avatarUrl: member.avatarUrl)
+                                        Button {
+                                            if let url = APIClient.absoluteURL(for: member.avatarUrl) {
+                                                lightboxURL = url
+                                            }
+                                        } label: {
+                                            AvatarView(name: member.displayName, colorHex: member.avatarColor, size: 40, online: member.online, avatarUrl: member.avatarUrl)
+                                        }
                                         VStack(alignment: .leading, spacing: 1) {
                                             Text(member.displayName).font(.system(size: 14, weight: .medium)).foregroundColor(Wave.textPrimary)
                                             Text("@\(member.username)").font(.system(size: 12)).foregroundColor(Wave.muted)
@@ -114,7 +173,7 @@ struct ConversationInfoView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Wave.bg, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarColorScheme(Wave.colorScheme, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Готово") { dismiss() }
@@ -122,9 +181,15 @@ struct ConversationInfoView: View {
             }
             .task {
                 isMuted = conversation.muted
+                avatarUrl = conversation.avatarUrl
                 stats = try? await APIClient.shared.conversationStats(conversationId: conversation.id)
                 if let res = try? await APIClient.shared.media(conversationId: conversation.id, type: "photos") {
                     photos = res.items
+                }
+            }
+            .fullScreenCover(isPresented: Binding(get: { lightboxURL != nil }, set: { if !$0 { lightboxURL = nil } })) {
+                if let lightboxURL {
+                    AvatarLightboxView(url: lightboxURL)
                 }
             }
             .confirmationDialog("Очистить историю переписки?", isPresented: $showingClearConfirm, titleVisibility: .visible) {
@@ -147,6 +212,57 @@ struct ConversationInfoView: View {
             }
         }
         .tint(Wave.accent)
+    }
+
+    private func uploadGroupAvatar(from item: PhotosPickerItem) {
+        avatarBusy = true
+        avatarError = nil
+        Task {
+            do {
+                guard let rawData = try await item.loadTransferable(type: Data.self) else {
+                    throw APIError.server("Не удалось прочитать фото")
+                }
+                var data = rawData
+                var mimeType = item.supportedContentTypes.first?.preferredMIMEType ?? "image/jpeg"
+                var ext = item.supportedContentTypes.first?.preferredFilenameExtension ?? "jpg"
+                if let image = UIImage(data: rawData), let resized = resizedJPEGData(image, maxDimension: 512, quality: 0.85) {
+                    data = resized
+                    mimeType = "image/jpeg"
+                    ext = "jpg"
+                }
+                let res = try await APIClient.shared.uploadGroupAvatar(conversationId: conversation.id, data: data, filename: "avatar.\(ext)", mimeType: mimeType)
+                await MainActor.run {
+                    avatarUrl = res.conversation.avatarUrl
+                    avatarBusy = false
+                    pickedAvatarItem = nil
+                }
+            } catch {
+                await MainActor.run {
+                    avatarError = error.localizedDescription
+                    avatarBusy = false
+                    pickedAvatarItem = nil
+                }
+            }
+        }
+    }
+
+    private func deleteGroupAvatar() {
+        avatarBusy = true
+        avatarError = nil
+        Task {
+            do {
+                let res = try await APIClient.shared.deleteGroupAvatar(conversationId: conversation.id)
+                await MainActor.run {
+                    avatarUrl = res.conversation.avatarUrl
+                    avatarBusy = false
+                }
+            } catch {
+                await MainActor.run {
+                    avatarError = error.localizedDescription
+                    avatarBusy = false
+                }
+            }
+        }
     }
 
     private func toggleMute() {

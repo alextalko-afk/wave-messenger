@@ -258,7 +258,7 @@ struct ChatView: View {
         }
         .toolbarBackground(Wave.bg, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarColorScheme(Wave.colorScheme, for: .navigationBar)
         .task { await loadInitialMessages() }
         .onAppear {
             otherOnline = conversation.otherUser?.online ?? false

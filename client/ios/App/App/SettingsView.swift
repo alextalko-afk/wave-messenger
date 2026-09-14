@@ -5,7 +5,7 @@ import PhotosUI
 /// Downscales an image to fit within maxDimension and re-encodes as JPEG, so a
 /// multi-megapixel photo doesn't get uploaded at full resolution just to be
 /// shown in a small circular avatar.
-private func resizedJPEGData(_ image: UIImage, maxDimension: CGFloat, quality: CGFloat) -> Data? {
+func resizedJPEGData(_ image: UIImage, maxDimension: CGFloat, quality: CGFloat) -> Data? {
     let scale = min(1, maxDimension / max(image.size.width, image.size.height))
     let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
     let renderer = UIGraphicsImageRenderer(size: size)
@@ -83,6 +83,11 @@ struct SettingsView: View {
                             }
                             if let avatarError {
                                 Text(avatarError).font(.system(size: 12)).foregroundColor(.red)
+                            }
+                            if session.user?.avatarUrl != nil && !avatarBusy {
+                                Button("Удалить фото") { deleteAvatar() }
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.red)
                             }
                         }
                         .padding(.top, 16)
@@ -167,6 +172,21 @@ struct SettingsView: View {
                         .cornerRadius(18)
                         .padding(.horizontal, 16)
 
+                        HStack {
+                            Text("Светлая тема").font(.system(size: 15)).foregroundColor(Wave.textPrimary)
+                            Spacer()
+                            Toggle("", isOn: Binding(
+                                get: { themeManager.appearance == .light },
+                                set: { themeManager.appearance = $0 ? .light : .dark }
+                            ))
+                            .labelsHidden()
+                            .tint(Wave.accent)
+                        }
+                        .padding(16)
+                        .background(Wave.panel.opacity(0.6))
+                        .cornerRadius(18)
+                        .padding(.horizontal, 16)
+
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Иконка приложения").font(.system(size: 15, weight: .semibold)).foregroundColor(Wave.textPrimary)
                             HStack(spacing: 14) {
@@ -241,7 +261,7 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(Wave.panel, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarColorScheme(Wave.colorScheme, for: .navigationBar)
             .onAppear {
                 displayName = session.user?.displayName ?? ""
                 username = session.user?.username ?? ""
@@ -330,6 +350,25 @@ struct SettingsView: View {
                     avatarError = error.localizedDescription
                     avatarBusy = false
                     pickedAvatarItem = nil
+                }
+            }
+        }
+    }
+
+    private func deleteAvatar() {
+        avatarBusy = true
+        avatarError = nil
+        Task {
+            do {
+                let res = try await APIClient.shared.deleteAvatar()
+                await MainActor.run {
+                    session.updateUser(res.user)
+                    avatarBusy = false
+                }
+            } catch {
+                await MainActor.run {
+                    avatarError = error.localizedDescription
+                    avatarBusy = false
                 }
             }
         }
