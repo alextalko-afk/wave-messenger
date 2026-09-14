@@ -9,11 +9,10 @@ enum GoogleAuthManager {
     // claim matches what the backend verifies against.
     private static let serverClientID = "102793506258-1hrii748vubehmm05haftbr4ove278nt.apps.googleusercontent.com"
 
-    // TODO: replace with the real "iOS" OAuth client ID from Google Cloud
-    // Console (see the note in Info.plist's CFBundleURLTypes). This is the
-    // platform client that drives the on-device sign-in UI; the ID token
-    // itself is audienced to `serverClientID` above, not this one.
-    private static let iosClientID = "REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com"
+    // The "iOS" OAuth client (Google Cloud Console, Bundle ID com.wave.app).
+    // Drives the on-device sign-in UI; the ID token itself is audienced to
+    // `serverClientID` above, not this one.
+    private static let iosClientID = "102793506258-sbgddhji9npctee94f0qb75rotb875f6.apps.googleusercontent.com"
 
     static func configure() {
         GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: iosClientID, serverClientID: serverClientID)
