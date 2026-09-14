@@ -8,8 +8,6 @@ struct ChatListView: View {
     @State private var path: [Conversation] = []
     @State private var showingNewChat = false
     @State private var showingNewGroup = false
-    @State private var showingSettings = false
-    @State private var searching = false
     @State private var searchText = ""
 
     private var filtered: [Conversation] {
@@ -23,142 +21,109 @@ struct ChatListView: View {
             ZStack {
                 Wave.bg.ignoresSafeArea()
 
-                if loading {
-                    ProgressView().tint(Wave.accent)
-                } else if let error {
-                    VStack(spacing: 10) {
-                        Text(error).foregroundColor(.red)
-                        Button("Повторить") { Task { await load() } }
+                VStack(spacing: 0) {
+                    searchField
+
+                    if loading {
+                        Spacer()
+                        ProgressView().tint(Wave.accent)
+                        Spacer()
+                    } else if let error {
+                        Spacer()
+                        VStack(spacing: 10) {
+                            Text(error).foregroundColor(.red)
+                            Button("Повторить") { Task { await load() } }
+                        }
+                        Spacer()
+                    } else if conversations.isEmpty {
+                        Spacer()
+                        VStack(spacing: 12) {
+                            Image(systemName: "bubble.left.and.bubble.right")
+                                .font(.system(size: 40))
+                                .foregroundColor(Wave.mutedFaint)
+                            Text("Пока нет чатов")
+                                .foregroundColor(Wave.muted)
+                            Button { showingNewChat = true } label: {
+                                Text("Начать новый чат").fontWeight(.semibold)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Wave.accentGradient)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                            .padding(.top, 6)
+                        }
+                        Spacer()
+                    } else if filtered.isEmpty {
+                        Spacer()
+                        Text("Ничего не найдено").foregroundColor(Wave.muted)
+                        Spacer()
+                    } else {
+                        List(filtered) { conversation in
+                            NavigationLink(value: conversation) {
+                                ConversationRow(conversation: conversation)
+                            }
+                            .listRowBackground(Wave.bg)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) { delete(conversation) } label: {
+                                    Label("Удалить", systemImage: "trash")
+                                }
+                                Button { toggleMute(conversation) } label: {
+                                    Label(conversation.muted ? "Вкл. звук" : "Без звука", systemImage: conversation.muted ? "bell.fill" : "bell.slash.fill")
+                                }
+                                .tint(.orange)
+                            }
+                            .swipeActions(edge: .leading) {
+                                Button { togglePin(conversation) } label: {
+                                    Label(conversation.pinned ? "Открепить" : "Закрепить", systemImage: "pin.fill")
+                                }
+                                .tint(Wave.accent2)
+                            }
+                            .contextMenu {
+                                Button { togglePin(conversation) } label: {
+                                    Label(conversation.pinned ? "Открепить" : "Закрепить", systemImage: "pin")
+                                }
+                                Button { toggleMute(conversation) } label: {
+                                    Label(conversation.muted ? "Включить уведомления" : "Отключить уведомления", systemImage: conversation.muted ? "bell" : "bell.slash")
+                                }
+                                Button { toggleMarkUnread(conversation) } label: {
+                                    Label("Отметить непрочитанным", systemImage: "envelope.badge")
+                                }
+                                Button(role: .destructive) { delete(conversation) } label: {
+                                    Label("Удалить", systemImage: "trash")
+                                }
+                            }
+                        }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                        .background(Wave.bg)
+                        .refreshable { await load() }
                     }
-                } else if conversations.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "bubble.left.and.bubble.right")
-                            .font(.system(size: 40))
-                            .foregroundColor(Wave.mutedFaint)
-                        Text("Пока нет чатов")
-                            .foregroundColor(Wave.muted)
-                        Button { showingNewChat = true } label: {
-                            Text("Начать новый чат").fontWeight(.semibold)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(Wave.accentGradient)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                        .padding(.top, 6)
-                    }
-                } else if filtered.isEmpty {
-                    Text("Ничего не найдено").foregroundColor(Wave.muted)
-                } else {
-                    List(filtered) { conversation in
-                        NavigationLink(value: conversation) {
-                            ConversationRow(conversation: conversation)
-                        }
-                        .listRowBackground(Wave.bg)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) { delete(conversation) } label: {
-                                Label("Удалить", systemImage: "trash")
-                            }
-                            Button { toggleMute(conversation) } label: {
-                                Label(conversation.muted ? "Вкл. звук" : "Без звука", systemImage: conversation.muted ? "bell.fill" : "bell.slash.fill")
-                            }
-                            .tint(.orange)
-                        }
-                        .swipeActions(edge: .leading) {
-                            Button { togglePin(conversation) } label: {
-                                Label(conversation.pinned ? "Открепить" : "Закрепить", systemImage: "pin.fill")
-                            }
-                            .tint(Wave.accent2)
-                        }
-                        .contextMenu {
-                            Button { togglePin(conversation) } label: {
-                                Label(conversation.pinned ? "Открепить" : "Закрепить", systemImage: "pin")
-                            }
-                            Button { toggleMute(conversation) } label: {
-                                Label(conversation.muted ? "Включить уведомления" : "Отключить уведомления", systemImage: conversation.muted ? "bell" : "bell.slash")
-                            }
-                            Button { toggleMarkUnread(conversation) } label: {
-                                Label("Отметить непрочитанным", systemImage: "envelope.badge")
-                            }
-                            Button(role: .destructive) { delete(conversation) } label: {
-                                Label("Удалить", systemImage: "trash")
-                            }
-                        }
-                    }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .background(Wave.bg)
-                    .refreshable { await load() }
                 }
             }
             .overlay(alignment: .bottomTrailing) {
-                if !searching {
-                    Menu {
-                        Button { showingNewChat = true } label: {
-                            Label("Новый чат", systemImage: "person")
-                        }
-                        Button { showingNewGroup = true } label: {
-                            Label("Новая группа", systemImage: "person.3")
-                        }
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 58, height: 58)
-                            .background(Wave.accentGradient)
-                            .clipShape(Circle())
-                            .shadow(color: Wave.accent.opacity(0.45), radius: 12, y: 6)
+                Menu {
+                    Button { showingNewChat = true } label: {
+                        Label("Новый чат", systemImage: "person")
                     }
-                    .padding(20)
+                    Button { showingNewGroup = true } label: {
+                        Label("Новая группа", systemImage: "person.3")
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 58, height: 58)
+                        .background(Wave.accentGradient)
+                        .clipShape(Circle())
+                        .shadow(color: Wave.accent.opacity(0.45), radius: 12, y: 6)
                 }
+                .padding(20)
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    if searching {
-                        HStack(spacing: 8) {
-                            Image(systemName: "magnifyingglass").foregroundColor(Wave.muted).font(.system(size: 14))
-                            TextField("Поиск", text: $searchText)
-                                .foregroundColor(Wave.textPrimary)
-                                .autocorrectionDisabled()
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(Wave.panel2)
-                        .cornerRadius(14)
-                    } else {
-                        Text("Wave")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(Wave.textPrimary)
-                    }
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if searching {
-                        Button {
-                            searching = false
-                            searchText = ""
-                        } label: {
-                            Image(systemName: "arrow.left")
-                        }
-                        .foregroundColor(Wave.muted)
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if !searching {
-                        HStack(spacing: 18) {
-                            Button { searching = true } label: {
-                                Image(systemName: "magnifyingglass")
-                            }
-                            Button { showingSettings = true } label: {
-                                Image(systemName: "gearshape")
-                            }
-                        }
-                        .foregroundColor(Wave.muted)
-                    }
-                }
-            }
+            .navigationTitle("Чаты")
+            .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(Wave.panel, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -187,11 +152,32 @@ struct ChatListView: View {
                     path.append(conversation)
                 }
             }
-            .sheet(isPresented: $showingSettings) {
-                SettingsView()
-            }
         }
         .tint(Wave.accent)
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(Wave.muted)
+                .font(.system(size: 15))
+            TextField("Поиск", text: $searchText)
+                .foregroundColor(Wave.textPrimary)
+                .autocorrectionDisabled()
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundColor(Wave.muted)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Wave.panel2)
+        .cornerRadius(12)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     private func upsert(_ conversation: Conversation) {

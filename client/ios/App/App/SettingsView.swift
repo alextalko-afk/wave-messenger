@@ -25,7 +25,6 @@ enum AppIconOption: String, CaseIterable, Identifiable {
 struct SettingsView: View {
     @ObservedObject private var session = SessionStore.shared
     @ObservedObject private var themeManager = ThemeManager.shared
-    @Environment(\.dismiss) private var dismiss
 
     @State private var displayName = ""
     @State private var username = ""
@@ -182,7 +181,6 @@ struct SettingsView: View {
 
                         Button {
                             session.logout()
-                            dismiss()
                         } label: {
                             Text("Выйти из аккаунта")
                                 .fontWeight(.semibold)
@@ -199,15 +197,10 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Настройки")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Wave.bg, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(Wave.panel, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Готово") { dismiss() }
-                }
-            }
             .onAppear {
                 displayName = session.user?.displayName ?? ""
                 username = session.user?.username ?? ""

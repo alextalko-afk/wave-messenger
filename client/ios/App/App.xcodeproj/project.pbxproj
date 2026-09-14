@@ -39,6 +39,9 @@
 		8A2BFF76CD53426A903A0732 /* GoogleAuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E767B9E29C204C639502ED5F /* GoogleAuthManager.swift */; };
 		5962059F7BD34CFC9AA3A951 /* AppIconMono120.png in Resources */ = {isa = PBXBuildFile; fileRef = 80028890EF1C40268D2BB057 /* AppIconMono120.png */; };
 		3243A7E504564AF0A32F8A7D /* AppIconMono180.png in Resources */ = {isa = PBXBuildFile; fileRef = C389C2BB1CBD49238B4BD9F3 /* AppIconMono180.png */; };
+		AF46573789C146A58C5C3D8E /* ContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094CFC3563A14D1B995199E3 /* ContactsView.swift */; };
+		87D59A00CA0346D68F3597AC /* CallsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9D172D8F9446A7A162CF3C /* CallsView.swift */; };
+		7DD7D9143D0F4788A46D7201 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 184905A84D874740BD54121C /* MainTabView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -76,6 +79,9 @@
 		E767B9E29C204C639502ED5F /* GoogleAuthManager.swift */ = {isa = PBXFileReference; name = "GoogleAuthManager.swift"; path = "GoogleAuthManager.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		80028890EF1C40268D2BB057 /* AppIconMono120.png */ = {isa = PBXFileReference; name = "AppIconMono120.png"; path = "AlternateIcons/AppIconMono120.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		C389C2BB1CBD49238B4BD9F3 /* AppIconMono180.png */ = {isa = PBXFileReference; name = "AppIconMono180.png"; path = "AlternateIcons/AppIconMono180.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		094CFC3563A14D1B995199E3 /* ContactsView.swift */ = {isa = PBXFileReference; name = "ContactsView.swift"; path = "ContactsView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		FD9D172D8F9446A7A162CF3C /* CallsView.swift */ = {isa = PBXFileReference; name = "CallsView.swift"; path = "CallsView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		184905A84D874740BD54121C /* MainTabView.swift */ = {isa = PBXFileReference; name = "MainTabView.swift"; path = "MainTabView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -142,6 +148,9 @@
 				E767B9E29C204C639502ED5F /* GoogleAuthManager.swift */,
 				80028890EF1C40268D2BB057 /* AppIconMono120.png */,
 				C389C2BB1CBD49238B4BD9F3 /* AppIconMono180.png */,
+				094CFC3563A14D1B995199E3 /* ContactsView.swift */,
+				FD9D172D8F9446A7A162CF3C /* CallsView.swift */,
+				184905A84D874740BD54121C /* MainTabView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -252,6 +261,9 @@
 				92D392960BD4419399F81808 /* ConversationInfoView.swift in Sources */,
 				3964078E5ED048279672FE21 /* ForwardPickerView.swift in Sources */,
 				8A2BFF76CD53426A903A0732 /* GoogleAuthManager.swift in Sources */,
+				AF46573789C146A58C5C3D8E /* ContactsView.swift in Sources */,
+				87D59A00CA0346D68F3597AC /* CallsView.swift in Sources */,
+				7DD7D9143D0F4788A46D7201 /* MainTabView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
