@@ -21,4 +21,16 @@ enum WaveFormat {
         }
         return dayMonthFormatter.string(from: date)
     }
+
+    static func lastSeen(_ timestamp: Int?) -> String {
+        guard let timestamp, timestamp > 0 else { return "не в сети" }
+        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+        if Calendar.current.isDateInToday(date) {
+            return "был(а) сегодня в \(timeFormatter.string(from: date))"
+        }
+        if Calendar.current.isDateInYesterday(date) {
+            return "был(а) вчера в \(timeFormatter.string(from: date))"
+        }
+        return "был(а) \(dayMonthFormatter.string(from: date))"
+    }
 }

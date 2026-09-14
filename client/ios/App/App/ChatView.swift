@@ -611,79 +611,130 @@ private struct MessageBubble: View {
 
     @State private var showingFullscreen = false
 
+    private var isMedia: Bool {
+        let type = message.fileType ?? ""
+        return type.hasPrefix("image") || type.hasPrefix("video")
+    }
+
     var body: some View {
         HStack {
             if isMine { Spacer(minLength: 50) }
-            VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
-                VStack(alignment: .leading, spacing: 6) {
-                    if let replySource {
-                        HStack(spacing: 6) {
-                            Rectangle().fill(Wave.accent).frame(width: 3)
-                            Text(replySource.deleted == true ? "Сообщение удалено" : ((replySource.content?.isEmpty == false) ? replySource.content! : "Вложение"))
-                                .font(.system(size: 12))
-                                .foregroundColor(Wave.muted)
-                                .lineLimit(1)
-                        }
-                        .padding(.bottom, 2)
-                    }
-
-                    if message.deleted == true {
-                        Text("Сообщение удалено")
-                            .font(.system(size: 15).italic())
-                            .foregroundColor(isMine ? .white.opacity(0.7) : Wave.muted)
-                    } else if let url = APIClient.absoluteURL(for: message.fileUrl), (message.fileType ?? "").hasPrefix("audio") {
-                        VoicePlayerView(url: url, isMine: isMine)
-                    } else if let url = APIClient.absoluteURL(for: message.fileUrl), (message.fileType ?? "").hasPrefix("video") {
-                        VideoBubbleView(url: url)
-                    } else {
-                        if let url = APIClient.absoluteURL(for: message.fileUrl), (message.fileType ?? "").hasPrefix("image") {
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image.resizable().scaledToFill()
-                                case .failure:
-                                    Image(systemName: "photo").foregroundColor(Wave.muted)
-                                default:
-                                    ProgressView()
-                                }
-                            }
-                            .frame(width: 200, height: 200)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .onTapGesture { showingFullscreen = true }
-                            .fullScreenCover(isPresented: $showingFullscreen) {
-                                FullscreenImageView(url: url)
-                            }
-                        }
-                        if let content = message.content, !content.isEmpty {
-                            Text(content)
-                                .font(.system(size: 15))
-                                .foregroundColor(isMine ? .white : Wave.textPrimary)
-                        }
+            VStack(alignment: .leading, spacing: 6) {
+                if let replySource {
+                    HStack(spacing: 6) {
+                        Rectangle().fill(isMine ? Color.white.opacity(0.6) : Wave.accent).frame(width: 3)
+                        Text(replySource.deleted == true ? "Сообщение удалено" : ((replySource.content?.isEmpty == false) ? replySource.content! : "Вложение"))
+                            .font(.system(size: 12))
+                            .foregroundColor(isMine ? .white.opacity(0.75) : Wave.muted)
+                            .lineLimit(1)
                     }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(isMine ? Wave.bubbleOut : Wave.bubbleIn)
-                .clipShape(RoundedRectangle(cornerRadius: 18))
 
-                HStack(spacing: 4) {
-                    Text(WaveFormat.short(message.createdAt))
-                        .font(.system(size: 10))
-                        .foregroundColor(Wave.mutedFaint)
-                    if message.editedAt != nil {
-                        Text("ред.")
-                            .font(.system(size: 10))
-                            .foregroundColor(Wave.mutedFaint)
+                if message.deleted == true {
+                    Text("Сообщение удалено")
+                        .font(.system(size: 15).italic())
+                        .foregroundColor(isMine ? .white.opacity(0.7) : Wave.muted)
+                    metaRow
+                } else if let url = APIClient.absoluteURL(for: message.fileUrl), (message.fileType ?? "").hasPrefix("audio") {
+                    VoicePlayerView(url: url, isMine: isMine)
+                    metaRow
+                } else if let url = APIClient.absoluteURL(for: message.fileUrl), (message.fileType ?? "").hasPrefix("video") {
+                    VideoBubbleView(url: url)
+                        .overlay(alignment: .bottomTrailing) { metaPill }
+                } else if let url = APIClient.absoluteURL(for: message.fileUrl), (message.fileType ?? "").hasPrefix("image") {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                        case .failure:
+                            Image(systemName: "photo").foregroundColor(Wave.muted)
+                        default:
+                            ProgressView()
+                        }
                     }
-                    if isMine {
-                        Image(systemName: isRead ? "checkmark.circle.fill" : "checkmark.circle")
-                            .font(.system(size: 10))
-                            .foregroundColor(isRead ? Wave.online : Wave.mutedFaint)
+                    .frame(width: 200, height: 200)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(alignment: .bottomTrailing) { metaPill }
+                    .onTapGesture { showingFullscreen = true }
+                    .fullScreenCover(isPresented: $showingFullscreen) {
+                        FullscreenImageView(url: url)
                     }
+                } else if let url = APIClient.absoluteURL(for: message.fileUrl) {
+                    fileBubble(url: url)
+                    metaRow
+                } else {
+                    if let content = message.content, !content.isEmpty {
+                        Text(content)
+                            .font(.system(size: 15))
+                            .foregroundColor(isMine ? .white : Wave.textPrimary)
+                    }
+                    metaRow
                 }
-                .padding(.horizontal, 4)
             }
+            .padding(.horizontal, isMedia ? 4 : 14)
+            .padding(.vertical, isMedia ? 4 : 10)
+            .background {
+                if isMine {
+                    Wave.bubbleOutGradient
+                } else {
+                    Wave.bubbleIn
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 18))
             if !isMine { Spacer(minLength: 50) }
         }
+    }
+
+    private func fileBubble(url: URL) -> some View {
+        Link(destination: url) {
+            HStack(spacing: 10) {
+                Image(systemName: "doc.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(isMine ? .white : Wave.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(message.fileName ?? "Файл")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(isMine ? .white : Wave.textPrimary)
+                        .lineLimit(1)
+                    Text("Файл")
+                        .font(.system(size: 12))
+                        .foregroundColor(isMine ? .white.opacity(0.7) : Wave.muted)
+                }
+            }
+        }
+    }
+
+    private var metaRow: some View {
+        HStack(spacing: 4) {
+            if message.editedAt != nil {
+                Text("ред.").font(.system(size: 10))
+            }
+            Text(WaveFormat.short(message.createdAt)).font(.system(size: 10))
+            if isMine {
+                Image(systemName: isRead ? "checkmark.circle.fill" : "checkmark.circle")
+                    .font(.system(size: 10))
+            }
+        }
+        .foregroundColor(isMine ? .white.opacity(0.75) : Wave.mutedFaint)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+
+    private var metaPill: some View {
+        HStack(spacing: 4) {
+            if message.editedAt != nil {
+                Text("ред.").font(.system(size: 10))
+            }
+            Text(WaveFormat.short(message.createdAt)).font(.system(size: 10))
+            if isMine {
+                Image(systemName: isRead ? "checkmark.circle.fill" : "checkmark.circle")
+                    .font(.system(size: 10))
+            }
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(Color.black.opacity(0.45))
+        .clipShape(Capsule())
+        .padding(6)
     }
 }

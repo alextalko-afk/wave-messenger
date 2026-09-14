@@ -10,20 +10,24 @@ struct ConversationInfoView: View {
     @State private var photos: [MediaItem] = []
     @State private var showingClearConfirm = false
     @State private var showingLeaveConfirm = false
+    @State private var isMuted = false
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Wave.bg.ignoresSafeArea()
                 ScrollView {
-                    VStack(spacing: 20) {
-                        VStack(spacing: 10) {
-                            AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 90, online: conversation.otherUser?.online ?? false)
+                    VStack(spacing: 24) {
+                        VStack(spacing: 8) {
+                            AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 100, online: conversation.otherUser?.online ?? false)
                             Text(conversation.name)
-                                .font(.system(size: 20, weight: .bold))
+                                .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(Wave.textPrimary)
 
                             if let other = conversation.otherUser {
+                                Text(other.online ? "в сети" : WaveFormat.lastSeen(other.lastSeen))
+                                    .font(.system(size: 14))
+                                    .foregroundColor(other.online ? Wave.online : Wave.muted)
                                 Text("@\(other.username)").font(.system(size: 13)).foregroundColor(Wave.muted)
                                 if let bio = other.bio, !bio.isEmpty {
                                     Text(bio)
@@ -36,7 +40,19 @@ struct ConversationInfoView: View {
                                 Text("\(members.count) участников").font(.system(size: 13)).foregroundColor(Wave.muted)
                             }
                         }
-                        .padding(.top, 16)
+                        .padding(.top, 20)
+
+                        HStack(spacing: 24) {
+                            actionButton(icon: isMuted ? "bell.slash.fill" : "bell.fill", label: isMuted ? "Вкл. звук" : "Без звука", tint: Wave.accent) {
+                                toggleMute()
+                            }
+                            actionButton(icon: "trash.fill", label: "Очистить", tint: .orange) {
+                                showingClearConfirm = true
+                            }
+                            actionButton(icon: conversation.isGroup ? "arrow.right.square.fill" : "xmark.circle.fill", label: conversation.isGroup ? "Покинуть" : "Удалить", tint: .red) {
+                                showingLeaveConfirm = true
+                            }
+                        }
 
                         if conversation.isGroup, let members = conversation.members {
                             VStack(alignment: .leading, spacing: 10) {
@@ -90,39 +106,11 @@ struct ConversationInfoView: View {
                                 }
                             }
                             .padding(.horizontal, 16)
+                            .padding(.bottom, 20)
                         }
-
-                        VStack(spacing: 10) {
-                            Button {
-                                showingClearConfirm = true
-                            } label: {
-                                Text("Очистить историю")
-                                    .fontWeight(.semibold)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                            }
-                            .background(Wave.panel)
-                            .foregroundColor(Wave.textPrimary)
-                            .cornerRadius(12)
-
-                            Button {
-                                showingLeaveConfirm = true
-                            } label: {
-                                Text(conversation.isGroup ? "Покинуть группу" : "Удалить чат")
-                                    .fontWeight(.semibold)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                            }
-                            .background(Wave.panel)
-                            .foregroundColor(.red)
-                            .cornerRadius(12)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 20)
                     }
                 }
             }
-            .navigationTitle("Информация")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Wave.bg, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -133,6 +121,7 @@ struct ConversationInfoView: View {
                 }
             }
             .task {
+                isMuted = conversation.muted
                 stats = try? await APIClient.shared.conversationStats(conversationId: conversation.id)
                 if let res = try? await APIClient.shared.media(conversationId: conversation.id, type: "photos") {
                     photos = res.items
@@ -158,6 +147,27 @@ struct ConversationInfoView: View {
             }
         }
         .tint(Wave.accent)
+    }
+
+    private func toggleMute() {
+        isMuted.toggle()
+        Task {
+            try? await APIClient.shared.setMuted(conversationId: conversation.id, muted: isMuted)
+        }
+    }
+
+    private func actionButton(icon: String, label: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                    .foregroundColor(tint)
+                    .frame(width: 52, height: 52)
+                    .background(Wave.panel2)
+                    .clipShape(Circle())
+                Text(label).font(.system(size: 11)).foregroundColor(Wave.muted)
+            }
+        }
     }
 
     private func statTile(count: Int, label: String) -> some View {
