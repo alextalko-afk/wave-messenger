@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.MarkChatUnread
 import androidx.compose.material.icons.filled.Notifications
@@ -81,7 +82,8 @@ fun ChatListScreen(
     onOpenConversation: (Conversation) -> Unit,
     onNewChat: () -> Unit,
     onNewGroup: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onOpenCalls: () -> Unit
 ) {
     val conversations by viewModel.conversations.collectAsState()
     val loading by viewModel.loading.collectAsState()
@@ -144,6 +146,9 @@ fun ChatListScreen(
                     if (!searchActive) {
                         IconButton(onClick = { searchActive = true }) {
                             Icon(Icons.Default.Search, contentDescription = "Поиск", tint = WaveMuted)
+                        }
+                        IconButton(onClick = onOpenCalls) {
+                            Icon(Icons.Default.Call, contentDescription = "Звонки", tint = WaveMuted)
                         }
                         IconButton(onClick = onOpenSettings) {
                             Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = WaveMuted)

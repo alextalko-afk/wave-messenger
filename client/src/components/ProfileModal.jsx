@@ -3,6 +3,7 @@ import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { renderGoogleButton } from '../lib/googleAuth.js';
+import { resizeImageFile } from '../lib/imageResize.js';
 import Avatar from './Avatar.jsx';
 import { IconEdit } from './Icons.jsx';
 
@@ -55,7 +56,8 @@ export default function ProfileModal({ onClose }) {
     setAvatarBusy(true);
     setAvatarError('');
     try {
-      const { user: updated } = await api.uploadAvatar(file);
+      const resized = await resizeImageFile(file);
+      const { user: updated } = await api.uploadAvatar(resized);
       setUser(updated);
     } catch (err) {
       setAvatarError(err.message);

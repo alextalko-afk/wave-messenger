@@ -14,6 +14,7 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import conversationRoutes, { serializeConversation } from './routes/conversations.js';
 import uploadRoutes from './routes/upload.js';
+import callsRoutes from './routes/calls.js';
 import { uploadsDir } from './paths.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -52,6 +53,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/calls', callsRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
@@ -234,19 +236,25 @@ io.on('connection', (socket) => {
 
   // WebRTC call signaling: the server never inspects SDP/ICE contents, it
   // just relays them to every active socket of the target user (mirroring
-  // how message delivery already works via onlineUsers). No call state is
-  // persisted server-side - clients own the call lifecycle.
-  socket.on('call:invite', ({ conversationId, targetUserId, callId, kind, sdp, fromDisplayName, fromAvatarColor, fromAvatarUrl }) => {
+  // how message delivery already works via onlineUsers). The only state
+  // persisted server-side is a call-log row (for the Calls history tab) -
+  // clients still own the actual call lifecycle.
+  socket.on('call:invite', async ({ conversationId, targetUserId, callId, kind, sdp, fromDisplayName, fromAvatarColor, fromAvatarUrl }) => {
     const sockets = onlineUsers.get(targetUserId);
     if (!sockets) return;
+    await run(
+      'INSERT INTO calls (id, caller_id, callee_id, conversation_id, kind, status) VALUES (?, ?, ?, ?, ?, ?)',
+      [callId, userId, targetUserId, conversationId || null, kind || 'audio', 'ringing']
+    );
     for (const sid of sockets) {
       io.to(sid).emit('call:invite', { conversationId, callId, kind, sdp, fromUserId: userId, fromDisplayName, fromAvatarColor, fromAvatarUrl });
     }
   });
 
-  socket.on('call:answer', ({ targetUserId, callId, sdp }) => {
+  socket.on('call:answer', async ({ targetUserId, callId, sdp }) => {
     const sockets = onlineUsers.get(targetUserId);
     if (!sockets) return;
+    await run("UPDATE calls SET status = 'answered', answered_at = strftime('%s','now') WHERE id = ?", [callId]);
     for (const sid of sockets) {
       io.to(sid).emit('call:answer', { callId, sdp, fromUserId: userId });
     }
@@ -260,16 +268,27 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('call:reject', ({ targetUserId, callId }) => {
+  socket.on('call:reject', async ({ targetUserId, callId }) => {
     const sockets = onlineUsers.get(targetUserId);
+    await run(
+      "UPDATE calls SET status = 'declined', ended_at = strftime('%s','now') WHERE id = ? AND status = 'ringing'",
+      [callId]
+    );
     if (!sockets) return;
     for (const sid of sockets) {
       io.to(sid).emit('call:reject', { callId, fromUserId: userId });
     }
   });
 
-  socket.on('call:end', ({ targetUserId, callId }) => {
+  socket.on('call:end', async ({ targetUserId, callId }) => {
     const sockets = onlineUsers.get(targetUserId);
+    await run(
+      `UPDATE calls SET
+         status = CASE WHEN status = 'ringing' THEN 'missed' ELSE status END,
+         ended_at = strftime('%s','now')
+       WHERE id = ? AND ended_at IS NULL`,
+      [callId]
+    );
     if (!sockets) return;
     for (const sid of sockets) {
       io.to(sid).emit('call:end', { callId, fromUserId: userId });

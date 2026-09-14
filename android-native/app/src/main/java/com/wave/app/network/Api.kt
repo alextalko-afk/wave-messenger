@@ -2,6 +2,7 @@ package com.wave.app.network
 
 import com.wave.app.model.AuthResponse
 import com.wave.app.model.AvatarUploadResponse
+import com.wave.app.model.CallLogEntry
 import com.wave.app.model.Conversation
 import com.wave.app.model.ConversationStats
 import com.wave.app.model.MediaItem
@@ -115,6 +116,13 @@ interface ConversationsApi {
 interface UsersApi {
     @GET("api/users/search")
     suspend fun search(@Query("q") query: String): UsersResponse
+}
+
+data class CallsResponse(val calls: List<CallLogEntry>)
+
+interface CallsApi {
+    @GET("api/calls")
+    suspend fun list(): CallsResponse
 }
 
 interface UploadApi {

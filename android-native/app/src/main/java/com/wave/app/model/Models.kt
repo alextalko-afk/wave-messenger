@@ -87,3 +87,23 @@ data class SharedGroup(
 )
 
 data class AvatarUploadResponse(val user: User)
+
+data class CallLogOtherUser(
+    val id: String,
+    val displayName: String,
+    val avatarColor: String?,
+    val avatarUrl: String? = null
+)
+
+data class CallLogEntry(
+    val id: String,
+    val conversationId: String?,
+    val kind: String,
+    val status: String,
+    val isOutgoing: Boolean,
+    val otherUser: CallLogOtherUser,
+    val startedAt: Long,
+    val answeredAt: Long?,
+    val endedAt: Long?,
+    val durationSeconds: Int
+)

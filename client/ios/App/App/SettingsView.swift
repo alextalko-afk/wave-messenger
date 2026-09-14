@@ -2,6 +2,19 @@ import SwiftUI
 import UIKit
 import PhotosUI
 
+/// Downscales an image to fit within maxDimension and re-encodes as JPEG, so a
+/// multi-megapixel photo doesn't get uploaded at full resolution just to be
+/// shown in a small circular avatar.
+private func resizedJPEGData(_ image: UIImage, maxDimension: CGFloat, quality: CGFloat) -> Data? {
+    let scale = min(1, maxDimension / max(image.size.width, image.size.height))
+    let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+    let renderer = UIGraphicsImageRenderer(size: size)
+    let resized = renderer.image { _ in
+        image.draw(in: CGRect(origin: .zero, size: size))
+    }
+    return resized.jpegData(compressionQuality: quality)
+}
+
 enum AppIconOption: String, CaseIterable, Identifiable {
     case `default`
     case mono
@@ -295,12 +308,17 @@ struct SettingsView: View {
         avatarError = nil
         Task {
             do {
-                guard let data = try await item.loadTransferable(type: Data.self) else {
+                guard let rawData = try await item.loadTransferable(type: Data.self) else {
                     throw APIError.server("Не удалось прочитать фото")
                 }
-                let utType = item.supportedContentTypes.first
-                let mimeType = utType?.preferredMIMEType ?? "image/jpeg"
-                let ext = utType?.preferredFilenameExtension ?? "jpg"
+                var data = rawData
+                var mimeType = item.supportedContentTypes.first?.preferredMIMEType ?? "image/jpeg"
+                var ext = item.supportedContentTypes.first?.preferredFilenameExtension ?? "jpg"
+                if let image = UIImage(data: rawData), let resized = resizedJPEGData(image, maxDimension: 512, quality: 0.85) {
+                    data = resized
+                    mimeType = "image/jpeg"
+                    ext = "jpg"
+                }
                 let res = try await APIClient.shared.uploadAvatar(data: data, filename: "avatar.\(ext)", mimeType: mimeType)
                 await MainActor.run {
                     session.updateUser(res.user)

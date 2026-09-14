@@ -54,6 +54,7 @@ object ApiClient {
     val conversations: ConversationsApi by lazy { retrofit.create(ConversationsApi::class.java) }
     val users: UsersApi by lazy { retrofit.create(UsersApi::class.java) }
     val upload: UploadApi by lazy { retrofit.create(UploadApi::class.java) }
+    val calls: CallsApi by lazy { retrofit.create(CallsApi::class.java) }
 }
 
 /** Resolves a relative /uploads/... URL from the server against the API host. */

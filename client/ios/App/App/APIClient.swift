@@ -78,6 +78,10 @@ final class APIClient {
         try await request("api/auth/me")
     }
 
+    func getCalls() async throws -> CallsResponse {
+        try await request("api/calls")
+    }
+
     func listConversations() async throws -> ConversationsResponse {
         try await request("api/conversations")
     }

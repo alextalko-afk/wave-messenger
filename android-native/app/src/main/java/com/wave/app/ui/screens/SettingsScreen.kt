@@ -105,7 +105,7 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
         avatarError = null
         scope.launch {
             runCatching {
-                val part = com.wave.app.data.uriToMultipart(context, uri)
+                val part = com.wave.app.data.uriToResizedAvatarMultipart(context, uri)
                 ApiClient.upload.uploadAvatar(part)
             }.onSuccess { res ->
                 session.user = res.user

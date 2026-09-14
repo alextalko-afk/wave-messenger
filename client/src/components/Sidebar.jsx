@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Avatar from './Avatar.jsx';
 import ProfileModal from './ProfileModal.jsx';
+import CallHistoryModal from './CallHistoryModal.jsx';
 import ContextMenu from './ContextMenu.jsx';
 import { formatTime } from '../lib/format.js';
 import { api } from '../lib/api.js';
@@ -25,6 +26,7 @@ import {
   IconMailUnread,
   IconEraser,
   IconTrash,
+  IconPhone,
 } from './Icons.jsx';
 
 function lastMessagePreview(lastMessage) {
@@ -69,6 +71,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
   const [filter, setFilter] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [callHistoryOpen, setCallHistoryOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
   const [userResults, setUserResults] = useState([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
@@ -205,6 +208,14 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
               setMenuOpen(false);
             }}
           />
+          <MenuRow
+            icon={<IconPhone size={17} />}
+            label="Звонки"
+            onClick={() => {
+              setCallHistoryOpen(true);
+              setMenuOpen(false);
+            }}
+          />
           <div className="my-2" style={{ borderTop: '1px solid var(--border)' }} />
           <MenuRow
             icon={theme === 'dark' ? <IconMoon size={17} /> : <IconSun size={17} />}
@@ -336,6 +347,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
       </div>
 
       {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
+      {callHistoryOpen && <CallHistoryModal onClose={() => setCallHistoryOpen(false)} />}
 
       {contextMenu && (
         <ContextMenu

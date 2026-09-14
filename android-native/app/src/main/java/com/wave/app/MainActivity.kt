@@ -21,6 +21,7 @@ import com.wave.app.ui.AuthViewModel
 import com.wave.app.ui.ChatListViewModel
 import com.wave.app.ui.SelectedConversation
 import com.wave.app.ui.ViewModelFactory
+import com.wave.app.ui.screens.CallHistoryScreen
 import com.wave.app.ui.screens.CallOverlay
 import com.wave.app.ui.screens.ChatInfoScreen
 import com.wave.app.ui.screens.ChatListScreen
@@ -97,8 +98,12 @@ class MainActivity : ComponentActivity() {
                             },
                             onNewChat = { navController.navigate("newChat") },
                             onNewGroup = { navController.navigate("newGroup") },
-                            onOpenSettings = { navController.navigate("settings") }
+                            onOpenSettings = { navController.navigate("settings") },
+                            onOpenCalls = { navController.navigate("calls") }
                         )
+                    }
+                    composable("calls") {
+                        CallHistoryScreen(onBack = { navController.popBackStack() })
                     }
                     composable("settings") {
                         SettingsScreen(

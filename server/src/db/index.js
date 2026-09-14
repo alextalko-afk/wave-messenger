@@ -75,6 +75,21 @@ CREATE TABLE IF NOT EXISTS phone_codes (
   expires_at INTEGER NOT NULL,
   attempts INTEGER DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS calls (
+  id TEXT PRIMARY KEY,
+  caller_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  callee_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  conversation_id TEXT,
+  kind TEXT NOT NULL DEFAULT 'audio',
+  status TEXT NOT NULL DEFAULT 'ringing',
+  started_at INTEGER DEFAULT (strftime('%s','now')),
+  answered_at INTEGER,
+  ended_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_calls_caller ON calls(caller_id, started_at);
+CREATE INDEX IF NOT EXISTS idx_calls_callee ON calls(callee_id, started_at);
 `);
 
 async function ensureColumn(table, column, definition) {

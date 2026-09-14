@@ -233,3 +233,27 @@ struct CallEndEvent: Codable {
     let callId: String
     let fromUserId: String
 }
+
+struct CallLogOtherUser: Codable {
+    let id: String
+    let displayName: String
+    let avatarColor: String?
+    let avatarUrl: String?
+}
+
+struct CallLogEntry: Codable, Identifiable {
+    let id: String
+    let conversationId: String?
+    let kind: String
+    let status: String
+    let isOutgoing: Bool
+    let otherUser: CallLogOtherUser
+    let startedAt: Int
+    let answeredAt: Int?
+    let endedAt: Int?
+    let durationSeconds: Int
+}
+
+struct CallsResponse: Codable {
+    let calls: [CallLogEntry]
+}
