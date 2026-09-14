@@ -9,7 +9,11 @@ data class User(
     val bio: String? = null,
     val online: Boolean = false,
     val lastSeen: Long? = null,
-    val hasGoogle: Boolean = false
+    val hasGoogle: Boolean = false,
+    // Only present when this User came back as a conversation member
+    // (server's getMembers() adds it); null everywhere else (search
+    // results, /me, etc).
+    val role: String? = null
 )
 
 data class AuthResponse(
