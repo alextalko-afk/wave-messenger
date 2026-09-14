@@ -45,6 +45,7 @@
 		8899142131E04A8C90B105D8 /* WebRTCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60578992FAE041108E14C0EB /* WebRTCClient.swift */; };
 		2CD4989368BD45C0A194EE24 /* CallManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67A436C404AC4D6194689945 /* CallManager.swift */; };
 		F5289350E7D94144A91BBA58 /* CallOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3542DCE0C539469E8A934A6C /* CallOverlayView.swift */; };
+		CAD4EDCB986244D6B549D4CA /* AvatarLightboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B056838312342F29129998C /* AvatarLightboxView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -88,6 +89,7 @@
 		60578992FAE041108E14C0EB /* WebRTCClient.swift */ = {isa = PBXFileReference; name = "WebRTCClient.swift"; path = "WebRTCClient.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		67A436C404AC4D6194689945 /* CallManager.swift */ = {isa = PBXFileReference; name = "CallManager.swift"; path = "CallManager.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		3542DCE0C539469E8A934A6C /* CallOverlayView.swift */ = {isa = PBXFileReference; name = "CallOverlayView.swift"; path = "CallOverlayView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		6B056838312342F29129998C /* AvatarLightboxView.swift */ = {isa = PBXFileReference; name = "AvatarLightboxView.swift"; path = "AvatarLightboxView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -160,6 +162,7 @@
 				60578992FAE041108E14C0EB /* WebRTCClient.swift */,
 				67A436C404AC4D6194689945 /* CallManager.swift */,
 				3542DCE0C539469E8A934A6C /* CallOverlayView.swift */,
+				6B056838312342F29129998C /* AvatarLightboxView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -276,6 +279,7 @@
 				8899142131E04A8C90B105D8 /* WebRTCClient.swift in Sources */,
 				2CD4989368BD45C0A194EE24 /* CallManager.swift in Sources */,
 				F5289350E7D94144A91BBA58 /* CallOverlayView.swift in Sources */,
+				CAD4EDCB986244D6B549D4CA /* AvatarLightboxView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
