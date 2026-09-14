@@ -33,7 +33,7 @@ struct NewGroupView: View {
                                 ForEach(selected) { user in
                                     VStack(spacing: 4) {
                                         ZStack(alignment: .topTrailing) {
-                                            AvatarView(name: user.displayName, colorHex: user.avatarColor, size: 52)
+                                            AvatarView(name: user.displayName, colorHex: user.avatarColor, size: 52, avatarUrl: user.avatarUrl)
                                             Button { toggle(user) } label: {
                                                 Image(systemName: "xmark.circle.fill")
                                                     .foregroundColor(.white)
@@ -65,7 +65,7 @@ struct NewGroupView: View {
                         List(results) { user in
                             Button { toggle(user) } label: {
                                 HStack(spacing: 12) {
-                                    AvatarView(name: user.displayName, colorHex: user.avatarColor, online: user.online)
+                                    AvatarView(name: user.displayName, colorHex: user.avatarColor, online: user.online, avatarUrl: user.avatarUrl)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(user.displayName).font(.system(size: 15, weight: .semibold)).foregroundColor(Wave.textPrimary)
                                         Text("@\(user.username)").font(.system(size: 13)).foregroundColor(Wave.muted)

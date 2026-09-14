@@ -10,6 +10,7 @@ struct CallPeer: Equatable {
     let id: String
     let displayName: String
     let avatarColor: String?
+    let avatarUrl: String?
 }
 
 enum CallState: Equatable {
@@ -83,7 +84,7 @@ final class CallManager: NSObject, ObservableObject {
         isVideoEnabled = true
         isSpeakerOn = kind == .video
 
-        let peer = CallPeer(id: otherUser.id, displayName: otherUser.displayName, avatarColor: otherUser.avatarColor)
+        let peer = CallPeer(id: otherUser.id, displayName: otherUser.displayName, avatarColor: otherUser.avatarColor, avatarUrl: otherUser.avatarUrl)
         state = .outgoing(peer: peer, kind: kind)
 
         let client = WebRTCClient(isVideoCall: kind == .video)
@@ -186,7 +187,8 @@ final class CallManager: NSObject, ObservableObject {
         let peer = CallPeer(
             id: event.fromUserId,
             displayName: (event.fromDisplayName?.isEmpty == false) ? event.fromDisplayName! : "Собеседник",
-            avatarColor: event.fromAvatarColor
+            avatarColor: event.fromAvatarColor,
+            avatarUrl: event.fromAvatarUrl
         )
         state = .incoming(
             callId: event.callId,

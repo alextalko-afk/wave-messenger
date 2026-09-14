@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import PhotosUI
 
 enum AppIconOption: String, CaseIterable, Identifiable {
     case `default`
@@ -35,6 +36,9 @@ struct SettingsView: View {
     @State private var linkingGoogle = false
     @State private var googleError: String?
     @State private var selectedIcon: AppIconOption = .default
+    @State private var pickedAvatarItem: PhotosPickerItem?
+    @State private var avatarBusy = false
+    @State private var avatarError: String?
 
     var body: some View {
         NavigationStack {
@@ -43,12 +47,36 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         VStack(spacing: 10) {
-                            AvatarView(name: session.user?.displayName ?? "?", colorHex: session.user?.avatarColor, size: 84)
+                            PhotosPicker(selection: $pickedAvatarItem, matching: .images) {
+                                ZStack(alignment: .bottomTrailing) {
+                                    AvatarView(name: session.user?.displayName ?? "?", colorHex: session.user?.avatarColor, size: 84, avatarUrl: session.user?.avatarUrl)
+                                        .opacity(avatarBusy ? 0.5 : 1)
+                                    ZStack {
+                                        Circle().fill(Wave.accent)
+                                        Image(systemName: "pencil")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(width: 26, height: 26)
+                                    .overlay(Circle().stroke(Wave.bg, lineWidth: 2))
+                                }
+                            }
+                            .disabled(avatarBusy)
                             Text("@\(session.user?.username ?? "")")
                                 .font(.system(size: 14))
                                 .foregroundColor(Wave.muted)
+                            if avatarBusy {
+                                Text("Загружаем…").font(.system(size: 12)).foregroundColor(Wave.muted)
+                            }
+                            if let avatarError {
+                                Text(avatarError).font(.system(size: 12)).foregroundColor(.red)
+                            }
                         }
                         .padding(.top, 16)
+                        .onChange(of: pickedAvatarItem) { newItem in
+                            guard let newItem else { return }
+                            uploadAvatar(from: newItem)
+                        }
 
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Профиль")
@@ -258,6 +286,33 @@ struct SettingsView: View {
         UIApplication.shared.setAlternateIconName(option.iconName) { error in
             if error == nil {
                 DispatchQueue.main.async { selectedIcon = option }
+            }
+        }
+    }
+
+    private func uploadAvatar(from item: PhotosPickerItem) {
+        avatarBusy = true
+        avatarError = nil
+        Task {
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else {
+                    throw APIError.server("Не удалось прочитать фото")
+                }
+                let utType = item.supportedContentTypes.first
+                let mimeType = utType?.preferredMIMEType ?? "image/jpeg"
+                let ext = utType?.preferredFilenameExtension ?? "jpg"
+                let res = try await APIClient.shared.uploadAvatar(data: data, filename: "avatar.\(ext)", mimeType: mimeType)
+                await MainActor.run {
+                    session.updateUser(res.user)
+                    avatarBusy = false
+                    pickedAvatarItem = nil
+                }
+            } catch {
+                await MainActor.run {
+                    avatarError = error.localizedDescription
+                    avatarBusy = false
+                    pickedAvatarItem = nil
+                }
             }
         }
     }

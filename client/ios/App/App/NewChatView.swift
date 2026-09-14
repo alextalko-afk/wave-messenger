@@ -28,7 +28,7 @@ struct NewChatView: View {
                             create(with: user)
                         } label: {
                             HStack(spacing: 12) {
-                                AvatarView(name: user.displayName, colorHex: user.avatarColor, online: user.online)
+                                AvatarView(name: user.displayName, colorHex: user.avatarColor, online: user.online, avatarUrl: user.avatarUrl)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(user.displayName)
                                         .font(.system(size: 15, weight: .semibold))

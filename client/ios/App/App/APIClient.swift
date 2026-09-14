@@ -146,6 +146,40 @@ final class APIClient {
         return try decoder.decode(UploadResponse.self, from: responseData)
     }
 
+    func uploadAvatar(data: Data, filename: String, mimeType: String) async throws -> AvatarUploadResponse {
+        var request = URLRequest(url: APIClient.baseURL.appendingPathComponent("api/upload/avatar"))
+        request.httpMethod = "POST"
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        if let token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(data)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        let (responseData, response): (Data, URLResponse)
+        do {
+            (responseData, response) = try await session.data(for: request)
+        } catch {
+            throw APIError.network
+        }
+
+        guard let http = response as? HTTPURLResponse else { throw APIError.network }
+        if !(200...299).contains(http.statusCode) {
+            if let err = try? decoder.decode(ErrorResponse.self, from: responseData) {
+                throw APIError.server(err.error)
+            }
+            throw APIError.server("Не удалось загрузить фото (\(http.statusCode))")
+        }
+        return try decoder.decode(AvatarUploadResponse.self, from: responseData)
+    }
+
     func setPinned(conversationId: String, pinned: Bool) async throws {
         let _: OkResponse = try await request("api/conversations/\(conversationId)/pin", method: "POST", body: PinBody(pinned: pinned))
     }

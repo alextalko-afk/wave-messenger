@@ -22,7 +22,7 @@ struct ForwardPickerView: View {
                             dismiss()
                         } label: {
                             HStack(spacing: 12) {
-                                AvatarView(name: conversation.name, colorHex: conversation.avatarColor)
+                                AvatarView(name: conversation.name, colorHex: conversation.avatarColor, avatarUrl: conversation.avatarUrl)
                                 Text(conversation.name)
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(Wave.textPrimary)

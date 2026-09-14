@@ -33,7 +33,7 @@ struct CallOverlayView: View {
                         Spacer(minLength: 60)
 
                         VStack(spacing: 14) {
-                            AvatarView(name: peer?.displayName ?? "?", colorHex: peer?.avatarColor, size: 100)
+                            AvatarView(name: peer?.displayName ?? "?", colorHex: peer?.avatarColor, size: 100, avatarUrl: peer?.avatarUrl)
                             Text(peer?.displayName ?? "")
                                 .font(.system(size: 24, weight: .semibold))
                                 .foregroundColor(.white)

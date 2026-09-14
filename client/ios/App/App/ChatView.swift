@@ -219,7 +219,7 @@ struct ChatView: View {
                     showingInfo = true
                 } label: {
                     HStack(spacing: 8) {
-                        AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 32, online: otherOnline)
+                        AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 32, online: otherOnline, avatarUrl: conversation.avatarUrl)
                         VStack(alignment: .leading, spacing: 0) {
                             Text(conversation.name)
                                 .font(.system(size: 16, weight: .semibold))

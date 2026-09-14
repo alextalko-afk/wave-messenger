@@ -5,6 +5,7 @@ struct User: Codable, Identifiable, Equatable {
     var username: String
     var displayName: String
     var avatarColor: String?
+    var avatarUrl: String?
     var bio: String?
     var online: Bool
     var lastSeen: Int?
@@ -16,6 +17,7 @@ struct Member: Codable, Identifiable, Equatable {
     var username: String
     var displayName: String
     var avatarColor: String?
+    var avatarUrl: String?
     var bio: String?
     var online: Bool
     var lastSeen: Int?
@@ -38,6 +40,7 @@ struct Conversation: Codable, Identifiable, Equatable {
     var isGroup: Bool
     var name: String
     var avatarColor: String?
+    var avatarUrl: String?
     var members: [Member]?
     var otherUser: Member?
     var lastMessage: LastMessage?
@@ -53,6 +56,7 @@ struct Message: Codable, Identifiable, Equatable {
     let senderId: String
     var senderName: String?
     var senderColor: String?
+    var senderAvatarUrl: String?
     var content: String?
     var fileUrl: String?
     var fileName: String?
@@ -134,6 +138,10 @@ struct UploadResponse: Codable {
     let type: String
 }
 
+struct AvatarUploadResponse: Codable {
+    let user: User
+}
+
 struct MessageUpdatedEvent: Codable {
     let id: String
     let content: String
@@ -201,6 +209,7 @@ struct CallInviteEvent: Codable {
     let fromUserId: String
     let fromDisplayName: String?
     let fromAvatarColor: String?
+    let fromAvatarUrl: String?
 }
 
 struct CallAnswerEvent: Codable {

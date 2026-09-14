@@ -236,6 +236,7 @@ final class AppSocketManager {
             "sdp": ["type": sdp.type.wireValue, "sdp": sdp.sdp],
             "fromDisplayName": user?.displayName ?? "",
             "fromAvatarColor": user?.avatarColor ?? "",
+            "fromAvatarUrl": user?.avatarUrl ?? "",
         ])
     }
 

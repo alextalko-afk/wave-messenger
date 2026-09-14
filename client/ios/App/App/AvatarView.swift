@@ -19,6 +19,7 @@ struct AvatarView: View {
     let colorHex: String?
     var size: CGFloat = 44
     var online: Bool = false
+    var avatarUrl: String? = nil
 
     private var initial: String {
         String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased()
@@ -26,14 +27,28 @@ struct AvatarView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            Circle()
-                .fill(Color(hex: colorHex))
+            if let avatarUrl, !avatarUrl.isEmpty, let url = APIClient.absoluteURL(for: avatarUrl) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        Color(hex: colorHex)
+                    }
+                }
                 .frame(width: size, height: size)
-                .overlay(
-                    Text(initial.isEmpty ? "?" : initial)
-                        .font(.system(size: size * 0.42, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
-                )
+                .clipShape(Circle())
+            } else {
+                Circle()
+                    .fill(Color(hex: colorHex))
+                    .frame(width: size, height: size)
+                    .overlay(
+                        Text(initial.isEmpty ? "?" : initial)
+                            .font(.system(size: size * 0.42, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                    )
+            }
 
             if online {
                 Circle()

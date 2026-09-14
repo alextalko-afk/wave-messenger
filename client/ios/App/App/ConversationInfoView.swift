@@ -19,7 +19,7 @@ struct ConversationInfoView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         VStack(spacing: 8) {
-                            AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 100, online: conversation.otherUser?.online ?? false)
+                            AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 100, online: conversation.otherUser?.online ?? false, avatarUrl: conversation.avatarUrl)
                             Text(conversation.name)
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(Wave.textPrimary)
@@ -59,7 +59,7 @@ struct ConversationInfoView: View {
                                 Text("Участники").font(.system(size: 13, weight: .semibold)).foregroundColor(Wave.muted)
                                 ForEach(members) { member in
                                     HStack(spacing: 12) {
-                                        AvatarView(name: member.displayName, colorHex: member.avatarColor, size: 40, online: member.online)
+                                        AvatarView(name: member.displayName, colorHex: member.avatarColor, size: 40, online: member.online, avatarUrl: member.avatarUrl)
                                         VStack(alignment: .leading, spacing: 1) {
                                             Text(member.displayName).font(.system(size: 14, weight: .medium)).foregroundColor(Wave.textPrimary)
                                             Text("@\(member.username)").font(.system(size: 12)).foregroundColor(Wave.muted)

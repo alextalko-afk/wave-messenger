@@ -248,7 +248,7 @@ private struct ConversationRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 52, online: conversation.otherUser?.online ?? false)
+            AvatarView(name: conversation.name, colorHex: conversation.avatarColor, size: 52, online: conversation.otherUser?.online ?? false, avatarUrl: conversation.avatarUrl)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
