@@ -129,6 +129,7 @@ struct ChatListView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .navigationDestination(for: Conversation.self) { conversation in
                 ChatView(conversation: conversation)
+                    .toolbar(.hidden, for: .tabBar)
             }
             .task { await load() }
             .onAppear {

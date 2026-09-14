@@ -65,6 +65,7 @@ struct ContactsView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .navigationDestination(for: Conversation.self) { conversation in
                 ChatView(conversation: conversation)
+                    .toolbar(.hidden, for: .tabBar)
             }
         }
         .tint(Wave.accent)
