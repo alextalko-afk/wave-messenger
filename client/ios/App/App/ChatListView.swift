@@ -272,7 +272,7 @@ private struct ConversationRow: View {
                 }
 
                 HStack(spacing: 6) {
-                    Text(conversation.lastMessage?.content ?? "Нет сообщений")
+                    Text(lastMessagePreview)
                         .font(.system(size: 14))
                         .foregroundColor(Wave.muted)
                         .lineLimit(1)
@@ -295,5 +295,16 @@ private struct ConversationRow: View {
         }
         .padding(.vertical, 8)
         .padding(.trailing, 16)
+    }
+
+    private var lastMessagePreview: String {
+        guard let last = conversation.lastMessage else { return "Нет сообщений" }
+        if let content = last.content, !content.isEmpty { return content }
+        switch last.fileType?.split(separator: "/").first.map(String.init) {
+        case "image": return "📷 Фото"
+        case "video": return "📹 Видео"
+        case "audio": return "🎤 Голосовое сообщение"
+        default: return last.fileType != nil ? "📎 Файл" : "Нет сообщений"
+        }
     }
 }
