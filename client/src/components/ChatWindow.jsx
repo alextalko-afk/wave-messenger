@@ -25,21 +25,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   const [loading, setLoading] = useState(true);
   const [typingUsers, setTypingUsers] = useState({});
   const [uploading, setUploading] = useState(false);
-  const [otherReadAt, setOtherReadAt] = useState(conversation.otherUser?.lastReadAt || 0);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordSeconds, setRecordSeconds] = useState(0);
-  const [infoOpen, setInfoOpen] = useState(false);
-  const [emojiPickerMode, setEmojiPickerMode] = useState(null); // null | 'emoji' | 'sticker'
-  const [pendingFile, setPendingFile] = useState(null); // { file, previewUrl, isImage }
-  const [caption, setCaption] = useState('');
-  const bottomRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
-  const textareaRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const chunksRef = useRef([]);
-  const streamRef = useRef(null);
-  const recordTimerRef = useRef(null);
+  const [replyTo, setReplyTo] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -123,10 +109,16 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   function sendMessage(extra = {}) {
     const content = text.trim();
     if (!content && !extra.fileUrl) return;
-    socket?.emit('message:send', { conversationId: conversation.id, content, ...extra }, (res) => {
+    socket?.emit('message:send', { 
+      conversationId: conversation.id, 
+      content, 
+      replyToId: replyTo?.id, 
+      ...extra 
+    }, (res) => {
       if (res?.error) console.error(res.error);
     });
     setText('');
+    setReplyTo(null);
     socket?.emit('typing:stop', { conversationId: conversation.id });
   }
 
@@ -345,6 +337,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
                 isRead={isRead}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onReply={() => setReplyTo(m)}
               />
             </div>
           );
@@ -353,6 +346,24 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
       </div>
 
       <div className="p-3 flex items-end gap-2" style={{ background: 'var(--panel)' }}>
+        {replyTo && (
+          <div 
+            className="absolute bottom-20 left-3 right-3 p-3 rounded-2xl border-l-4 bg-panel2 pop-in flex items-center justify-between z-10"
+            style={{ borderColor: 'var(--accent)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)', borderTop: '1px solid var(--border)' }}
+          >
+            <div className="flex-1 min-w-0 mr-4">
+              <div className="text-[12px] font-semibold" style={{ color: 'var(--accent)' }}>
+                {replyTo.senderName}
+              </div>
+              <div className="text-[13px] truncate opacity-70">
+                {replyTo.content || (replyTo.fileUrl ? 'Медиафайл' : 'Пустое сообщение')}
+              </div>
+            </div>
+            <button onClick={() => setReplyTo(null)} className="p-1 hover:bg-hover rounded-full text-muted">
+              <IconClose size={16} />
+            </button>
+          </div>
+        )}
         {isRecording ? (
           <>
             <button onClick={cancelRecording} className="w-10 h-10 rounded-full hover:bg-hover flex items-center justify-center shrink-0 text-red-400 transition-colors">
