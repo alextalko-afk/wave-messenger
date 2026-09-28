@@ -4,6 +4,7 @@ WORKDIR /app/client
 COPY client/package*.json ./
 RUN npm install
 COPY client/ ./
+RUN chmod -R +x node_modules/.bin
 RUN npm run build
 
 # --- Runtime image: Express server + built client ---
