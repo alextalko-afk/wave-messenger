@@ -252,25 +252,25 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
 
   return (
     <div className="relative flex-1 flex flex-col h-full chat-bg">
-      <div className="flex items-center gap-3 px-4 py-2.5 border-b" style={{ background: 'var(--panel)', borderColor: 'var(--border)' }}>
-        <button onClick={onBack} className="sm:hidden px-1 text-accent">
+      <div className="flex items-center gap-3 px-4 py-2 border-b" style={{ background: 'var(--panel)', borderColor: 'var(--border)' }}>
+        <button onClick={onBack} className="sm:hidden p-1 text-accent hover:bg-hover rounded-full">
           <IconBack size={22} />
         </button>
         <button
           onClick={() => setInfoOpen(true)}
-          className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-lg hover:bg-hover px-1 py-0.5 -ml-1"
+          className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-xl hover:bg-hover px-2 py-1.5 -ml-1 transition-colors"
         >
           <Avatar
             name={conversation.name}
             seed={conversation.id}
-            size={42}
+            size={40}
             online={conversation.otherUser?.online}
             isGroup={conversation.isGroup}
             src={conversation.avatarUrl}
           />
           <div className="flex-1 min-w-0">
-            <div className="font-semibold truncate text-[15px]">{conversation.name}</div>
-            <div className="text-xs text-muted truncate">
+            <div className="font-semibold truncate text-[15px] leading-tight">{conversation.name}</div>
+            <div className="text-[13px] text-muted truncate">
               {typingNames.length > 0 ? (
                 <span style={{ color: 'var(--accent)' }} className="flex items-center gap-1">
                   {typingNames.join(', ')} печатает
@@ -291,29 +291,29 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
             <button
               onClick={() => call.startCall(conversation, 'audio')}
               disabled={call.state.status !== 'idle'}
-              className="w-9 h-9 rounded-full hover:bg-hover flex items-center justify-center text-accent disabled:opacity-40"
+              className="w-9 h-9 rounded-full hover:bg-hover flex items-center justify-center text-accent disabled:opacity-40 transition-colors"
               title="Аудиозвонок"
             >
-              <IconPhone size={19} />
+              <IconPhone size={18} />
             </button>
             <button
               onClick={() => call.startCall(conversation, 'video')}
               disabled={call.state.status !== 'idle'}
-              className="w-9 h-9 rounded-full hover:bg-hover flex items-center justify-center text-accent disabled:opacity-40"
+              className="w-9 h-9 rounded-full hover:bg-hover flex items-center justify-center text-accent disabled:opacity-40 transition-colors"
               title="Видеозвонок"
             >
-              <IconVideo size={19} />
+              <IconVideo size={18} />
             </button>
           </div>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 sm:px-10 py-3">
-        {loading && <div className="text-center text-muted mt-8">Загрузка сообщений…</div>}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-20 py-4">
+        {loading && <div className="text-center text-muted mt-8 animate-pulse">Загрузка сообщений…</div>}
         {!loading && messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center text-muted mt-8 gap-2">
-            <IconChatLogo size={40} className="opacity-40" />
-            <div>Начните переписку</div>
+          <div className="flex flex-col items-center justify-center text-muted mt-12 gap-3 opacity-60">
+            <IconChatLogo size={48} />
+            <div className="text-sm">Начните переписку</div>
           </div>
         )}
         {messages.map((m, i) => {
@@ -328,10 +328,10 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
           return (
             <div key={m.id}>
               {showDay && (
-                <div className="flex justify-center my-3">
+                <div className="flex justify-center my-4">
                   <span
-                    className="text-xs px-3 py-1 rounded-full"
-                    style={{ background: 'var(--panel)', color: 'var(--muted)', boxShadow: 'var(--bubble-shadow)' }}
+                    className="text-[11px] font-medium px-3 py-0.5 rounded-full uppercase tracking-wide"
+                    style={{ background: 'var(--panel)', color: 'var(--muted)', boxShadow: 'var(--bubble-shadow)', border: '1px solid var(--border)' }}
                   >
                     {day}
                   </span>
@@ -355,20 +355,20 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
       <div className="p-3 flex items-end gap-2" style={{ background: 'var(--panel)' }}>
         {isRecording ? (
           <>
-            <button onClick={cancelRecording} className="w-10 h-10 rounded-full hover:bg-hover flex items-center justify-center shrink-0 text-red-400">
+            <button onClick={cancelRecording} className="w-10 h-10 rounded-full hover:bg-hover flex items-center justify-center shrink-0 text-red-400 transition-colors">
               <IconTrash size={18} />
             </button>
             <div
               className="flex-1 min-w-0 flex items-center gap-2.5 px-4 py-2.5 rounded-3xl text-[15px]"
               style={{ background: 'var(--panel2)' }}
             >
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0" />
-              <span className="text-muted tabular-nums">{formatClock(recordSeconds)}</span>
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+              <span className="text-muted tabular-nums font-medium">{formatClock(recordSeconds)}</span>
               <span className="text-muted text-sm">Запись голосового…</span>
             </div>
             <button
               onClick={finishRecording}
-              className="w-11 h-11 rounded-full text-white flex items-center justify-center shrink-0 transition-transform active:scale-90"
+              className="w-11 h-11 rounded-full text-white flex items-center justify-center shrink-0 transition-all active:scale-90"
               style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}
               title="Отправить"
             >
@@ -381,7 +381,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="w-10 h-10 rounded-full hover:bg-hover flex items-center justify-center shrink-0 text-accent"
+              className="w-10 h-10 rounded-full hover:bg-hover flex items-center justify-center shrink-0 text-accent transition-colors"
               title="Прикрепить файл"
             >
               <IconPaperclip size={20} />
@@ -389,7 +389,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
             <div className="relative shrink-0">
               <button
                 onClick={() => setEmojiPickerMode((m) => (m === 'sticker' ? null : 'sticker'))}
-                className="w-10 h-10 rounded-full hover:bg-hover flex items-center justify-center text-accent"
+                className="w-10 h-10 rounded-full hover:bg-hover flex items-center justify-center text-accent transition-colors"
                 title="Стикеры"
               >
                 <IconSticker size={20} />
@@ -410,13 +410,13 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
                 }
               }}
               placeholder="Написать сообщение…"
-              className="flex-1 min-w-0 resize-none px-4 py-2.5 rounded-3xl outline-none max-h-32 text-[15px]"
+              className="flex-1 min-w-0 resize-none px-4 py-2.5 rounded-2xl outline-none max-h-32 text-[15px] transition-all"
               style={{ background: 'var(--panel2)' }}
             />
             <div className="relative shrink-0">
               <button
                 onClick={() => setEmojiPickerMode((m) => (m === 'emoji' ? null : 'emoji'))}
-                className="w-10 h-10 rounded-full hover:bg-hover flex items-center justify-center text-accent"
+                className="w-10 h-10 rounded-full hover:bg-hover flex items-center justify-center text-accent transition-colors"
                 title="Эмодзи"
               >
                 <IconSmile size={20} />
@@ -428,7 +428,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
             {text.trim() ? (
               <button
                 onClick={() => sendMessage()}
-                className="w-11 h-11 rounded-full text-white flex items-center justify-center shrink-0 transition-transform active:scale-90"
+                className="w-11 h-11 rounded-full text-white flex items-center justify-center shrink-0 transition-all active:scale-90"
                 style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}
                 title="Отправить"
               >
@@ -438,7 +438,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
               <button
                 onClick={startRecording}
                 disabled={uploading}
-                className="w-11 h-11 rounded-full text-white flex items-center justify-center shrink-0 transition-transform active:scale-90 disabled:opacity-50"
+                className="w-11 h-11 rounded-full text-white flex items-center justify-center shrink-0 transition-all active:scale-90 disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}
                 title="Голосовое сообщение"
               >

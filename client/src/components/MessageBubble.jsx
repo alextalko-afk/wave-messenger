@@ -4,7 +4,7 @@ import { isStickerContent } from '../lib/emoji.js';
 import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile, IconClose, IconDownload, IconPlay } from './Icons.jsx';
 import VoiceMessage from './VoiceMessage.jsx';
 
-export default function MessageBubble({ message, isMine, showSender, isRead, showTail, onEdit, onDelete }) {
+export default function MessageBubble({ message, isMine, showSender, isRead, showTail, onEdit, onDelete, onReply }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
@@ -79,11 +79,11 @@ export default function MessageBubble({ message, isMine, showSender, isRead, sho
   return (
     <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} msg-in group px-1`}>
       <div
-        className={`relative max-w-[72%] sm:max-w-[65%] pl-3 pr-3.5 py-1.5 my-[1px] ${
+        className={`relative max-w-[85%] sm:max-w-[70%] pl-3 pr-3 py-1.5 my-0.5 ${
           showTail
             ? isMine
-              ? 'bubble-tail-out rounded-2xl rounded-br-md'
-              : 'bubble-tail-in rounded-2xl rounded-bl-md'
+              ? 'bubble-tail-out rounded-2xl rounded-br-sm'
+              : 'bubble-tail-in rounded-2xl rounded-bl-sm'
             : 'rounded-2xl'
         }`}
         style={{
@@ -93,10 +93,30 @@ export default function MessageBubble({ message, isMine, showSender, isRead, sho
         }}
         onMouseEnter={() => setMenuOpen(true)}
         onMouseLeave={() => setMenuOpen(false)}
+        onDoubleClick={() => onReply && onReply()}
       >
         {showSender && !isMine && (
-          <div className="text-xs font-semibold mb-0.5" style={{ color: 'var(--accent)' }}>
+          <div className="text-xs font-medium mb-0.5" style={{ color: 'var(--accent)' }}>
             {message.senderName}
+          </div>
+        )}
+
+        {message.replyToId && (
+          <div 
+            className="flex gap-2 p-2 mb-1 rounded-lg border-l-4 bg-black/5 cursor-pointer transition-colors hover:bg-black/10"
+            style={{ borderColor: 'var(--accent)', color: 'var(--muted)' }}
+          >
+            <div className="shrink-0 mt-0.5">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--accent)' }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] font-semibold" style={{ color: 'var(--accent)' }}>
+                {message.replyToSenderName || 'Пользователь'}
+              </div>
+              <div className="text-[12px] truncate opacity-80">
+                {message.replyToContent || 'Медиафайл'}
+              </div>
+            </div>
           </div>
         )}
 
@@ -105,18 +125,18 @@ export default function MessageBubble({ message, isMine, showSender, isRead, sho
             src={message.fileUrl}
             alt={message.fileName}
             onClick={() => setLightboxOpen(true)}
-            className="rounded-lg mb-1 max-h-72 object-cover -mx-0.5 cursor-pointer"
+            className="rounded-xl mb-1 max-h-72 object-cover -mx-0.5 cursor-pointer"
           />
         )}
         {message.fileUrl && isVideo && (
           <div
             onClick={() => setLightboxOpen(true)}
-            className="relative rounded-lg mb-1 -mx-0.5 cursor-pointer overflow-hidden"
+            className="relative rounded-xl mb-1 -mx-0.5 cursor-pointer overflow-hidden"
           >
             <video src={message.fileUrl} playsInline muted className="max-h-72 w-full" style={{ background: '#000' }} />
             <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-black/50 text-white">
-                <IconPlay size={22} />
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-black/50 text-white">
+                <IconPlay size={20} />
               </div>
             </div>
           </div>
@@ -127,7 +147,7 @@ export default function MessageBubble({ message, isMine, showSender, isRead, sho
             href={message.fileUrl}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-2 mb-1 px-2.5 py-2 rounded-xl bg-black/5"
+            className="flex items-center gap-2 mb-1 px-3 py-2 rounded-xl bg-black/5 hover:bg-black/10 transition-colors"
           >
             <IconFile size={18} />
             <span className="truncate underline text-sm">{message.fileName || 'Файл'}</span>
@@ -150,21 +170,21 @@ export default function MessageBubble({ message, isMine, showSender, isRead, sho
           </div>
         ) : (
           message.content && (
-            <div className="whitespace-pre-wrap break-words text-[15px] leading-snug pr-12">{message.content}</div>
+            <div className="whitespace-pre-wrap break-words text-[15px] leading-normal pr-10">{message.content}</div>
           )
         )}
 
         <div
-          className={`flex items-center gap-1 justify-end text-[11px] mt-0.5 whitespace-nowrap ${
+          className={`flex items-center gap-1 justify-end text-[10px] mt-0.5 whitespace-nowrap ${
             isAudio ? '' : 'float-right -mb-1 ml-1'
           }`}
-          style={{ color: isMine ? 'rgba(23,33,43,0.55)' : 'var(--muted)' }}
+          style={{ color: isMine ? 'rgba(23,33,43,0.45)' : 'var(--muted)' }}
         >
-          {message.editedAt && <span>изм.</span>}
+          {message.editedAt && <span className="mr-0.5">изм.</span>}
           {formatTime(message.createdAt)}
           {isMine && (
-            <span style={{ color: isRead ? 'var(--check)' : 'inherit', display: 'inline-flex' }}>
-              {isRead ? <IconCheckAll size={16} /> : <IconCheck size={13} />}
+            <span style={{ color: isRead ? 'var(--check)' : 'inherit', display: 'inline-flex', marginLeft: '2px' }}>
+              {isRead ? <IconCheckAll size={15} /> : <IconCheck size={12} />}
             </span>
           )}
         </div>
