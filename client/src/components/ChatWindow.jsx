@@ -26,6 +26,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   const [typingUsers, setTypingUsers] = useState({});
   const [uploading, setUploading] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
+  const [otherReadAt, setOtherReadAt] = useState(conversation.otherUser?.lastReadAt || 0);
 
   useEffect(() => {
     setLoading(true);
@@ -109,11 +110,11 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   function sendMessage(extra = {}) {
     const content = text.trim();
     if (!content && !extra.fileUrl) return;
-    socket?.emit('message:send', { 
-      conversationId: conversation.id, 
-      content, 
-      replyToId: replyTo?.id, 
-      ...extra 
+    socket?.emit('message:send', {
+      conversationId: conversation.id,
+      content,
+      replyToId: replyTo?.id,
+      ...extra
     }, (res) => {
       if (res?.error) console.error(res.error);
     });
