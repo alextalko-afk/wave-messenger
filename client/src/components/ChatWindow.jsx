@@ -31,7 +31,8 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   useEffect(() => {
     setLoading(true);
     setMessages([]);
-    setOtherReadAt(conversation.otherUser?.lastReadAt || 0);
+    const initialReadAt = conversation?.otherUser?.lastReadAt || 0;
+    setOtherReadAt(initialReadAt);
     api.getMessages(conversation.id).then((r) => {
       setMessages(r.messages);
       setLoading(false);
