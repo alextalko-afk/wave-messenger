@@ -1,7 +1,0 @@
-**/node_modules
-server/.env
-server/messenger.db
-server/messenger.db-*
-server/uploads
-client/dist
-.git

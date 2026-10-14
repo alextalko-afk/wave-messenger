@@ -29,3 +29,18 @@ yarn-error.log*
 # IDE
 .vscode/
 .idea/
+
+# Uploads and server logs
+server/uploads/*
+!server/uploads/.gitkeep
+server/server.log
+
+# iOS build output
+client/ios/App/build/
+client/ios/**/xcuserdata/
+client/ios/**/DerivedData/
+*.ipa
+
+# Android native build output
+android-native/.gradle/
+android-native/local.properties
