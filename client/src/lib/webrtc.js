@@ -1,10 +1,32 @@
-const ICE_SERVERS = [
+import { api } from './api.js';
+
+const FALLBACK_ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
 ];
+const ICE_CACHE_MS = 30 * 60 * 1000; // server-issued TURN credentials live for hours
+
+let cachedIce = null;
+
+// STUN/TURN servers come from the backend (so TURN credentials stay out of
+// the client bundle). Any failure falls back to public STUN so calls still
+// work on friendly networks.
+export async function loadIceServers() {
+  if (cachedIce && Date.now() - cachedIce.at < ICE_CACHE_MS) return cachedIce.servers;
+  try {
+    const { iceServers } = await api.getIceServers();
+    if (Array.isArray(iceServers) && iceServers.length > 0) {
+      cachedIce = { servers: iceServers, at: Date.now() };
+      return iceServers;
+    }
+  } catch {
+    // fall through
+  }
+  return FALLBACK_ICE_SERVERS;
+}
 
 export class WebRTCClient {
-  constructor({ isVideoCall, onIceCandidate, onRemoteStream, onConnectionStateChange }) {
+  constructor({ isVideoCall, iceServers, onIceCandidate, onRemoteStream, onConnectionStateChange }) {
     this.isVideoCall = isVideoCall;
     this.onIceCandidate = onIceCandidate;
     this.onRemoteStream = onRemoteStream;
@@ -13,7 +35,7 @@ export class WebRTCClient {
     this.localStream = null;
     this.remoteStream = new MediaStream();
 
-    this.pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    this.pc = new RTCPeerConnection({ iceServers: iceServers || FALLBACK_ICE_SERVERS });
     this.pc.onicecandidate = (e) => {
       if (e.candidate) this.onIceCandidate?.(e.candidate);
     };

@@ -3,7 +3,7 @@ import Avatar from './Avatar.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import CallHistoryModal from './CallHistoryModal.jsx';
 import ContextMenu from './ContextMenu.jsx';
-import { formatTime } from '../lib/format.js';
+import { formatTime, formatDayLabel } from '../lib/format.js';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
@@ -65,6 +65,22 @@ function MenuRow({ icon, label, danger, onClick, right }) {
   );
 }
 
+const MIN_MESSAGE_SEARCH_LENGTH = 2;
+
+function Highlighted({ text, needle }) {
+  const idx = text.toLowerCase().indexOf(needle.toLowerCase());
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="rounded-sm px-px" style={{ background: 'var(--accent)', color: '#fff' }}>
+        {text.slice(idx, idx + needle.length)}
+      </mark>
+      {text.slice(idx + needle.length)}
+    </>
+  );
+}
+
 export default function Sidebar({ conversations, activeId, onSelect, onNewChat, onAction, onCreated }) {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
@@ -75,6 +91,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
   const [contextMenu, setContextMenu] = useState(null);
   const [userResults, setUserResults] = useState([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
+  const [messageResults, setMessageResults] = useState([]);
   const [openingUserId, setOpeningUserId] = useState(null);
 
   const trimmedFilter = filter.trim();
@@ -95,6 +112,29 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
     }, 300);
     return () => clearTimeout(t);
   }, [trimmedFilter, user.id]);
+
+  useEffect(() => {
+    if (trimmedFilter.length < MIN_MESSAGE_SEARCH_LENGTH) {
+      setMessageResults([]);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      api
+        .searchMessages(trimmedFilter)
+        .then((r) => !cancelled && setMessageResults(r.results))
+        .catch(() => !cancelled && setMessageResults([]));
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [trimmedFilter]);
+
+  // Only hits in chats still in the list can be opened.
+  const visibleMessageResults = messageResults
+    .map((r) => ({ ...r, conversation: conversations.find((c) => c.id === r.conversationId) }))
+    .filter((r) => r.conversation);
 
   async function openUser(u) {
     if (openingUserId) return;
@@ -261,7 +301,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
             Нажмите на меню, чтобы начать переписку.
           </div>
         )}
-        {trimmedFilter && !searchingUsers && filtered.length === 0 && userResults.length === 0 && (
+        {trimmedFilter && !searchingUsers && filtered.length === 0 && userResults.length === 0 && visibleMessageResults.length === 0 && (
           <div className="text-center text-muted text-sm mt-10 px-6 leading-relaxed">Никого не найдено</div>
         )}
         {filtered.map((c) => {
@@ -324,6 +364,39 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
             </button>
           );
         })}
+
+        {visibleMessageResults.length > 0 && (
+          <>
+            <div className="px-3 pt-3 pb-1.5 text-xs font-medium text-muted uppercase tracking-wide">
+              Сообщения
+            </div>
+            {visibleMessageResults.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => onSelect(r.conversationId)}
+                className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-left mb-0.5 hover:bg-[var(--hover)]"
+              >
+                <Avatar
+                  name={r.conversation.name}
+                  seed={r.conversation.id}
+                  size={44}
+                  isGroup={r.conversation.isGroup}
+                  src={r.conversation.avatarUrl}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium truncate text-[15px]">{r.conversation.name}</span>
+                    <span className="text-xs text-muted shrink-0">{formatDayLabel(r.createdAt)}</span>
+                  </div>
+                  <div className="text-sm text-muted truncate">
+                    {r.senderId === user.id ? 'Вы: ' : r.isGroup ? `${r.senderName}: ` : ''}
+                    <Highlighted text={r.snippet} needle={trimmedFilter} />
+                  </div>
+                </div>
+              </button>
+            ))}
+          </>
+        )}
 
         {trimmedFilter && userResults.length > 0 && (
           <>

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useSocket } from './SocketContext.jsx';
 import { useAuth } from './AuthContext.jsx';
-import { WebRTCClient } from '../lib/webrtc.js';
+import { WebRTCClient, loadIceServers } from '../lib/webrtc.js';
 
 const CallContext = createContext(null);
 
@@ -139,9 +139,11 @@ export function CallProvider({ children }) {
     };
   }, [socket, flushPendingCandidates, resetState]);
 
-  function setupClient(kind, callId) {
+  async function setupClient(kind, callId) {
+    const iceServers = await loadIceServers();
     const client = new WebRTCClient({
       isVideoCall: kind === 'video',
+      iceServers,
       onIceCandidate: (candidate) => {
         if (!targetUserIdRef.current) return;
         socket.emit('call:ice-candidate', {
@@ -188,7 +190,7 @@ export function CallProvider({ children }) {
     setIsMuted(false);
 
     try {
-      const client = setupClient(kind, callId);
+      const client = await setupClient(kind, callId);
       const stream = await client.openLocalMedia();
       setLocalStream(stream);
       const offer = await client.createOffer();
@@ -216,7 +218,7 @@ export function CallProvider({ children }) {
     setState({ ...s, status: 'connecting' });
 
     try {
-      const client = setupClient(s.kind, s.callId);
+      const client = await setupClient(s.kind, s.callId);
       const stream = await client.openLocalMedia();
       setLocalStream(stream);
       await client.setRemoteDescription(pendingInviteSdpRef.current);

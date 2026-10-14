@@ -4,7 +4,22 @@ import { isStickerContent } from '../lib/emoji.js';
 import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile, IconClose, IconDownload, IconPlay } from './Icons.jsx';
 import VoiceMessage from './VoiceMessage.jsx';
 
-export default function MessageBubble({ message, isMine, showSender, isRead, isDelivered, showTail, onEdit, onDelete, onReply }) {
+// Must match ALLOWED_REACTIONS on the server.
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👎'];
+
+export default function MessageBubble({
+  message,
+  isMine,
+  showSender,
+  isRead,
+  isDelivered,
+  showTail,
+  currentUserId,
+  onEdit,
+  onDelete,
+  onReply,
+  onReact,
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
@@ -27,6 +42,62 @@ export default function MessageBubble({ message, isMine, showSender, isRead, isD
       </div>
     );
   }
+
+  const reactions = message.reactions || [];
+
+  const reactionBar = menuOpen && !editing && onReact && (
+    <div
+      className={`absolute -top-10 pb-2 z-10 ${isMine ? 'right-2' : 'left-2'}`}
+      onClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+    >
+      <div
+        className="flex gap-0.5 rounded-full px-1.5 py-1 shadow-lg pop-in"
+        style={{ background: 'var(--overlay)', border: '1px solid var(--border)' }}
+      >
+        {QUICK_REACTIONS.map((emoji) => {
+          const mine = reactions.some((r) => r.emoji === emoji && r.userIds.includes(currentUserId));
+          return (
+            <button
+              key={emoji}
+              className="w-7 h-7 flex items-center justify-center rounded-full text-[17px] leading-none hover:scale-125 transition-transform"
+              style={{ background: mine ? 'var(--hover)' : 'transparent' }}
+              onClick={() => {
+                onReact(message.id, emoji);
+                setMenuOpen(false);
+              }}
+              title={emoji}
+            >
+              {emoji}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const reactionChips = reactions.length > 0 && (
+    <div className="flex flex-wrap gap-1 mt-1.5 clear-both">
+      {reactions.map(({ emoji, userIds }) => {
+        const mine = userIds.includes(currentUserId);
+        return (
+          <button
+            key={emoji}
+            onClick={() => onReact?.(message.id, emoji)}
+            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[13px] leading-none transition-colors"
+            style={{
+              background: mine ? 'var(--accent)' : 'rgba(0,0,0,0.07)',
+              color: mine ? '#fff' : 'inherit',
+            }}
+            title={mine ? 'Убрать реакцию' : 'Поставить реакцию'}
+          >
+            <span>{emoji}</span>
+            {userIds.length > 1 && <span className="text-[11px] font-medium">{userIds.length}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   const editDeleteMenu = isMine && menuOpen && !editing && (
     <div
@@ -93,6 +164,12 @@ export default function MessageBubble({ message, isMine, showSender, isRead, isD
         }}
         onMouseEnter={() => setMenuOpen(true)}
         onMouseLeave={() => setMenuOpen(false)}
+        onContextMenu={(e) => {
+          // long-press on touch devices opens the reaction bar
+          if (!onReact) return;
+          e.preventDefault();
+          setMenuOpen(true);
+        }}
         onDoubleClick={() => onReply && onReply()}
       >
         {showSender && !isMine && (
@@ -189,6 +266,8 @@ export default function MessageBubble({ message, isMine, showSender, isRead, isD
           )}
         </div>
 
+        {reactionChips}
+        {reactionBar}
         {editDeleteMenu}
       </div>
 

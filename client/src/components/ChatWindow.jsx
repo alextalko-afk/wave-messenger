@@ -72,6 +72,10 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
     function onUpdated({ id, content, editedAt }) {
       setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, content, editedAt } : m)));
     }
+    function onReactions({ id, conversationId, reactions }) {
+      if (conversationId !== conversation.id) return;
+      setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, reactions } : m)));
+    }
     function onDeleted({ id }) {
       setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, deleted: true } : m)));
     }
@@ -95,6 +99,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
     socket.on('message:new', onNew);
     socket.on('message:updated', onUpdated);
     socket.on('message:deleted', onDeleted);
+    socket.on('message:reactions', onReactions);
     socket.on('typing:update', onTyping);
     socket.on('message:read', onRead);
     socket.on('message:delivered', onDelivered);
@@ -102,6 +107,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
       socket.off('message:new', onNew);
       socket.off('message:updated', onUpdated);
       socket.off('message:deleted', onDeleted);
+      socket.off('message:reactions', onReactions);
       socket.off('typing:update', onTyping);
       socket.off('message:read', onRead);
       socket.off('message:delivered', onDelivered);
@@ -198,6 +204,10 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   }
   function handleDelete(messageId) {
     socket?.emit('message:delete', { messageId });
+  }
+
+  function handleReact(messageId, emoji) {
+    socket?.emit('message:react', { messageId, emoji });
   }
 
   async function startRecording() {
@@ -361,6 +371,8 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
                 showTail={showTail}
                 isRead={isRead}
                 isDelivered={isDelivered}
+                currentUserId={user.id}
+                onReact={handleReact}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onReply={() => setReplyTo(m)}
