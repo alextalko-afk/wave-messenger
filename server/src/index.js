@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import './asyncErrors.js';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -16,6 +17,14 @@ import conversationRoutes, { serializeConversation } from './routes/conversation
 import uploadRoutes from './routes/upload.js';
 import callsRoutes from './routes/calls.js';
 import { uploadsDir } from './paths.js';
+
+if (!process.env.JWT_SECRET) {
+  console.error('JWT_SECRET is not set - refusing to start');
+  process.exit(1);
+}
+
+process.on('unhandledRejection', (err) => console.error('unhandledRejection:', err));
+process.on('uncaughtException', (err) => console.error('uncaughtException:', err));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -81,6 +90,14 @@ if (fs.existsSync(clientDist)) {
   });
 }
 
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error(err);
+  if (res.headersSent) return;
+  if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'Файл слишком большой (максимум 25 МБ)' });
+  res.status(err.status || 500).json({ error: err.status && err.status < 500 ? err.message : 'Внутренняя ошибка сервера' });
+});
+
 // -------- Socket.io realtime layer --------
 const onlineUsers = new Map(); // userId -> Set(socketIds)
 
@@ -125,82 +142,174 @@ io.use((socket, next) => {
   next();
 });
 
+const MAX_CONTENT_LENGTH = 5000;
+const MAX_NAME_LENGTH = 255;
+const MAX_EVENTS_PER_WINDOW = 150;
+const EVENT_WINDOW_MS = 10_000;
+
+const isString = (v) => typeof v === 'string';
+
+// Uploads are returned by /api/upload as either a same-origin /uploads/ path
+// or an https Cloudinary URL; anything else (javascript:, data:, arbitrary
+// hosts) is rejected so a client can't plant it in other users' chats.
+function isValidFileUrl(url) {
+  return isString(url) && url.length <= 2048 && (url.startsWith('/uploads/') || /^https:\/\//i.test(url));
+}
+
+async function isMember(conversationId, userId) {
+  if (!isString(conversationId)) return false;
+  const row = await get('SELECT 1 FROM conversation_members WHERE conversation_id = ? AND user_id = ?', [
+    conversationId,
+    userId,
+  ]);
+  return !!row;
+}
+
+// A call may only be signalled between two users who share at least one
+// conversation.
+async function sharesConversation(userA, userB) {
+  if (!isString(userB)) return false;
+  const row = await get(
+    `SELECT 1 FROM conversation_members m1
+     JOIN conversation_members m2 ON m2.conversation_id = m1.conversation_id AND m2.user_id = ?
+     WHERE m1.user_id = ? LIMIT 1`,
+    [userB, userA]
+  );
+  return !!row;
+}
+
+// The call row for callId, provided `userId` and `peerId` are its two
+// participants (in either direction).
+async function getCallBetween(callId, userId, peerId) {
+  if (!isString(callId) || !isString(peerId)) return null;
+  return get(
+    `SELECT * FROM calls WHERE id = ?
+       AND ((caller_id = ? AND callee_id = ?) OR (caller_id = ? AND callee_id = ?))`,
+    [callId, userId, peerId, peerId, userId]
+  );
+}
+
+function emitToUser(userId, event, payload) {
+  const sockets = onlineUsers.get(userId);
+  if (!sockets) return;
+  for (const sid of sockets) io.to(sid).emit(event, payload);
+}
+
 io.on('connection', (socket) => {
   const { userId } = socket;
   if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
   const wasOffline = onlineUsers.get(userId).size === 0;
   onlineUsers.get(userId).add(socket.id);
-  if (wasOffline) setPresence(userId, true);
+  if (wasOffline) setPresence(userId, true).catch((err) => console.error(err));
 
-  socket.on('conversation:join', (conversationId) => {
-    socket.join(conversationId);
-  });
-
-  socket.on('conversation:leave', (conversationId) => {
-    socket.leave(conversationId);
-  });
-
-  socket.on('message:send', async (data, ack) => {
-    try {
-      const { conversationId, content, fileUrl, fileName, fileType, replyToId } = data || {};
-      const member = await get('SELECT 1 FROM conversation_members WHERE conversation_id = ? AND user_id = ?', [
-        conversationId,
-        userId,
-      ]);
-      if (!member) return ack?.({ error: 'Нет доступа к чату' });
-      if (!content?.trim() && !fileUrl) return ack?.({ error: 'Пустое сообщение' });
-
-      const id = nanoid();
-      await run(
-        `INSERT INTO messages (id, conversation_id, sender_id, content, file_url, file_name, file_type, reply_to_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, conversationId, userId, content?.trim() || '', fileUrl || null, fileName || null, fileType || null, replyToId || null]
-      );
-
-      const sender = await get('SELECT display_name, avatar_color, avatar_url FROM users WHERE id = ?', [userId]);
-      const message = {
-        id,
-        conversationId,
-        senderId: userId,
-        senderName: sender.display_name,
-        senderColor: sender.avatar_color,
-        senderAvatarUrl: sender.avatar_url || null,
-        content: content?.trim() || '',
-        fileUrl: fileUrl || null,
-        fileName: fileName || null,
-        fileType: fileType || null,
-        replyToId: replyToId || null,
-        editedAt: null,
-        deleted: false,
-        createdAt: Math.floor(Date.now() / 1000),
-      };
-
-      await broadcastToConversation(conversationId, 'message:new', message);
-      ack?.({ message });
-    } catch (err) {
-      console.error(err);
-      ack?.({ error: 'Ошибка отправки сообщения' });
+  // Per-socket flood protection: drop events beyond the window budget.
+  let windowStart = Date.now();
+  let eventCount = 0;
+  socket.use((_packet, next) => {
+    const now = Date.now();
+    if (now - windowStart > EVENT_WINDOW_MS) {
+      windowStart = now;
+      eventCount = 0;
     }
+    if (++eventCount > MAX_EVENTS_PER_WINDOW) return next(new Error('rate_limited'));
+    next();
   });
 
-  socket.on('message:edit', async ({ messageId, content }, ack) => {
+  // Registers a socket event handler whose errors are logged (and reported
+  // through the ack, if any) instead of becoming unhandled rejections.
+  const on = (event, handler) => {
+    socket.on(event, async (...args) => {
+      const ack = typeof args[args.length - 1] === 'function' ? args[args.length - 1] : null;
+      try {
+        await handler(args[0] ?? {}, ack);
+      } catch (err) {
+        console.error(`socket ${event} failed:`, err);
+        ack?.({ error: 'Внутренняя ошибка сервера' });
+      }
+    });
+  };
+
+  on('conversation:join', async (conversationId) => {
+    if (await isMember(conversationId, userId)) socket.join(conversationId);
+  });
+
+  on('conversation:leave', (conversationId) => {
+    if (isString(conversationId)) socket.leave(conversationId);
+  });
+
+  on('message:send', async (data, ack) => {
+    const { conversationId, content, fileUrl, fileName, fileType, replyToId } = data;
+    if (!(await isMember(conversationId, userId))) return ack?.({ error: 'Нет доступа к чату' });
+    if (content != null && !isString(content)) return ack?.({ error: 'Некорректное сообщение' });
+    const text = content?.trim() || '';
+    if (text.length > MAX_CONTENT_LENGTH) return ack?.({ error: 'Сообщение слишком длинное' });
+    if (fileUrl != null && !isValidFileUrl(fileUrl)) return ack?.({ error: 'Некорректный файл' });
+    if (!text && !fileUrl) return ack?.({ error: 'Пустое сообщение' });
+
+    let replyId = null;
+    if (replyToId != null) {
+      const target = isString(replyToId)
+        ? await get('SELECT 1 FROM messages WHERE id = ? AND conversation_id = ?', [replyToId, conversationId])
+        : null;
+      if (!target) return ack?.({ error: 'Сообщение для ответа не найдено' });
+      replyId = replyToId;
+    }
+    const safeFileName = isString(fileName) ? fileName.slice(0, MAX_NAME_LENGTH) : null;
+    const safeFileType = isString(fileType) ? fileType.slice(0, MAX_NAME_LENGTH) : null;
+
+    const id = nanoid();
+    await run(
+      `INSERT INTO messages (id, conversation_id, sender_id, content, file_url, file_name, file_type, reply_to_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, conversationId, userId, text, fileUrl || null, safeFileName, safeFileType, replyId]
+    );
+
+    const sender = await get('SELECT display_name, avatar_color, avatar_url FROM users WHERE id = ?', [userId]);
+    const message = {
+      id,
+      conversationId,
+      senderId: userId,
+      senderName: sender.display_name,
+      senderColor: sender.avatar_color,
+      senderAvatarUrl: sender.avatar_url || null,
+      content: text,
+      fileUrl: fileUrl || null,
+      fileName: safeFileName,
+      fileType: safeFileType,
+      replyToId: replyId,
+      editedAt: null,
+      deleted: false,
+      createdAt: Math.floor(Date.now() / 1000),
+    };
+
+    await broadcastToConversation(conversationId, 'message:new', message);
+    ack?.({ message });
+  });
+
+  on('message:edit', async ({ messageId, content }, ack) => {
+    if (!isString(messageId) || !isString(content)) return ack?.({ error: 'Некорректное сообщение' });
+    const text = content.trim();
+    if (!text || text.length > MAX_CONTENT_LENGTH) return ack?.({ error: 'Некорректный текст сообщения' });
     const msg = await get('SELECT * FROM messages WHERE id = ?', [messageId]);
-    if (!msg || msg.sender_id !== userId) return ack?.({ error: 'Нельзя редактировать это сообщение' });
+    if (!msg || msg.sender_id !== userId || msg.deleted) {
+      return ack?.({ error: 'Нельзя редактировать это сообщение' });
+    }
     const editedAt = Math.floor(Date.now() / 1000);
-    await run('UPDATE messages SET content = ?, edited_at = ? WHERE id = ?', [content, editedAt, messageId]);
-    await broadcastToConversation(msg.conversation_id, 'message:updated', { id: messageId, content, editedAt });
+    await run('UPDATE messages SET content = ?, edited_at = ? WHERE id = ?', [text, editedAt, messageId]);
+    await broadcastToConversation(msg.conversation_id, 'message:updated', { id: messageId, content: text, editedAt });
     ack?.({ ok: true });
   });
 
-  socket.on('message:delete', async ({ messageId }, ack) => {
-    const msg = await get('SELECT * FROM messages WHERE id = ?', [messageId]);
+  on('message:delete', async ({ messageId }, ack) => {
+    const msg = isString(messageId) ? await get('SELECT * FROM messages WHERE id = ?', [messageId]) : null;
     if (!msg || msg.sender_id !== userId) return ack?.({ error: 'Нельзя удалить это сообщение' });
     await run("UPDATE messages SET deleted = 1, content = '', file_url = NULL WHERE id = ?", [messageId]);
     await broadcastToConversation(msg.conversation_id, 'message:deleted', { id: messageId });
     ack?.({ ok: true });
   });
 
-  socket.on('typing:start', async ({ conversationId }) => {
+  on('typing:start', async ({ conversationId }) => {
+    if (!(await isMember(conversationId, userId))) return;
     const user = await get('SELECT display_name FROM users WHERE id = ?', [userId]);
     await broadcastToConversation(
       conversationId,
@@ -210,11 +319,13 @@ io.on('connection', (socket) => {
     );
   });
 
-  socket.on('typing:stop', async ({ conversationId }) => {
+  on('typing:stop', async ({ conversationId }) => {
+    if (!(await isMember(conversationId, userId))) return;
     await broadcastToConversation(conversationId, 'typing:update', { conversationId, userId, typing: false }, socket.id);
   });
 
-  socket.on('conversation:read', async ({ conversationId }) => {
+  on('conversation:read', async ({ conversationId }) => {
+    if (!(await isMember(conversationId, userId))) return;
     const now = Math.floor(Date.now() / 1000);
     await run('UPDATE conversation_members SET last_read_at = ? WHERE conversation_id = ? AND user_id = ?', [
       now,
@@ -224,13 +335,15 @@ io.on('connection', (socket) => {
     await broadcastToConversation(conversationId, 'message:read', { conversationId, userId, readAt: now }, socket.id);
   });
 
-  socket.on('conversation:created', async ({ conversationId, memberIds }) => {
-    for (const uid of memberIds || []) {
-      const sockets = onlineUsers.get(uid);
-      if (!sockets) continue;
-      const conv = await get('SELECT * FROM conversations WHERE id = ?', [conversationId]);
-      const payload = await serializeConversation(conv, uid);
-      for (const sid of sockets) io.to(sid).emit('conversation:new', payload);
+  // The recipients come from the database, never from the client: only a
+  // member can announce a conversation, and only to its other members.
+  on('conversation:created', async ({ conversationId }) => {
+    if (!(await isMember(conversationId, userId))) return;
+    const conv = await get('SELECT * FROM conversations WHERE id = ?', [conversationId]);
+    if (!conv) return;
+    for (const uid of await getConversationMemberIds(conversationId)) {
+      if (uid === userId || !onlineUsers.has(uid)) continue;
+      emitToUser(uid, 'conversation:new', await serializeConversation(conv, uid));
     }
   });
 
@@ -238,50 +351,62 @@ io.on('connection', (socket) => {
   // just relays them to every active socket of the target user (mirroring
   // how message delivery already works via onlineUsers). The only state
   // persisted server-side is a call-log row (for the Calls history tab) -
-  // clients still own the actual call lifecycle.
-  socket.on('call:invite', async ({ conversationId, targetUserId, callId, kind, sdp, fromDisplayName, fromAvatarColor, fromAvatarUrl }) => {
-    const sockets = onlineUsers.get(targetUserId);
-    if (!sockets) return;
+  // clients still own the actual call lifecycle. Every call event is checked
+  // against that row so only the two participants can drive a call.
+  on('call:invite', async ({ conversationId, targetUserId, callId, kind, sdp, fromDisplayName, fromAvatarColor, fromAvatarUrl }) => {
+    if (!isString(callId) || callId.length > 64 || !isString(targetUserId) || targetUserId === userId) return;
+    if (!(await sharesConversation(userId, targetUserId))) return;
+    if (conversationId != null && !((await isMember(conversationId, userId)) && (await isMember(conversationId, targetUserId)))) {
+      return;
+    }
+    if (await get('SELECT 1 FROM calls WHERE id = ?', [callId])) return;
+
+    const callKind = kind === 'video' ? 'video' : 'audio';
+    const online = onlineUsers.has(targetUserId);
     await run(
-      'INSERT INTO calls (id, caller_id, callee_id, conversation_id, kind, status) VALUES (?, ?, ?, ?, ?, ?)',
-      [callId, userId, targetUserId, conversationId || null, kind || 'audio', 'ringing']
+      `INSERT INTO calls (id, caller_id, callee_id, conversation_id, kind, status, ended_at)
+       VALUES (?, ?, ?, ?, ?, ?, ${online ? 'NULL' : "strftime('%s','now')"})`,
+      [callId, userId, targetUserId, conversationId || null, callKind, online ? 'ringing' : 'missed']
     );
-    for (const sid of sockets) {
-      io.to(sid).emit('call:invite', { conversationId, callId, kind, sdp, fromUserId: userId, fromDisplayName, fromAvatarColor, fromAvatarUrl });
-    }
+    if (!online) return;
+    emitToUser(targetUserId, 'call:invite', {
+      conversationId,
+      callId,
+      kind: callKind,
+      sdp,
+      fromUserId: userId,
+      fromDisplayName,
+      fromAvatarColor,
+      fromAvatarUrl,
+    });
   });
 
-  socket.on('call:answer', async ({ targetUserId, callId, sdp }) => {
-    const sockets = onlineUsers.get(targetUserId);
-    if (!sockets) return;
+  on('call:answer', async ({ targetUserId, callId, sdp }) => {
+    const call = await getCallBetween(callId, userId, targetUserId);
+    if (!call || call.callee_id !== userId || call.ended_at) return;
     await run("UPDATE calls SET status = 'answered', answered_at = strftime('%s','now') WHERE id = ?", [callId]);
-    for (const sid of sockets) {
-      io.to(sid).emit('call:answer', { callId, sdp, fromUserId: userId });
-    }
+    emitToUser(targetUserId, 'call:answer', { callId, sdp, fromUserId: userId });
   });
 
-  socket.on('call:ice-candidate', ({ targetUserId, callId, candidate }) => {
-    const sockets = onlineUsers.get(targetUserId);
-    if (!sockets) return;
-    for (const sid of sockets) {
-      io.to(sid).emit('call:ice-candidate', { callId, candidate, fromUserId: userId });
-    }
+  on('call:ice-candidate', async ({ targetUserId, callId, candidate }) => {
+    const call = await getCallBetween(callId, userId, targetUserId);
+    if (!call || call.ended_at) return;
+    emitToUser(targetUserId, 'call:ice-candidate', { callId, candidate, fromUserId: userId });
   });
 
-  socket.on('call:reject', async ({ targetUserId, callId }) => {
-    const sockets = onlineUsers.get(targetUserId);
+  on('call:reject', async ({ targetUserId, callId }) => {
+    const call = await getCallBetween(callId, userId, targetUserId);
+    if (!call) return;
     await run(
       "UPDATE calls SET status = 'declined', ended_at = strftime('%s','now') WHERE id = ? AND status = 'ringing'",
       [callId]
     );
-    if (!sockets) return;
-    for (const sid of sockets) {
-      io.to(sid).emit('call:reject', { callId, fromUserId: userId });
-    }
+    emitToUser(targetUserId, 'call:reject', { callId, fromUserId: userId });
   });
 
-  socket.on('call:end', async ({ targetUserId, callId }) => {
-    const sockets = onlineUsers.get(targetUserId);
+  on('call:end', async ({ targetUserId, callId }) => {
+    const call = await getCallBetween(callId, userId, targetUserId);
+    if (!call) return;
     await run(
       `UPDATE calls SET
          status = CASE WHEN status = 'ringing' THEN 'missed' ELSE status END,
@@ -289,10 +414,7 @@ io.on('connection', (socket) => {
        WHERE id = ? AND ended_at IS NULL`,
       [callId]
     );
-    if (!sockets) return;
-    for (const sid of sockets) {
-      io.to(sid).emit('call:end', { callId, fromUserId: userId });
-    }
+    emitToUser(targetUserId, 'call:end', { callId, fromUserId: userId });
   });
 
   socket.on('disconnect', () => {
@@ -301,7 +423,7 @@ io.on('connection', (socket) => {
       set.delete(socket.id);
       if (set.size === 0) {
         onlineUsers.delete(userId);
-        setPresence(userId, false);
+        setPresence(userId, false).catch((err) => console.error(err));
       }
     }
   });

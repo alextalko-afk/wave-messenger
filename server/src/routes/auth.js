@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
+import { randomInt } from 'crypto';
 import { rateLimit } from 'express-rate-limit';
 import { OAuth2Client } from 'google-auth-library';
 import { get, run } from '../db/index.js';
@@ -107,8 +108,8 @@ router.put('/me', authMiddleware, async (req, res) => {
 
 router.post('/change-password', authMiddleware, authLimiter, async (req, res) => {
   const { currentPassword, newPassword } = req.body || {};
-  if (!newPassword || newPassword.length < 4) {
-    return res.status(400).json({ error: 'Новый пароль от 4 символов' });
+  if (typeof newPassword !== 'string' || newPassword.length < 8) {
+    return res.status(400).json({ error: 'Новый пароль от 8 символов' });
   }
   const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
   if (!user || !bcrypt.compareSync(currentPassword || '', user.password_hash)) {
@@ -119,16 +120,21 @@ router.post('/change-password', authMiddleware, authLimiter, async (req, res) =>
   res.json({ ok: true });
 });
 
-// No SMS gateway is configured, so instead of sending a text we hand the
-// code straight back in the response (devCode) - fine for personal/testing
-// use like the rest of this app, but anyone with the phone number can log
-// in without owning it. Swap this out for a real gateway (Twilio, SMS.ru,
-// etc.) before this is used by people you don't trust.
+// No SMS gateway is configured, so there is no way to deliver a code to the
+// phone's owner. Returning the code in the response (devCode) lets anyone log
+// in as any phone number, so it is only available when explicitly opted into
+// with ALLOW_DEV_PHONE_CODE=1 (local development). Otherwise phone login is
+// disabled until a real gateway (Twilio, SMS.ru, etc.) is wired in here.
+const DEV_PHONE_CODES = process.env.ALLOW_DEV_PHONE_CODE === '1';
+
 router.post('/phone/request', authLimiter, async (req, res) => {
+  if (!DEV_PHONE_CODES) {
+    return res.status(503).json({ error: 'Вход по номеру телефона временно недоступен' });
+  }
   const phone = normalizePhone(req.body?.phone);
   if (!phone) return res.status(400).json({ error: 'Некорректный номер телефона' });
 
-  const code = String(Math.floor(10000 + Math.random() * 90000));
+  const code = String(randomInt(10000, 100000));
   const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
   await run(
     `INSERT INTO phone_codes (phone, code, expires_at, attempts) VALUES (?, ?, ?, 0)
@@ -139,6 +145,9 @@ router.post('/phone/request', authLimiter, async (req, res) => {
 });
 
 router.post('/phone/verify', authLimiter, async (req, res) => {
+  if (!DEV_PHONE_CODES) {
+    return res.status(503).json({ error: 'Вход по номеру телефона временно недоступен' });
+  }
   const phone = normalizePhone(req.body?.phone);
   const { code, displayName } = req.body || {};
   if (!phone) return res.status(400).json({ error: 'Некорректный номер телефона' });

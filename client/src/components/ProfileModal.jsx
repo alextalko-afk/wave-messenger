@@ -122,8 +122,8 @@ export default function ProfileModal({ onClose }) {
   }
 
   async function handleChangePassword() {
-    if (newPassword.length < 4) {
-      setPasswordError('Новый пароль от 4 символов');
+    if (newPassword.length < 8) {
+      setPasswordError('Новый пароль от 8 символов');
       return;
     }
     if (newPassword !== confirmPassword) {
