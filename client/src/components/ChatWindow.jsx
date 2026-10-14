@@ -27,6 +27,20 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   const [uploading, setUploading] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
   const [otherReadAt, setOtherReadAt] = useState(conversation.otherUser?.lastReadAt || 0);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [emojiPickerMode, setEmojiPickerMode] = useState(null); // null | 'emoji' | 'sticker'
+  const [pendingFile, setPendingFile] = useState(null); // { file, previewUrl, isImage }
+  const [caption, setCaption] = useState('');
+  const bottomRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const textareaRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const recordTimerRef = useRef(null);
 
   useEffect(() => {
     setLoading(true);
