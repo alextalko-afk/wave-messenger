@@ -104,10 +104,21 @@ await ensureColumn('conversation_members', 'pinned', 'INTEGER DEFAULT 0');
 await ensureColumn('conversation_members', 'muted', 'INTEGER DEFAULT 0');
 await ensureColumn('conversation_members', 'manually_unread', 'INTEGER DEFAULT 0');
 await ensureColumn('conversation_members', 'cleared_before', 'INTEGER DEFAULT 0');
+await ensureColumn('conversation_members', 'last_delivered_at', 'INTEGER DEFAULT 0');
 await ensureColumn('users', 'phone', 'TEXT');
 await ensureColumn('users', 'google_id', 'TEXT');
 await ensureColumn('users', 'avatar_url', 'TEXT');
 await ensureColumn('conversations', 'avatar_url', 'TEXT');
+
+await client.executeMultiple(`
+CREATE TABLE IF NOT EXISTS push_tokens (
+  token TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  platform TEXT,
+  created_at INTEGER DEFAULT (strftime('%s','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_push_tokens_user ON push_tokens(user_id);
+`);
 
 export async function get(sql, args = []) {
   const res = await client.execute({ sql, args });

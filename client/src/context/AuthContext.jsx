@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { api, getToken, setToken } from '../lib/api.js';
+import { removePushToken } from '../lib/push.js';
 
 const AuthContext = createContext(null);
 
@@ -37,6 +38,7 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
+    removePushToken();
     setToken(null);
     setUser(null);
   }

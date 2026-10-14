@@ -4,7 +4,7 @@ import { isStickerContent } from '../lib/emoji.js';
 import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile, IconClose, IconDownload, IconPlay } from './Icons.jsx';
 import VoiceMessage from './VoiceMessage.jsx';
 
-export default function MessageBubble({ message, isMine, showSender, isRead, showTail, onEdit, onDelete, onReply }) {
+export default function MessageBubble({ message, isMine, showSender, isRead, isDelivered, showTail, onEdit, onDelete, onReply }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
@@ -66,7 +66,7 @@ export default function MessageBubble({ message, isMine, showSender, isRead, sho
             {formatTime(message.createdAt)}
             {isMine && (
               <span style={{ color: isRead ? 'var(--check)' : 'inherit', display: 'inline-flex' }}>
-                {isRead ? <IconCheckAll size={14} /> : <IconCheck size={11} />}
+                {isRead || isDelivered ? <IconCheckAll size={14} /> : <IconCheck size={11} />}
               </span>
             )}
           </div>
@@ -184,7 +184,7 @@ export default function MessageBubble({ message, isMine, showSender, isRead, sho
           {formatTime(message.createdAt)}
           {isMine && (
             <span style={{ color: isRead ? 'var(--check)' : 'inherit', display: 'inline-flex', marginLeft: '2px' }}>
-              {isRead ? <IconCheckAll size={15} /> : <IconCheck size={12} />}
+              {isRead || isDelivered ? <IconCheckAll size={15} /> : <IconCheck size={12} />}
             </span>
           )}
         </div>

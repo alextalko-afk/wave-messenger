@@ -27,6 +27,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   const [uploading, setUploading] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
   const [otherReadAt, setOtherReadAt] = useState(conversation.otherUser?.lastReadAt || 0);
+  const [otherDeliveredAt, setOtherDeliveredAt] = useState(conversation.otherUser?.lastDeliveredAt || 0);
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -47,6 +48,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
     setMessages([]);
     const initialReadAt = conversation?.otherUser?.lastReadAt || 0;
     setOtherReadAt(initialReadAt);
+    setOtherDeliveredAt(conversation?.otherUser?.lastDeliveredAt || 0);
     api.getMessages(conversation.id).then((r) => {
       setMessages(r.messages);
       setLoading(false);
@@ -86,17 +88,23 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
       if (conversationId !== conversation.id || userId === user.id) return;
       setOtherReadAt(readAt);
     }
+    function onDelivered({ conversationId, userId, deliveredAt }) {
+      if (conversationId !== conversation.id || userId === user.id) return;
+      setOtherDeliveredAt((prev) => Math.max(prev, deliveredAt));
+    }
     socket.on('message:new', onNew);
     socket.on('message:updated', onUpdated);
     socket.on('message:deleted', onDeleted);
     socket.on('typing:update', onTyping);
     socket.on('message:read', onRead);
+    socket.on('message:delivered', onDelivered);
     return () => {
       socket.off('message:new', onNew);
       socket.off('message:updated', onUpdated);
       socket.off('message:deleted', onDeleted);
       socket.off('typing:update', onTyping);
       socket.off('message:read', onRead);
+      socket.off('message:delivered', onDelivered);
     };
   }, [socket, conversation.id, user.id]);
 
@@ -333,6 +341,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
           const showSender = conversation.isGroup && (!prev || prev.senderId !== m.senderId);
           const showTail = !next || next.senderId !== m.senderId || formatDayLabel(next.createdAt) !== day;
           const isRead = m.senderId === user.id && m.createdAt <= otherReadAt;
+          const isDelivered = m.senderId === user.id && m.createdAt <= otherDeliveredAt;
           return (
             <div key={m.id}>
               {showDay && (
@@ -351,6 +360,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
                 showSender={showSender}
                 showTail={showTail}
                 isRead={isRead}
+                isDelivered={isDelivered}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onReply={() => setReplyTo(m)}

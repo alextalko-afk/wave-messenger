@@ -52,6 +52,9 @@ export const api = {
     return request('/upload', { method: 'POST', body: form });
   },
   getCalls: () => request('/calls'),
+  pushRegister: (token, platform) =>
+    request('/push/register', { method: 'POST', body: JSON.stringify({ token, platform }) }),
+  pushUnregister: (token) => request('/push/unregister', { method: 'POST', body: JSON.stringify({ token }) }),
   uploadAvatar: (file) => {
     const form = new FormData();
     form.append('file', file);

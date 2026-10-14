@@ -267,6 +267,8 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
         {filtered.map((c) => {
           const lastMine = c.lastMessage && c.lastMessage.senderId === user.id;
           const isReadByOther = lastMine && !c.isGroup && (c.otherUser?.lastReadAt || 0) >= c.lastMessage.createdAt;
+          const isDeliveredToOther =
+            lastMine && !c.isGroup && (c.otherUser?.lastDeliveredAt || 0) >= c.lastMessage.createdAt;
           return (
             <button
               key={c.id}
@@ -297,7 +299,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
                     <span className="flex items-center gap-0.5 shrink-0 ml-2 text-xs text-muted">
                       {lastMine && (
                         <span style={{ color: isReadByOther ? 'var(--check)' : 'var(--muted)', display: 'inline-flex' }}>
-                          {isReadByOther ? <IconCheckAll size={14} /> : <IconCheck size={11} />}
+                          {isReadByOther || isDeliveredToOther ? <IconCheckAll size={14} /> : <IconCheck size={11} />}
                         </span>
                       )}
                       {formatTime(c.lastMessage.createdAt)}

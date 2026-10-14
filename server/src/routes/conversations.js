@@ -10,10 +10,10 @@ router.use(authMiddleware);
 
 async function getMembers(conversationId) {
   const rows = await all(
-    `SELECT u.*, cm.role, cm.last_read_at FROM conversation_members cm JOIN users u ON u.id = cm.user_id WHERE cm.conversation_id = ?`,
+    `SELECT u.*, cm.role, cm.last_read_at, cm.last_delivered_at FROM conversation_members cm JOIN users u ON u.id = cm.user_id WHERE cm.conversation_id = ?`,
     [conversationId]
   );
-  return rows.map((r) => ({ ...publicUser(r), role: r.role, lastReadAt: r.last_read_at }));
+  return rows.map((r) => ({ ...publicUser(r), role: r.role, lastReadAt: r.last_read_at, lastDeliveredAt: r.last_delivered_at || 0 }));
 }
 
 async function getOwnMember(conversationId, userId) {

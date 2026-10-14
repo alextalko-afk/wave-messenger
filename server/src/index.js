@@ -16,6 +16,8 @@ import userRoutes from './routes/users.js';
 import conversationRoutes, { serializeConversation } from './routes/conversations.js';
 import uploadRoutes from './routes/upload.js';
 import callsRoutes from './routes/calls.js';
+import pushRoutes from './routes/push.js';
+import { sendPush, previewText } from './push.js';
 import { uploadsDir } from './paths.js';
 
 if (!process.env.JWT_SECRET) {
@@ -63,6 +65,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/calls', callsRoutes);
+app.use('/api/push', pushRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
@@ -131,6 +134,37 @@ async function setPresence(userId, online) {
   }
 }
 
+// Delivery = the message reached an online device of the recipient. Stored per
+// member as last_delivered_at (same second-resolution timeline as
+// last_read_at) and pushed to the other members so senders can show ticks.
+async function markDelivered(conversationId, userIds, deliveredAt, exceptSocketId = null) {
+  if (userIds.length === 0) return;
+  const placeholders = userIds.map(() => '?').join(',');
+  await run(
+    `UPDATE conversation_members SET last_delivered_at = ?
+     WHERE conversation_id = ? AND user_id IN (${placeholders}) AND last_delivered_at < ?`,
+    [deliveredAt, conversationId, ...userIds, deliveredAt]
+  );
+  for (const uid of userIds) {
+    await broadcastToConversation(
+      conversationId,
+      'message:delivered',
+      { conversationId, userId: uid, deliveredAt },
+      exceptSocketId
+    );
+  }
+}
+
+// A user who just came online has, by definition, received everything sent
+// to them while they were away.
+async function markAllDelivered(userId, socketId) {
+  const now = Math.floor(Date.now() / 1000);
+  const rows = await all('SELECT conversation_id FROM conversation_members WHERE user_id = ?', [userId]);
+  for (const { conversation_id } of rows) {
+    await markDelivered(conversation_id, [userId], now, socketId);
+  }
+}
+
 io.use((socket, next) => {
   // socket.io-client-swift (the iOS native client) has no support for the
   // v3+ `auth` handshake payload, only query params - accept either so
@@ -189,6 +223,18 @@ async function getCallBetween(callId, userId, peerId) {
   );
 }
 
+// A user needs a push when none of their connected sockets is in the
+// foreground: a backgrounded phone app keeps its socket open for a while, and
+// that must not suppress notifications.
+function isUserActive(userId) {
+  const sockets = onlineUsers.get(userId);
+  if (!sockets) return false;
+  for (const sid of sockets) {
+    if (io.sockets.sockets.get(sid)?.data.visible !== false) return true;
+  }
+  return false;
+}
+
 function emitToUser(userId, event, payload) {
   const sockets = onlineUsers.get(userId);
   if (!sockets) return;
@@ -200,7 +246,10 @@ io.on('connection', (socket) => {
   if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
   const wasOffline = onlineUsers.get(userId).size === 0;
   onlineUsers.get(userId).add(socket.id);
-  if (wasOffline) setPresence(userId, true).catch((err) => console.error(err));
+  if (wasOffline) {
+    setPresence(userId, true).catch((err) => console.error(err));
+    markAllDelivered(userId, socket.id).catch((err) => console.error(err));
+  }
 
   // Per-socket flood protection: drop events beyond the window budget.
   let windowStart = Date.now();
@@ -228,6 +277,10 @@ io.on('connection', (socket) => {
       }
     });
   };
+
+  on('app:visibility', ({ visible }) => {
+    socket.data.visible = visible !== false;
+  });
 
   on('conversation:join', async (conversationId) => {
     if (await isMember(conversationId, userId)) socket.join(conversationId);
@@ -284,6 +337,29 @@ io.on('connection', (socket) => {
 
     await broadcastToConversation(conversationId, 'message:new', message);
     ack?.({ message });
+
+    // Past this point the message is sent; delivery marks and push are
+    // best-effort and must not turn a successful send into an error.
+    try {
+      const recipients = await all(
+        'SELECT user_id, muted FROM conversation_members WHERE conversation_id = ? AND user_id != ?',
+        [conversationId, userId]
+      );
+      const online = recipients.filter((r) => onlineUsers.has(r.user_id)).map((r) => r.user_id);
+      await markDelivered(conversationId, online, message.createdAt);
+
+      const offlineToNotify = recipients.filter((r) => !isUserActive(r.user_id) && !r.muted).map((r) => r.user_id);
+      if (offlineToNotify.length > 0) {
+        const conv = await get('SELECT is_group, name FROM conversations WHERE id = ?', [conversationId]);
+        sendPush(offlineToNotify, {
+          title: conv?.is_group ? conv.name || 'Группа' : message.senderName,
+          body: conv?.is_group ? `${message.senderName}: ${previewText(message)}` : previewText(message),
+          data: { conversationId, messageId: id },
+        });
+      }
+    } catch (err) {
+      console.error('post-send delivery/push failed:', err);
+    }
   });
 
   on('message:edit', async ({ messageId, content }, ack) => {
@@ -327,11 +403,10 @@ io.on('connection', (socket) => {
   on('conversation:read', async ({ conversationId }) => {
     if (!(await isMember(conversationId, userId))) return;
     const now = Math.floor(Date.now() / 1000);
-    await run('UPDATE conversation_members SET last_read_at = ? WHERE conversation_id = ? AND user_id = ?', [
-      now,
-      conversationId,
-      userId,
-    ]);
+    await run(
+      'UPDATE conversation_members SET last_read_at = ?, last_delivered_at = MAX(last_delivered_at, ?) WHERE conversation_id = ? AND user_id = ?',
+      [now, now, conversationId, userId]
+    );
     await broadcastToConversation(conversationId, 'message:read', { conversationId, userId, readAt: now }, socket.id);
   });
 

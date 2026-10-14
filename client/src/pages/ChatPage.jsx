@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { api } from '../lib/api.js';
+import { initPush } from '../lib/push.js';
 import { useSocket } from '../context/SocketContext.jsx';
 import Sidebar from '../components/Sidebar.jsx';
 import ChatWindow from '../components/ChatWindow.jsx';
@@ -23,6 +24,15 @@ export default function ChatPage() {
 
   useEffect(() => {
     api.getConversations().then((r) => setConversations(r.conversations));
+  }, []);
+
+  useEffect(() => {
+    initPush({
+      onOpen: (conversationId) => {
+        setActiveId(conversationId);
+        setShowChatOnMobile(true);
+      },
+    }).catch((err) => console.warn('Push setup failed:', err));
   }, []);
 
   useEffect(() => {
@@ -77,15 +87,26 @@ export default function ChatPage() {
         )
       );
     }
+    function onMessageDelivered({ conversationId, userId, deliveredAt }) {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === conversationId && c.otherUser?.id === userId
+            ? { ...c, otherUser: { ...c.otherUser, lastDeliveredAt: Math.max(c.otherUser.lastDeliveredAt || 0, deliveredAt) } }
+            : c
+        )
+      );
+    }
     socket.on('conversation:new', onNewConversation);
     socket.on('message:new', onNewMessage);
     socket.on('presence:update', onPresence);
     socket.on('message:read', onMessageRead);
+    socket.on('message:delivered', onMessageDelivered);
     return () => {
       socket.off('conversation:new', onNewConversation);
       socket.off('message:new', onNewMessage);
       socket.off('presence:update', onPresence);
       socket.off('message:read', onMessageRead);
+      socket.off('message:delivered', onMessageDelivered);
     };
   }, [socket, activeId]);
 
