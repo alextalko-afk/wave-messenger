@@ -4,6 +4,7 @@ import { get, all, run, batch } from '../db/index.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { publicUser } from './auth.js';
 import { upload, useCloudinary } from './upload.js';
+import { getReactionsFor, replyPreview } from '../messages.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -175,11 +176,17 @@ router.get('/:id/messages', async (req, res) => {
   const before = req.query.before ? Number(req.query.before) : Date.now() / 1000 + 1000000;
   const clearedBefore = member.cleared_before || 0;
   const rows = await all(
-    `SELECT m.*, u.display_name as sender_name, u.avatar_color as sender_color, u.avatar_url as sender_avatar_url FROM messages m
+    `SELECT m.*, u.display_name as sender_name, u.avatar_color as sender_color, u.avatar_url as sender_avatar_url,
+            rm.content as reply_content, rm.deleted as reply_deleted, rm.file_type as reply_file_type,
+            ru.display_name as reply_sender_name
+     FROM messages m
      JOIN users u ON u.id = m.sender_id
+     LEFT JOIN messages rm ON rm.id = m.reply_to_id AND rm.conversation_id = m.conversation_id
+     LEFT JOIN users ru ON ru.id = rm.sender_id
      WHERE m.conversation_id = ? AND m.created_at < ? AND m.created_at > ? ORDER BY m.created_at DESC LIMIT 50`,
     [req.params.id, before, clearedBefore]
   );
+  const reactions = await getReactionsFor(rows.map((m) => m.id));
 
   res.json({
     messages: rows.reverse().map((m) => ({
@@ -194,6 +201,9 @@ router.get('/:id/messages', async (req, res) => {
       fileName: m.file_name,
       fileType: m.file_type,
       replyToId: m.reply_to_id,
+      replyToSenderName: m.reply_sender_name || null,
+      replyToContent: m.reply_deleted ? '' : replyPreview(m.reply_content),
+      reactions: m.deleted ? [] : reactions.get(m.id) || [],
       editedAt: m.edited_at,
       deleted: !!m.deleted,
       createdAt: m.created_at,

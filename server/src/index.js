@@ -17,7 +17,9 @@ import conversationRoutes, { serializeConversation } from './routes/conversation
 import uploadRoutes from './routes/upload.js';
 import callsRoutes from './routes/calls.js';
 import pushRoutes from './routes/push.js';
+import searchRoutes from './routes/search.js';
 import { sendPush, previewText } from './push.js';
+import { ALLOWED_REACTIONS, getReactionsFor, replyPreview } from './messages.js';
 import { uploadsDir } from './paths.js';
 
 if (!process.env.JWT_SECRET) {
@@ -66,6 +68,7 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/calls', callsRoutes);
 app.use('/api/push', pushRoutes);
+app.use('/api/search', searchRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
@@ -300,11 +303,16 @@ io.on('connection', (socket) => {
     if (!text && !fileUrl) return ack?.({ error: 'Пустое сообщение' });
 
     let replyId = null;
+    let reply = null;
     if (replyToId != null) {
-      const target = isString(replyToId)
-        ? await get('SELECT 1 FROM messages WHERE id = ? AND conversation_id = ?', [replyToId, conversationId])
+      reply = isString(replyToId)
+        ? await get(
+            `SELECT m.content, m.deleted, u.display_name AS sender_name FROM messages m
+             JOIN users u ON u.id = m.sender_id WHERE m.id = ? AND m.conversation_id = ?`,
+            [replyToId, conversationId]
+          )
         : null;
-      if (!target) return ack?.({ error: 'Сообщение для ответа не найдено' });
+      if (!reply) return ack?.({ error: 'Сообщение для ответа не найдено' });
       replyId = replyToId;
     }
     const safeFileName = isString(fileName) ? fileName.slice(0, MAX_NAME_LENGTH) : null;
@@ -330,6 +338,9 @@ io.on('connection', (socket) => {
       fileName: safeFileName,
       fileType: safeFileType,
       replyToId: replyId,
+      replyToSenderName: reply?.sender_name || null,
+      replyToContent: reply && !reply.deleted ? replyPreview(reply.content) : '',
+      reactions: [],
       editedAt: null,
       deleted: false,
       createdAt: Math.floor(Date.now() / 1000),
@@ -376,10 +387,41 @@ io.on('connection', (socket) => {
     ack?.({ ok: true });
   });
 
+  // One reaction per user per message: sending the emoji you already have
+  // removes it, a different emoji replaces it.
+  on('message:react', async ({ messageId, emoji }, ack) => {
+    if (!isString(messageId) || !ALLOWED_REACTIONS.includes(emoji)) return ack?.({ error: 'Некорректная реакция' });
+    const msg = await get('SELECT conversation_id, deleted FROM messages WHERE id = ?', [messageId]);
+    if (!msg || msg.deleted || !(await isMember(msg.conversation_id, userId))) {
+      return ack?.({ error: 'Нельзя отреагировать на это сообщение' });
+    }
+    const existing = await get('SELECT emoji FROM message_reactions WHERE message_id = ? AND user_id = ?', [
+      messageId,
+      userId,
+    ]);
+    if (existing?.emoji === emoji) {
+      await run('DELETE FROM message_reactions WHERE message_id = ? AND user_id = ?', [messageId, userId]);
+    } else {
+      await run(
+        `INSERT INTO message_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)
+         ON CONFLICT(message_id, user_id) DO UPDATE SET emoji = excluded.emoji, created_at = strftime('%s','now')`,
+        [messageId, userId, emoji]
+      );
+    }
+    const reactions = (await getReactionsFor([messageId])).get(messageId);
+    await broadcastToConversation(msg.conversation_id, 'message:reactions', {
+      id: messageId,
+      conversationId: msg.conversation_id,
+      reactions,
+    });
+    ack?.({ ok: true, reactions });
+  });
+
   on('message:delete', async ({ messageId }, ack) => {
     const msg = isString(messageId) ? await get('SELECT * FROM messages WHERE id = ?', [messageId]) : null;
     if (!msg || msg.sender_id !== userId) return ack?.({ error: 'Нельзя удалить это сообщение' });
     await run("UPDATE messages SET deleted = 1, content = '', file_url = NULL WHERE id = ?", [messageId]);
+    await run('DELETE FROM message_reactions WHERE message_id = ?', [messageId]);
     await broadcastToConversation(msg.conversation_id, 'message:deleted', { id: messageId });
     ack?.({ ok: true });
   });

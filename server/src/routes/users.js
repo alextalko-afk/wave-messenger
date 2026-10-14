@@ -9,11 +9,13 @@ router.use(authMiddleware);
 router.get('/search', async (req, res) => {
   const q = String(req.query.q || '').toLowerCase().trim();
   if (!q) return res.json({ users: [] });
-  const rows = await all(
-    `SELECT * FROM users WHERE id != ? AND (LOWER(username) LIKE ? OR LOWER(display_name) LIKE ?) LIMIT 20`,
-    [req.userId, `%${q}%`, `%${q}%`]
-  );
-  res.json({ users: rows.map(publicUser) });
+  // SQLite's LOWER()/LIKE only fold ASCII, so match in JS to make Cyrillic
+  // search case-insensitive ("алиса" finds "Алиса").
+  const rows = await all('SELECT * FROM users WHERE id != ? ORDER BY created_at DESC LIMIT 5000', [req.userId]);
+  const matches = rows
+    .filter((u) => u.username.toLowerCase().includes(q) || u.display_name.toLowerCase().includes(q))
+    .slice(0, 20);
+  res.json({ users: matches.map(publicUser) });
 });
 
 export default router;

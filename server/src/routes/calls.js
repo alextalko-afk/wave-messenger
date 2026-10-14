@@ -1,9 +1,42 @@
 import { Router } from 'express';
+import { createHmac } from 'crypto';
 import { all } from '../db/index.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 router.use(authMiddleware);
+
+// ICE servers for WebRTC. STUN is always included; add a TURN relay (needed
+// behind symmetric NAT / most mobile networks) with either:
+//   TURN_URLS=turn:host:3478,turns:host:5349 plus
+//   - TURN_SECRET (coturn `use-auth-secret`; short-lived credentials are
+//     generated per request), or
+//   - TURN_USERNAME + TURN_CREDENTIAL (static credentials).
+const TURN_CREDENTIAL_TTL_SECONDS = 6 * 60 * 60;
+
+function buildIceServers(userId) {
+  const stunUrls = (process.env.STUN_URLS || 'stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302')
+    .split(',')
+    .map((u) => u.trim())
+    .filter(Boolean);
+  const servers = stunUrls.map((urls) => ({ urls }));
+
+  const turnUrls = (process.env.TURN_URLS || '').split(',').map((u) => u.trim()).filter(Boolean);
+  if (turnUrls.length > 0) {
+    if (process.env.TURN_SECRET) {
+      const username = `${Math.floor(Date.now() / 1000) + TURN_CREDENTIAL_TTL_SECONDS}:${userId}`;
+      const credential = createHmac('sha1', process.env.TURN_SECRET).update(username).digest('base64');
+      servers.push({ urls: turnUrls, username, credential });
+    } else if (process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {
+      servers.push({ urls: turnUrls, username: process.env.TURN_USERNAME, credential: process.env.TURN_CREDENTIAL });
+    }
+  }
+  return servers;
+}
+
+router.get('/ice-servers', (req, res) => {
+  res.json({ iceServers: buildIceServers(req.userId) });
+});
 
 router.get('/', async (req, res) => {
   const rows = await all(
