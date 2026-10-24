@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext.jsx';
 import { renderGoogleButton } from '../lib/googleAuth.js';
 import { resizeImageFile } from '../lib/imageResize.js';
 import Avatar from './Avatar.jsx';
+import TwoFactorSettings from './TwoFactorSettings.jsx';
 import { IconEdit, IconUser, IconPalette, IconLock, IconLogout, IconClose, IconCheck } from './Icons.jsx';
 
 function GoogleBadge({ size = 20 }) {
@@ -160,8 +161,9 @@ export default function SettingsModal({ onClose }) {
 
   // The Google button only exists while its section is open.
   useEffect(() => {
-    if (section !== 'google' || user.hasGoogle || !googleButtonRef.current) return;
-    renderGoogleButton(googleButtonRef.current, {
+    const container = googleButtonRef.current;
+    if (section !== 'google' || user.hasGoogle || !container) return undefined;
+    renderGoogleButton(container, {
       onCredential: async (idToken) => {
         setGoogleError('');
         try {
@@ -172,6 +174,9 @@ export default function SettingsModal({ onClose }) {
       },
       onError: (message) => setGoogleError(message),
     });
+    // The Google SDK injects its own DOM into the container; make sure none of
+    // it outlives the button (e.g. after the account has just been linked).
+    return () => container.replaceChildren();
   }, [section, user.hasGoogle]);
 
   async function handleAvatarPick(e) {
@@ -461,7 +466,11 @@ export default function SettingsModal({ onClose }) {
 
             {section === 'security' && (
               <section>
-                <SectionTitle title="Безопасность">Пароль и устройства, на которых вы вошли</SectionTitle>
+                <SectionTitle title="Безопасность">Двухэтапная проверка, пароль и устройства, на которых вы вошли</SectionTitle>
+
+                <TwoFactorSettings />
+
+                <div className="my-7" style={{ borderTop: '1px solid var(--border)' }} />
 
                 <h4 className="font-semibold mb-3">Смена пароля</h4>
                 <form
@@ -537,6 +546,7 @@ export default function SettingsModal({ onClose }) {
                 <SectionTitle title="Вход через Google">Входите в Wave одним нажатием, без пароля</SectionTitle>
                 {user.hasGoogle ? (
                   <div
+                    key="google-linked"
                     className="flex items-center gap-4 p-4 rounded-2xl max-w-[480px]"
                     style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}
                   >
@@ -557,7 +567,7 @@ export default function SettingsModal({ onClose }) {
                     </span>
                   </div>
                 ) : (
-                  <div className="max-w-[420px]">
+                  <div key="google-unlink" className="max-w-[420px]">
                     <p className="text-sm text-muted mb-4">
                       Привяжите Google-аккаунт: вы сможете входить без логина и пароля, а старый пароль останется запасным способом.
                     </p>

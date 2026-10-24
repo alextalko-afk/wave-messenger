@@ -1,10 +1,21 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
 import { randomInt } from 'crypto';
 import { rateLimit } from 'express-rate-limit';
 import { OAuth2Client } from 'google-auth-library';
-import { get, run, searchKey } from '../db/index.js';
+import { get, run, batch, searchKey } from '../db/index.js';
+import {
+  generateSecret,
+  verifyTotp,
+  otpauthUrl,
+  encryptSecret,
+  decryptSecret,
+  generateRecoveryCodes,
+  hashRecoveryCode,
+  normalizeRecoveryCode,
+} from '../totp.js';
 import { authMiddleware, signToken, revokeUserTokens, announceRevocation } from '../middleware/auth.js';
 
 const router = Router();
@@ -40,6 +51,7 @@ function publicUser(u) {
     online: !!u.online,
     lastSeen: u.last_seen,
     hasGoogle: !!u.google_id,
+    twoFactorEnabled: !!u.totp_enabled,
   };
 }
 
@@ -68,6 +80,16 @@ async function verifyGoogleIdToken(idToken) {
   }
 }
 
+// With two-step verification on, a correct password (or Google identity) only
+// earns a short-lived challenge; the session starts after /2fa/verify.
+function finishSignIn(res, user, extra = {}) {
+  if (user.totp_enabled) {
+    const challengeToken = jwt.sign({ userId: user.id, purpose: '2fa' }, process.env.JWT_SECRET, { expiresIn: '5m' });
+    return res.json({ twoFactorRequired: true, challengeToken, ...extra });
+  }
+  return res.json({ token: signToken(user), user: publicUser(user), ...extra });
+}
+
 // Password-based registration is intentionally gone: new accounts are only
 // created through /google (or /phone/verify). Existing password accounts
 // still log in via /login below and can link a Google account with
@@ -78,8 +100,7 @@ router.post('/login', authLimiter, async (req, res) => {
   if (!user || !(await bcrypt.compare(String(password || ''), user.password_hash))) {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
-  const token = signToken(user);
-  res.json({ token, user: publicUser(user) });
+  finishSignIn(res, user);
 });
 
 router.get('/me', authMiddleware, async (req, res) => {
@@ -194,8 +215,7 @@ router.post('/phone/verify', authLimiter, async (req, res) => {
     user = await get('SELECT * FROM users WHERE id = ?', [id]);
   }
 
-  const token = signToken(user);
-  res.json({ token, user: publicUser(user), isNewUser });
+  finishSignIn(res, user, { isNewUser });
 });
 
 router.post('/google', authLimiter, async (req, res) => {
@@ -229,8 +249,7 @@ router.post('/google', authLimiter, async (req, res) => {
     user = await get('SELECT * FROM users WHERE id = ?', [id]);
   }
 
-  const token = signToken(user);
-  res.json({ token, user: publicUser(user), isNewUser });
+  finishSignIn(res, user, { isNewUser });
 });
 
 router.post('/link-google', authMiddleware, authLimiter, async (req, res) => {
@@ -251,6 +270,147 @@ router.post('/link-google', authMiddleware, authLimiter, async (req, res) => {
   await run('UPDATE users SET google_id = ? WHERE id = ?', [googleId, req.userId]);
   const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
   res.json({ user: publicUser(user) });
+});
+
+
+// ---------------------------------------------------------------------------
+// Two-step verification (authenticator app codes + one-time recovery codes)
+// ---------------------------------------------------------------------------
+const TWO_FACTOR_MAX_FAILURES = 5;
+const TWO_FACTOR_LOCK_SECONDS = 5 * 60;
+const nowSeconds = () => Math.floor(Date.now() / 1000);
+
+/**
+ * Checks a 6-digit authenticator code or a recovery code for `user`.
+ * A code is single-use: authenticator codes can't be replayed within their
+ * time window, recovery codes are burnt. Repeated failures lock the account's
+ * second step for a few minutes.
+ */
+async function checkSecondFactor(user, rawCode) {
+  const now = nowSeconds();
+  if (Number(user.totp_locked_until) > now) return { ok: false, locked: true };
+
+  const code = String(rawCode ?? '').trim();
+  let ok = false;
+  const secret = user.totp_secret ? decryptSecret(user.totp_secret) : null;
+  if (secret && /^[\d\s]{6,8}$/.test(code)) {
+    const step = verifyTotp(secret, code);
+    if (step !== null) {
+      const res = await run('UPDATE users SET totp_last_step = ? WHERE id = ? AND totp_last_step < ?', [step, user.id, step]);
+      ok = res.changes === 1;
+    }
+  } else if (normalizeRecoveryCode(code).length === 10) {
+    const res = await run(
+      'UPDATE recovery_codes SET used_at = ? WHERE user_id = ? AND code_hash = ? AND used_at IS NULL',
+      [now, user.id, hashRecoveryCode(code)]
+    );
+    ok = res.changes === 1;
+  }
+
+  if (ok) {
+    await run('UPDATE users SET totp_failed = 0, totp_locked_until = 0 WHERE id = ?', [user.id]);
+    return { ok: true };
+  }
+  const failed = Number(user.totp_failed) + 1;
+  const locked = failed >= TWO_FACTOR_MAX_FAILURES;
+  await run('UPDATE users SET totp_failed = ?, totp_locked_until = ? WHERE id = ?', [
+    locked ? 0 : failed,
+    locked ? now + TWO_FACTOR_LOCK_SECONDS : 0,
+    user.id,
+  ]);
+  return { ok: false, locked };
+}
+
+const secondFactorError = (res, result) =>
+  result.locked
+    ? res.status(429).json({ error: 'Слишком много неверных кодов. Попробуйте через 5 минут.' })
+    : res.status(401).json({ error: 'Неверный код' });
+
+async function replaceRecoveryCodes(userId) {
+  const codes = generateRecoveryCodes(10);
+  await batch([
+    { sql: 'DELETE FROM recovery_codes WHERE user_id = ?', args: [userId] },
+    ...codes.map((code) => ({
+      sql: 'INSERT INTO recovery_codes (id, user_id, code_hash) VALUES (?, ?, ?)',
+      args: [nanoid(), userId, hashRecoveryCode(code)],
+    })),
+  ]);
+  return codes;
+}
+
+// Step 1: hand out a fresh secret (not active until /enable proves it works).
+router.post('/2fa/setup', authMiddleware, authLimiter, async (req, res) => {
+  const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
+  if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+  if (user.totp_enabled) return res.status(409).json({ error: 'Двухэтапная проверка уже включена' });
+  const secret = generateSecret();
+  await run('UPDATE users SET totp_pending_secret = ? WHERE id = ?', [encryptSecret(secret), req.userId]);
+  res.json({ secret, otpauthUrl: otpauthUrl({ secret, account: user.username }) });
+});
+
+// Step 2: the first valid code activates it and reveals the recovery codes (once).
+router.post('/2fa/enable', authMiddleware, authLimiter, async (req, res) => {
+  const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
+  if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+  if (user.totp_enabled) return res.status(409).json({ error: 'Двухэтапная проверка уже включена' });
+  if (!user.totp_pending_secret) return res.status(400).json({ error: 'Сначала получите секрет' });
+  const step = verifyTotp(decryptSecret(user.totp_pending_secret), req.body?.code);
+  if (step === null) return res.status(401).json({ error: 'Неверный код' });
+
+  await run(
+    `UPDATE users SET totp_secret = totp_pending_secret, totp_pending_secret = NULL, totp_enabled = 1,
+       totp_last_step = ?, totp_failed = 0, totp_locked_until = 0 WHERE id = ?`,
+    [step, req.userId]
+  );
+  const recoveryCodes = await replaceRecoveryCodes(req.userId);
+  const updated = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
+  res.json({ ok: true, recoveryCodes, user: publicUser(updated) });
+});
+
+router.post('/2fa/disable', authMiddleware, authLimiter, async (req, res) => {
+  const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
+  if (!user?.totp_enabled) return res.status(409).json({ error: 'Двухэтапная проверка не включена' });
+  const result = await checkSecondFactor(user, req.body?.code);
+  if (!result.ok) return secondFactorError(res, result);
+  await batch([
+    {
+      sql: 'UPDATE users SET totp_enabled = 0, totp_secret = NULL, totp_pending_secret = NULL, totp_last_step = 0 WHERE id = ?',
+      args: [req.userId],
+    },
+    { sql: 'DELETE FROM recovery_codes WHERE user_id = ?', args: [req.userId] },
+  ]);
+  const updated = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
+  res.json({ ok: true, user: publicUser(updated) });
+});
+
+router.post('/2fa/recovery-codes', authMiddleware, authLimiter, async (req, res) => {
+  const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
+  if (!user?.totp_enabled) return res.status(409).json({ error: 'Двухэтапная проверка не включена' });
+  const result = await checkSecondFactor(user, req.body?.code);
+  if (!result.ok) return secondFactorError(res, result);
+  res.json({ recoveryCodes: await replaceRecoveryCodes(req.userId) });
+});
+
+router.get('/2fa/recovery-codes/remaining', authMiddleware, async (req, res) => {
+  const row = await get('SELECT COUNT(*) AS n FROM recovery_codes WHERE user_id = ? AND used_at IS NULL', [req.userId]);
+  res.json({ remaining: Number(row.n) });
+});
+
+// Second step of a sign-in: trade the challenge from /login or /google, plus a code, for a session.
+router.post('/2fa/verify', authLimiter, async (req, res) => {
+  const { challengeToken, code } = req.body || {};
+  let payload;
+  try {
+    payload = jwt.verify(String(challengeToken || ''), process.env.JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: 'Время подтверждения истекло. Войдите заново.' });
+  }
+  if (payload.purpose !== '2fa') return res.status(401).json({ error: 'Недействительный запрос' });
+  const user = await get('SELECT * FROM users WHERE id = ?', [payload.userId]);
+  if (!user?.totp_enabled) return res.status(401).json({ error: 'Недействительный запрос' });
+  const result = await checkSecondFactor(user, code);
+  if (!result.ok) return secondFactorError(res, result);
+  res.json({ token: signToken(user), user: publicUser(user) });
 });
 
 export { publicUser };

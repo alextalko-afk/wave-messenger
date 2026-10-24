@@ -117,6 +117,14 @@ await ensureColumn('users', 'token_version', 'INTEGER NOT NULL DEFAULT 0');
 // ASCII, so Cyrillic is folded in JS on write and matched with instr().
 await ensureColumn('users', 'display_name_lower', 'TEXT');
 await ensureColumn('messages', 'content_search', 'TEXT');
+// Two-step verification (TOTP). The secret is stored encrypted; the pending
+// one only becomes the real one after the user proves they can generate codes.
+await ensureColumn('users', 'totp_secret', 'TEXT');
+await ensureColumn('users', 'totp_pending_secret', 'TEXT');
+await ensureColumn('users', 'totp_enabled', 'INTEGER NOT NULL DEFAULT 0');
+await ensureColumn('users', 'totp_last_step', 'INTEGER NOT NULL DEFAULT 0');
+await ensureColumn('users', 'totp_failed', 'INTEGER NOT NULL DEFAULT 0');
+await ensureColumn('users', 'totp_locked_until', 'INTEGER NOT NULL DEFAULT 0');
 
 await client.executeMultiple(`
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) WHERE google_id IS NOT NULL;
@@ -131,6 +139,15 @@ CREATE TABLE IF NOT EXISTS uploads (
   created_at INTEGER DEFAULT (strftime('%s','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_uploads_user ON uploads(user_id, created_at);
+
+CREATE TABLE IF NOT EXISTS recovery_codes (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code_hash TEXT NOT NULL,
+  used_at INTEGER,
+  created_at INTEGER DEFAULT (strftime('%s','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_recovery_codes_user ON recovery_codes(user_id);
 `);
 
 await client.executeMultiple(`

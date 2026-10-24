@@ -2,29 +2,36 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthShell from '../components/AuthShell.jsx';
+import TwoFactorStep from '../components/TwoFactorStep.jsx';
 import { renderGoogleButton } from '../lib/googleAuth.js';
 
 export default function RegisterPage() {
   const { loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
+  const [challenge, setChallenge] = useState(null);
   const googleButtonRef = useRef(null);
 
   useEffect(() => {
-    if (!googleButtonRef.current) return;
+    if (challenge || !googleButtonRef.current) return;
     renderGoogleButton(googleButtonRef.current, {
       onCredential: async (idToken) => {
         setError('');
         try {
-          await loginWithGoogle(idToken);
-          navigate('/');
+          const pending = await loginWithGoogle(idToken);
+          if (pending) setChallenge(pending.challengeToken);
+          else navigate('/');
         } catch (err) {
           setError(err.message);
         }
       },
       onError: (message) => setError(message),
     });
-  }, []);
+  }, [challenge]);
+
+  if (challenge) {
+    return <TwoFactorStep challengeToken={challenge} onDone={() => navigate('/')} onCancel={() => setChallenge(null)} />;
+  }
 
   return (
     <AuthShell

@@ -41,6 +41,8 @@ async function authenticate(token) {
   } catch {
     return null;
   }
+  // Tokens minted for another purpose (the 2FA challenge) are not sessions.
+  if (payload.purpose) return null;
   const version = await currentTokenVersion(payload.userId);
   if (version === null || version !== (Number(payload.v) || 0)) return null;
   return { userId: payload.userId, version };

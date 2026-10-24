@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthShell from '../components/AuthShell.jsx';
+import TwoFactorStep from '../components/TwoFactorStep.jsx';
 import { renderGoogleButton } from '../lib/googleAuth.js';
 
 export default function LoginPage() {
@@ -11,36 +12,43 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [challenge, setChallenge] = useState(null); // challengeToken while a code is being asked for
   const googleButtonRef = useRef(null);
 
   useEffect(() => {
-    if (!googleButtonRef.current) return;
+    if (challenge || !googleButtonRef.current) return;
     renderGoogleButton(googleButtonRef.current, {
       onCredential: async (idToken) => {
         setError('');
         try {
-          await loginWithGoogle(idToken);
-          navigate('/');
+          const pending = await loginWithGoogle(idToken);
+          if (pending) setChallenge(pending.challengeToken);
+          else navigate('/');
         } catch (err) {
           setError(err.message);
         }
       },
       onError: (message) => setError(message),
     });
-  }, []);
+  }, [challenge]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     setBusy(true);
     try {
-      await login(username, password);
-      navigate('/');
+      const pending = await login(username, password);
+      if (pending) setChallenge(pending.challengeToken);
+      else navigate('/');
     } catch (err) {
       setError(err.message);
     } finally {
       setBusy(false);
     }
+  }
+
+  if (challenge) {
+    return <TwoFactorStep challengeToken={challenge} onDone={() => navigate('/')} onCancel={() => setChallenge(null)} />;
   }
 
   return (

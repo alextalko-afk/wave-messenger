@@ -36,6 +36,13 @@ export const api = {
     if (data.token) setToken(data.token);
     return data;
   },
+  twoFactorSetup: () => request('/auth/2fa/setup', { method: 'POST' }),
+  twoFactorEnable: (code) => request('/auth/2fa/enable', { method: 'POST', body: JSON.stringify({ code }) }),
+  twoFactorDisable: (code) => request('/auth/2fa/disable', { method: 'POST', body: JSON.stringify({ code }) }),
+  twoFactorRecoveryCodes: (code) => request('/auth/2fa/recovery-codes', { method: 'POST', body: JSON.stringify({ code }) }),
+  twoFactorRemaining: () => request('/auth/2fa/recovery-codes/remaining'),
+  twoFactorVerify: (challengeToken, code) =>
+    request('/auth/2fa/verify', { method: 'POST', body: JSON.stringify({ challengeToken, code }) }),
   revokeOtherSessions: async () => {
     const data = await request('/auth/revoke-sessions', { method: 'POST' });
     if (data.token) setToken(data.token);

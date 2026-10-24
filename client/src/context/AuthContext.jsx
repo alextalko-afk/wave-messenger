@@ -20,14 +20,26 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  async function login(username, password) {
-    const { token, user } = await api.login({ username, password });
+  // With two-step verification on, the server answers with a challenge instead
+  // of a session. Both sign-ins return that challenge ({ challengeToken }) so
+  // the page can ask for the code, or null once the user is signed in.
+  function startSession({ token, user, twoFactorRequired, challengeToken }) {
+    if (twoFactorRequired) return { challengeToken };
     setToken(token);
     setUser(user);
+    return null;
+  }
+
+  async function login(username, password) {
+    return startSession(await api.login({ username, password }));
   }
 
   async function loginWithGoogle(idToken) {
-    const { token, user } = await api.googleAuth(idToken);
+    return startSession(await api.googleAuth(idToken));
+  }
+
+  async function verifyTwoFactor(challengeToken, code) {
+    const { token, user } = await api.twoFactorVerify(challengeToken, code);
     setToken(token);
     setUser(user);
   }
@@ -44,7 +56,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, loginWithGoogle, linkGoogle, logout }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, loginWithGoogle, verifyTwoFactor, linkGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );
