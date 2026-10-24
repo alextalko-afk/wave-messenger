@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { IconChatLogo } from '../components/Icons.jsx';
+import AuthShell from '../components/AuthShell.jsx';
 import { renderGoogleButton } from '../lib/googleAuth.js';
 
 export default function LoginPage() {
@@ -44,63 +44,67 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="safe-area h-dvh w-screen flex items-center justify-center chat-bg text-text">
-      <form onSubmit={handleSubmit} className="w-full max-w-[360px] px-6">
-        <div className="flex flex-col items-center mb-8">
-          <div
-            className="w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-lg text-white"
-            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}
-          >
-            <IconChatLogo size={38} />
-          </div>
-          <h1 className="text-2xl font-semibold">Wave</h1>
-          <p className="text-muted text-sm mt-1">Быстрый и удобный мессенджер</p>
-        </div>
-
-        <div className="rounded-2xl p-6" style={{ background: 'var(--panel)', boxShadow: 'var(--bubble-shadow)' }}>
-          <h2 className="text-lg font-semibold mb-5 text-center">Вход в аккаунт</h2>
-          {error && <div className="mb-4 text-sm text-red-400 bg-red-500/10 rounded-xl px-3 py-2.5">{error}</div>}
-
-          <input
-            className="w-full mb-3 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-accent/40 text-[15px]"
-            style={{ background: 'var(--panel2)' }}
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Логин"
-            autoFocus
-          />
-          <input
-            type="password"
-            className="w-full mb-5 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-accent/40 text-[15px]"
-            style={{ background: 'var(--panel2)' }}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Пароль"
-          />
-          <button
-            disabled={busy}
-            className="w-full py-3 rounded-full text-white font-medium hover:opacity-90 transition disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}
-          >
-            {busy ? 'Входим…' : 'Войти'}
-          </button>
-
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-            <span className="text-xs text-muted">или</span>
-            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-          </div>
-
-          <div ref={googleButtonRef} className="flex justify-center" />
-        </div>
-
-        <p className="text-sm text-muted text-center mt-5">
+    <AuthShell
+      title="Вход в Wave"
+      subtitle="Введите логин и пароль или войдите через Google"
+      footer={
+        <>
           Нет аккаунта?{' '}
           <Link to="/register" className="font-medium" style={{ color: 'var(--accent)' }}>
             Зарегистрироваться
           </Link>
-        </p>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col" style={{ gap: 18 }}>
+        {error && <div className="text-sm text-red-400 bg-red-500/10 rounded-xl px-3 py-2.5">{error}</div>}
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="login-username" className="text-[13px] font-medium text-muted">
+            Логин
+          </label>
+          <input
+            id="login-username"
+            className="h-[52px] px-4 rounded-[14px] outline-none focus:ring-2 focus:ring-accent/40 text-[15px] border"
+            style={{ background: 'var(--panel)', borderColor: 'var(--border)' }}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="alice"
+            autoComplete="username"
+            autoFocus
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="login-password" className="text-[13px] font-medium text-muted">
+            Пароль
+          </label>
+          <input
+            id="login-password"
+            type="password"
+            className="h-[52px] px-4 rounded-[14px] outline-none focus:ring-2 focus:ring-accent/40 text-[15px] border"
+            style={{ background: 'var(--panel)', borderColor: 'var(--border)' }}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="current-password"
+          />
+        </div>
+        <button
+          disabled={busy}
+          className="h-[52px] rounded-[14px] text-white text-base font-semibold hover:opacity-90 transition disabled:opacity-50"
+          style={{ background: 'var(--accent-fill)' }}
+        >
+          {busy ? 'Входим…' : 'Войти'}
+        </button>
+
+        <div className="flex items-center gap-3 text-[13px] text-muted">
+          <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+          или
+          <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+        </div>
+
+        <div ref={googleButtonRef} className="flex justify-center" />
       </form>
-    </div>
+    </AuthShell>
   );
 }

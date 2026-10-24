@@ -67,14 +67,14 @@ export default function NewChatModal({ onClose, onCreated, initialMode = 'direct
         <div className="flex gap-1 mb-4 p-1 rounded-full" style={{ background: 'var(--panel2)' }}>
           <button
             className="flex-1 py-2 rounded-full font-medium text-sm transition-colors"
-            style={mode === 'direct' ? { background: 'var(--accent)', color: '#fff' } : { color: 'var(--muted)' }}
+            style={mode === 'direct' ? { background: 'var(--accent-fill)', color: '#fff' } : { color: 'var(--muted)' }}
             onClick={() => setMode('direct')}
           >
             Личный чат
           </button>
           <button
             className="flex-1 py-2 rounded-full font-medium text-sm transition-colors"
-            style={mode === 'group' ? { background: 'var(--accent)', color: '#fff' } : { color: 'var(--muted)' }}
+            style={mode === 'group' ? { background: 'var(--accent-fill)', color: '#fff' } : { color: 'var(--muted)' }}
             onClick={() => setMode('group')}
           >
             Группа
@@ -151,7 +151,7 @@ export default function NewChatModal({ onClose, onCreated, initialMode = 'direct
             disabled={busy}
             onClick={handleCreateGroup}
             className="w-full mt-4 py-2.5 rounded-full text-white font-medium hover:opacity-90 transition disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}
+            style={{ background: 'var(--accent-fill)' }}
           >
             {busy ? 'Создаём…' : 'Создать группу'}
           </button>

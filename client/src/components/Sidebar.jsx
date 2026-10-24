@@ -27,6 +27,10 @@ import {
   IconEraser,
   IconTrash,
   IconPhone,
+  IconPlus,
+  IconSettings,
+  IconChatLogo,
+  IconChat,
 } from './Icons.jsx';
 
 function lastMessagePreview(lastMessage) {
@@ -41,7 +45,7 @@ function Switch({ on }) {
   return (
     <span
       className="w-10 h-6 rounded-full relative shrink-0 transition-colors"
-      style={{ background: on ? 'var(--accent)' : 'var(--border)' }}
+      style={{ background: on ? 'var(--accent-fill)' : 'var(--badge-muted)' }}
     >
       <span
         className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform"
@@ -50,6 +54,36 @@ function Switch({ on }) {
     </span>
   );
 }
+
+function RailButton({ label, active, onClick, badge, children }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={`relative w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${
+        active ? '' : 'hover:bg-hover'
+      }`}
+      style={{ background: active ? 'var(--selected)' : 'transparent', color: active ? 'var(--accent)' : 'var(--muted)' }}
+    >
+      {children}
+      {badge > 0 && (
+        <span
+          className="absolute top-0.5 right-0 min-w-[18px] h-[18px] px-1 rounded-full text-[11px] leading-[18px] font-semibold text-white text-center"
+          style={{ background: 'var(--accent-fill)' }}
+        >
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+    </button>
+  );
+}
+
+const CHAT_TABS = [
+  ['all', 'Все'],
+  ['direct', 'Личные'],
+  ['group', 'Группы'],
+];
 
 function MenuRow({ icon, label, danger, onClick, right }) {
   return (
@@ -73,7 +107,7 @@ function Highlighted({ text, needle }) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="rounded-sm px-px" style={{ background: 'var(--accent)', color: '#fff' }}>
+      <mark className="rounded-sm px-px" style={{ background: 'var(--accent-fill)', color: '#fff' }}>
         {text.slice(idx, idx + needle.length)}
       </mark>
       {text.slice(idx + needle.length)}
@@ -93,6 +127,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [messageResults, setMessageResults] = useState([]);
   const [openingUserId, setOpeningUserId] = useState(null);
+  const [tab, setTab] = useState('all');
 
   const trimmedFilter = filter.trim();
 
@@ -185,10 +220,50 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
     ];
   }
 
-  const filtered = conversations.filter((c) => c.name.toLowerCase().includes(filter.toLowerCase()));
+  const filtered = conversations.filter(
+    (c) =>
+      (tab === 'all' || (tab === 'group' ? c.isGroup : !c.isGroup)) && c.name.toLowerCase().includes(filter.toLowerCase())
+  );
+  const totalUnread = conversations.reduce((n, c) => n + (c.muted ? 0 : c.unreadCount || 0), 0);
 
   return (
-    <div className="relative w-full sm:w-[360px] shrink-0 h-full flex flex-col bg-panel overflow-hidden">
+    <div className="relative w-full sm:w-[436px] shrink-0 h-full flex bg-panel overflow-hidden">
+      <nav
+        aria-label="Разделы"
+        className="hidden sm:flex w-[76px] shrink-0 flex-col items-center py-4 gap-2.5 border-r bg-rail"
+        style={{ borderColor: 'var(--border)' }}
+      >
+        <div
+          className="w-11 h-11 rounded-[14px] flex items-center justify-center text-white mb-3"
+          style={{ background: 'var(--accent-fill)' }}
+        >
+          <IconChatLogo size={26} />
+        </div>
+        <RailButton label="Чаты" active badge={totalUnread}>
+          <IconChat size={24} />
+        </RailButton>
+        <RailButton label="Звонки" onClick={() => setCallHistoryOpen(true)}>
+          <IconPhone size={24} />
+        </RailButton>
+        <RailButton label="Новая группа" onClick={() => onNewChat('group')}>
+          <IconGroup size={24} />
+        </RailButton>
+        <div className="flex-1" />
+        <RailButton label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'} onClick={toggle}>
+          {theme === 'dark' ? <IconSun size={22} /> : <IconMoon size={22} />}
+        </RailButton>
+        <RailButton label="Настройки" onClick={() => setProfileOpen(true)}>
+          <IconSettings size={22} />
+        </RailButton>
+        <RailButton label="Выйти" onClick={logout}>
+          <IconLogout size={22} />
+        </RailButton>
+        <button onClick={() => setProfileOpen(true)} aria-label="Мой профиль" className="mt-1 rounded-full">
+          <Avatar name={user.displayName} seed={user.id} size={44} online src={user.avatarUrl} />
+        </button>
+      </nav>
+
+      <div className="relative flex-1 min-w-0 h-full flex flex-col bg-panel overflow-hidden">
       <div
         className={`fixed inset-0 z-40 transition-opacity duration-200 ${
           menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
@@ -273,32 +348,64 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 px-2 pt-2.5 pb-2">
+      <div className="flex items-center gap-2 px-4 sm:px-5 pt-4 pb-3">
         <button
           onClick={() => setMenuOpen(true)}
-          className="w-10 h-10 rounded-full hover:bg-hover flex items-center justify-center shrink-0 text-muted"
+          aria-label="Меню"
+          className="sm:hidden w-10 h-10 -ml-2 rounded-full hover:bg-hover flex items-center justify-center shrink-0 text-muted"
         >
-          <IconMenu size={20} />
+          <IconMenu size={22} />
         </button>
-        <div className="flex-1 relative">
+        <h1 className="flex-1 font-display text-2xl leading-[30px] font-bold">Чаты</h1>
+        <button
+          onClick={() => onNewChat('direct')}
+          aria-label="Новый чат"
+          title="Новый чат"
+          className="w-10 h-10 rounded-xl flex items-center justify-center bg-panel2 hover:opacity-80"
+        >
+          <IconPlus size={20} />
+        </button>
+      </div>
+
+      <div className="px-4 pb-3">
+        <label className="relative block">
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">
-            <IconSearch size={16} />
+            <IconSearch size={18} />
           </span>
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Поиск"
-            className="w-full pl-9 pr-3 py-2.5 rounded-full bg-panel2 outline-none text-sm placeholder:text-muted focus:ring-2 focus:ring-accent/40"
+            placeholder="Поиск людей и сообщений"
+            aria-label="Поиск"
+            className="w-full h-11 pl-10 pr-3 rounded-[14px] bg-panel2 outline-none text-sm placeholder:text-muted focus:ring-2 focus:ring-accent/40"
           />
-        </div>
+        </label>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-1.5 pb-2">
+      <div className="flex gap-2 px-4 pb-2.5" role="tablist" aria-label="Фильтр чатов">
+        {CHAT_TABS.map(([id, label]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className="px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-colors"
+            style={{
+              background: tab === id ? 'var(--accent-fill)' : 'var(--panel2)',
+              color: tab === id ? '#ffffff' : 'var(--text)',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-2 pb-2">
         {!trimmedFilter && filtered.length === 0 && (
           <div className="text-center text-muted text-sm mt-10 px-6 leading-relaxed">
             Пока нет чатов.
             <br />
-            Нажмите на меню, чтобы начать переписку.
+            Нажмите «+», чтобы начать переписку.
           </div>
         )}
         {trimmedFilter && !searchingUsers && filtered.length === 0 && userResults.length === 0 && visibleMessageResults.length === 0 && (
@@ -314,7 +421,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
               key={c.id}
               onClick={() => onSelect(c.id)}
               onContextMenu={(e) => handleContextMenu(e, c)}
-              className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-left mb-0.5 transition-colors duration-150 ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-left mb-0.5 transition-colors duration-150 ${
                 activeId === c.id ? '' : 'hover:bg-[var(--hover)]'
               }`}
               style={{ background: activeId === c.id ? 'var(--selected)' : 'transparent' }}
@@ -332,7 +439,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
                   <span className="flex items-center gap-1 min-w-0">
                     {c.pinned && <IconPin size={12} className="text-muted shrink-0" />}
                     {c.isGroup && <IconUsers size={13} className="text-muted shrink-0" />}
-                    <span className="font-medium truncate text-[15px]">{c.name}</span>
+                    <span className="font-semibold truncate text-[15px]">{c.name}</span>
                     {c.muted && <IconBellOff size={12} className="text-muted shrink-0" />}
                   </span>
                   {c.lastMessage && (
@@ -354,7 +461,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
                   {c.unreadCount > 0 && (
                     <span
                       className="text-white text-xs font-medium rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shrink-0 ml-2 pop-in"
-                      style={{ background: c.muted ? 'var(--muted)' : 'var(--accent)' }}
+                      style={{ background: c.muted ? 'var(--badge-muted)' : 'var(--accent-fill)' }}
                     >
                       {c.unreadCount}
                     </span>
@@ -432,6 +539,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
           onClose={() => setContextMenu(null)}
         />
       )}
+      </div>
     </div>
   );
 }

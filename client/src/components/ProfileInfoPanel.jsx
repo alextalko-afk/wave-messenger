@@ -355,7 +355,7 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
                   {isGroupAdmin && (
                     <span
                       className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full flex items-center justify-center"
-                      style={{ background: 'var(--accent)', border: '2px solid var(--overlay)' }}
+                      style={{ background: 'var(--accent-fill)', border: '2px solid var(--overlay)' }}
                     >
                       <IconEdit size={13} className="text-white" />
                     </span>

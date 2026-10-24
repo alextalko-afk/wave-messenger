@@ -84,10 +84,11 @@ export default function MessageBubble({
           <button
             key={emoji}
             onClick={() => onReact?.(message.id, emoji)}
-            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[13px] leading-none transition-colors"
+            className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] leading-none transition-colors"
             style={{
-              background: mine ? 'var(--accent)' : 'rgba(0,0,0,0.07)',
-              color: mine ? '#fff' : 'inherit',
+              background: mine ? 'var(--react-mine)' : 'var(--react)',
+              color: 'var(--text)',
+              boxShadow: 'var(--bubble-shadow)',
             }}
             title={mine ? 'Убрать реакцию' : 'Поставить реакцию'}
           >
@@ -148,14 +149,10 @@ export default function MessageBubble({
   }
 
   return (
-    <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} msg-in group px-1`}>
+    <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} msg-in group px-1 mb-1`}>
       <div
-        className={`relative max-w-[85%] sm:max-w-[70%] pl-3 pr-3 py-1.5 my-0.5 ${
-          showTail
-            ? isMine
-              ? 'bubble-tail-out rounded-2xl rounded-br-sm'
-              : 'bubble-tail-in rounded-2xl rounded-bl-sm'
-            : 'rounded-2xl'
+        className={`relative max-w-[85%] sm:max-w-[70%] pl-3.5 pr-3 py-2 rounded-[18px] ${
+          showTail ? (isMine ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''
         }`}
         style={{
           background: isMine ? 'var(--bubble-out)' : 'var(--bubble-in)',
@@ -179,21 +176,17 @@ export default function MessageBubble({
         )}
 
         {message.replyToId && (
-          <div 
-            className="flex gap-2 p-2 mb-1 rounded-lg border-l-4 bg-black/5 cursor-pointer transition-colors hover:bg-black/10"
-            style={{ borderColor: 'var(--accent)', color: 'var(--muted)' }}
+          <div
+            className="px-2.5 py-1.5 mb-1.5 rounded-xl cursor-pointer"
+            style={{ background: isMine ? 'var(--reply-out)' : 'var(--reply-in)' }}
           >
-            <div className="shrink-0 mt-0.5">
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--accent)' }} />
+            <div
+              className="text-[12px] leading-4 font-semibold"
+              style={{ color: isMine ? 'var(--bubble-out-text)' : 'var(--accent)' }}
+            >
+              {message.replyToSenderName || 'Пользователь'}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[11px] font-semibold" style={{ color: 'var(--accent)' }}>
-                {message.replyToSenderName || 'Пользователь'}
-              </div>
-              <div className="text-[12px] truncate opacity-80">
-                {message.replyToContent || 'Медиафайл'}
-              </div>
-            </div>
+            <div className="text-[13px] leading-[18px] truncate">{message.replyToContent || 'Медиафайл'}</div>
           </div>
         )}
 
@@ -224,7 +217,8 @@ export default function MessageBubble({
             href={message.fileUrl}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-2 mb-1 px-3 py-2 rounded-xl bg-black/5 hover:bg-black/10 transition-colors"
+            className="flex items-center gap-2 mb-1 px-3 py-2 rounded-xl hover:opacity-80 transition-opacity"
+            style={{ background: isMine ? 'var(--reply-out)' : 'var(--reply-in)' }}
           >
             <IconFile size={18} />
             <span className="truncate underline text-sm">{message.fileName || 'Файл'}</span>
@@ -255,12 +249,19 @@ export default function MessageBubble({
           className={`flex items-center gap-1 justify-end text-[10px] mt-0.5 whitespace-nowrap ${
             isAudio ? '' : 'float-right -mb-1 ml-1'
           }`}
-          style={{ color: isMine ? 'rgba(23,33,43,0.45)' : 'var(--muted)' }}
+          style={{ color: isMine ? 'var(--bubble-out-meta)' : 'var(--muted)' }}
         >
           {message.editedAt && <span className="mr-0.5">изм.</span>}
           {formatTime(message.createdAt)}
           {isMine && (
-            <span style={{ color: isRead ? 'var(--check)' : 'inherit', display: 'inline-flex', marginLeft: '2px' }}>
+            <span
+              style={{
+                color: isRead ? 'var(--bubble-out-text)' : 'inherit',
+                opacity: isRead ? 1 : 0.75,
+                display: 'inline-flex',
+                marginLeft: '2px',
+              }}
+            >
               {isRead || isDelivered ? <IconCheckAll size={15} /> : <IconCheck size={12} />}
             </span>
           )}

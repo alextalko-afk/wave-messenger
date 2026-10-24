@@ -1,279 +1,308 @@
-export const IconSearch = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 18} height={p.size || 18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" {...p}>
-    <circle cx="11" cy="11" r="7" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
+// Wave's own icon set: solid glyphs, with rounded strokes for simple marks.
+// Every icon takes `size` and passes the rest (className, style…) to the <svg>;
+// colour comes from `currentColor`.
+
+const FILL = { fill: 'currentColor', stroke: 'none' };
+const EVEN_ODD = { ...FILL, fillRule: 'evenodd' };
+
+function icon(defaultSize, children) {
+  return function WaveIcon({ size, ...rest }) {
+    const s = size || defaultSize;
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        width={s}
+        height={s}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        {...rest}
+      >
+        {children}
+      </svg>
+    );
+  };
+}
+
+const circle = (cx, cy, r) => `M${cx - r},${cy}a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0z`;
+const rrect = (x, y, w, h, r) =>
+  `M${x + r},${y}h${w - 2 * r}a${r},${r} 0 0 1 ${r},${r}v${h - 2 * r}a${r},${r} 0 0 1 ${-r},${r}` +
+  `h${-(w - 2 * r)}a${r},${r} 0 0 1 ${-r},${-r}v${-(h - 2 * r)}a${r},${r} 0 0 1 ${r},${-r}z`;
+
+const HANDSET =
+  'M6.2 2.8c.6-.5 1.5-.4 2 .2l2 2.5c.4.5.4 1.2 0 1.7l-1.2 1.4c-.2.2-.2.5 0 .8 1 1.9 2.7 3.6 4.7 4.7.3.1.6.1.8-.1' +
+  'l1.4-1.2c.5-.4 1.2-.4 1.7 0l2.5 2c.6.5.7 1.4.2 2l-1.4 1.8c-.9 1.1-2.4 1.6-3.8 1.2C10.3 18.5 5.5 13.7 3.5 7.4' +
+  'c-.4-1.4.1-2.9 1.2-3.8z';
+const BUBBLE =
+  'M12 2.8c-5.2 0-9.2 3.6-9.2 8.3 0 2.4 1 4.5 2.8 6-.2 1.5-.8 2.7-1.8 3.7a.6.6 0 00.5 1c2.1-.1 3.9-.8 5.3-1.9' +
+  '.8.2 1.6.3 2.4.3 5.2 0 9.2-3.6 9.2-8.3S17.2 2.8 12 2.8z';
+const BELL =
+  'M12 2.5a1.5 1.5 0 011.5 1.5v.6A6.5 6.5 0 0118.5 11v4.2l1.6 2.1c.5.6 0 1.7-.8 1.7H4.7c-.8 0-1.3-1.1-.8-1.7' +
+  'l1.6-2.1V11a6.5 6.5 0 015-6.4V4A1.5 1.5 0 0112 2.5z';
+const BELL_CLAPPER = 'M9.7 20.3h4.6a2.3 2.3 0 01-4.6 0z';
+const VIDEO_LENS = 'M17.5 10.6l3.3-2.2c.6-.4 1.2 0 1.2.7v6.1c0 .7-.6 1.1-1.2.7l-3.3-2.2z';
+const PEOPLE = (
+  <>
+    <circle {...FILL} cx="9" cy="8" r="3.6" />
+    <path {...FILL} d="M2.5 19.5c0-3.4 2.9-5.7 6.5-5.7s6.5 2.3 6.5 5.7c0 .6-.4 1-1 1H3.5c-.6 0-1-.4-1-1z" />
+    <circle {...FILL} cx="17.2" cy="9" r="2.7" />
+    <path
+      {...FILL}
+      d="M17.2 14.2c2.5 0 4.4 1.6 4.8 4.1.1.6-.3 1.2-.9 1.2h-3.7c.2-.4.2-.8.2-1.2 0-1.6-.6-3.1-1.7-4.1.4-.1.9-.1 1.3-.1z"
+    />
+  </>
 );
 
-export const IconPaperclip = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 20} height={p.size || 20} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M21.44 11.05l-9.19 9.19a5 5 0 01-7.07-7.07l9.19-9.19a3.5 3.5 0 014.95 4.95l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
-  </svg>
+export const IconSearch = icon(
+  18,
+  <>
+    <path d={circle(10.5, 10.5, 6.2)} strokeWidth="2.8" />
+    <path d="M15.4 15.4L20 20" strokeWidth="3" />
+  </>
 );
 
-export const IconSend = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 20} height={p.size || 20} fill="currentColor" {...p}>
-    <path d="M3 20l18-8L3 4v6l12 2-12 2z" />
-  </svg>
+export const IconPaperclip = icon(
+  20,
+  <path d="M20 11.5l-8 8a5 5 0 01-7-7l8.5-8.5a3.3 3.3 0 014.7 4.7L9.5 17.3a1.7 1.7 0 01-2.4-2.4L15 7" />
 );
 
-export const IconEdit = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 15} height={p.size || 15} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M12 20h9" />
-    <path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z" />
-  </svg>
+export const IconSend = icon(
+  20,
+  <path
+    {...FILL}
+    d="M3.2 11.1L19.8 3.6c.9-.4 1.8.5 1.4 1.4l-7.5 16.6c-.4.9-1.7.8-2-.1l-1.8-6.4-6.4-1.8c-.9-.3-1-1.6-.1-2z"
+  />
 );
 
-export const IconTrash = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 15} height={p.size || 15} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <polyline points="3 6 5 6 21 6" />
-    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-  </svg>
+export const IconEdit = icon(
+  15,
+  <>
+    <path {...FILL} d="M15.2 4.8l4 4-10.9 10.9c-.2.2-.4.3-.7.4L4.3 20.7l.6-3.3c.1-.3.2-.5.4-.7z" />
+    <path {...FILL} d="M16.6 3.4c.8-.8 2-.8 2.8 0l1.2 1.2c.8.8.8 2 0 2.8l-.7.7-4-4z" />
+  </>
 );
 
-export const IconLogout = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 17} height={p.size || 17} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
+export const IconTrash = icon(
+  15,
+  <>
+    <path {...FILL} d="M9 3.5h6l.7 1.5H20a1 1 0 010 2H4a1 1 0 010-2h4.3z" />
+    <path {...FILL} d="M5.5 9h13l-.9 10.2A2 2 0 0115.6 21H8.4a2 2 0 01-2-1.8z" />
+  </>
 );
 
-export const IconSun = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 17} height={p.size || 17} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <circle cx="12" cy="12" r="4" />
-    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-  </svg>
+export const IconLogout = icon(
+  17,
+  <>
+    <path d="M10 4H6a2 2 0 00-2 2v12a2 2 0 002 2h4" strokeWidth="2.2" />
+    <path d="M15 8l4 4-4 4M19 12H9" />
+  </>
 );
 
-export const IconMoon = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 17} height={p.size || 17} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-  </svg>
+export const IconSun = icon(
+  17,
+  <>
+    <circle {...FILL} cx="12" cy="12" r="4.4" />
+    <path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4" strokeWidth="2.2" />
+  </>
 );
 
-export const IconMic = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 20} height={p.size || 20} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-    <path d="M19 10v2a7 7 0 01-14 0v-2" />
-    <line x1="12" y1="19" x2="12" y2="23" />
-    <line x1="8" y1="23" x2="16" y2="23" />
-  </svg>
+export const IconMoon = icon(17, <path {...FILL} d="M20.5 13.6A8.6 8.6 0 1110.4 3.5a7 7 0 0010.1 10.1z" />);
+
+export const IconMic = icon(
+  20,
+  <>
+    <rect {...FILL} x="8.5" y="2.5" width="7" height="12.5" rx="3.5" />
+    <path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3" strokeWidth="2.2" />
+  </>
 );
 
-export const IconPlay = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 16} height={p.size || 16} fill="currentColor" {...p}>
-    <polygon points="6 3 20 12 6 21 6 3" />
-  </svg>
+export const IconPlay = icon(
+  16,
+  <path {...FILL} d="M8 6.2c0-1.1 1.2-1.7 2.1-1.1l9.1 5.8c.8.5.8 1.7 0 2.2l-9.1 5.8c-.9.6-2.1 0-2.1-1.1z" />
 );
 
-export const IconPause = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 16} height={p.size || 16} fill="currentColor" {...p}>
-    <rect x="6" y="4" width="4" height="16" />
-    <rect x="14" y="4" width="4" height="16" />
-  </svg>
+export const IconPause = icon(
+  16,
+  <>
+    <path {...FILL} d={rrect(6.5, 4.5, 3.8, 15, 1.4)} />
+    <path {...FILL} d={rrect(13.7, 4.5, 3.8, 15, 1.4)} />
+  </>
 );
 
-export const IconCheck = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 15} height={p.size || 15} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
+export const IconCheck = icon(15, <path d="M5 12.5l4.5 4.5L19 7.5" strokeWidth="2.8" />);
+export const IconCheckAll = icon(18, <path d="M2.5 12.5l4 4 8-9M11 15.5l1.5 1.5 8.5-9.5" />);
+export const IconClose = icon(14, <path d="M6 6l12 12M18 6L6 18" strokeWidth="2.6" />);
+
+export const IconGroup = icon(18, PEOPLE);
+export const IconUsers = icon(13, PEOPLE);
+
+// The brand mark: a wave line.
+export const IconChatLogo = icon(34, <path d="M3 13c2.5-4.5 4.5-4.5 7 0s4.5 4.5 7 0c1.2-2 2.2-2.6 4-2.4" strokeWidth="2.2" />);
+
+export const IconBack = icon(22, <path d="M15 5l-7 7 7 7" strokeWidth="2.6" />);
+export const IconStop = icon(16, <rect {...FILL} x="5" y="5" width="14" height="14" rx="3" />);
+
+export const IconUser = icon(
+  18,
+  <>
+    <circle {...FILL} cx="12" cy="8" r="4" />
+    <path {...FILL} d="M4.5 20c0-3.9 3.4-6.5 7.5-6.5s7.5 2.6 7.5 6.5c0 .6-.4 1-1 1h-13c-.6 0-1-.4-1-1z" />
+  </>
 );
 
-export const IconCheckAll = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 18} height={p.size || 15} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <polyline points="18 6 7 17 2 12" />
-    <polyline points="23 6 12 17 10.5 15.5" />
-  </svg>
+export const IconPhone = icon(18, <path {...FILL} d={HANDSET} />);
+
+export const IconPhoneOff = icon(
+  18,
+  <g transform="rotate(135 12 12)">
+    <path {...FILL} d={HANDSET} />
+  </g>
 );
 
-export const IconClose = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 14} height={p.size || 14} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" {...p}>
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
+export const IconVideo = icon(
+  18,
+  <>
+    <rect {...FILL} x="2.5" y="6" width="13" height="12" rx="3.2" />
+    <path {...FILL} d={VIDEO_LENS} />
+  </>
 );
 
-export const IconGroup = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 18} height={p.size || 18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 00-3-3.87" />
-    <path d="M16 3.13a4 4 0 010 7.75" />
-  </svg>
+export const IconVideoOff = icon(
+  18,
+  <>
+    <rect {...FILL} x="2.5" y="6" width="13" height="12" rx="3.2" fillOpacity="0.45" />
+    <path {...FILL} d={VIDEO_LENS} fillOpacity="0.45" />
+    <path d="M4 4l16 16" />
+  </>
 );
 
-export const IconChatLogo = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 34} height={p.size || 34} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
-  </svg>
+export const IconMicOff = icon(
+  18,
+  <>
+    <rect {...FILL} x="8.5" y="2.5" width="7" height="12.5" rx="3.5" fillOpacity="0.45" />
+    <path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3" strokeWidth="2.2" strokeOpacity="0.45" />
+    <path d="M4 4l16 16" />
+  </>
 );
 
-export const IconBack = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 22} height={p.size || 22} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <polyline points="15 18 9 12 15 6" />
-  </svg>
+export const IconVolume = icon(
+  18,
+  <>
+    <path {...FILL} d="M4 9.6c0-.6.4-1 1-1h2.6l3.7-3.1c.7-.6 1.7-.1 1.7.8v11.4c0 .9-1 1.4-1.7.8l-3.7-3.1H5c-.6 0-1-.4-1-1z" />
+    <path d="M16.5 9.3a4 4 0 010 5.4M19 6.8a7.5 7.5 0 010 10.4" strokeWidth="2.2" />
+  </>
 );
 
-export const IconStop = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 16} height={p.size || 16} fill="currentColor" {...p}>
-    <rect x="5" y="5" width="14" height="14" rx="2" />
-  </svg>
+export const IconMoreDots = icon(
+  18,
+  <>
+    <circle {...FILL} cx="5" cy="12" r="1.8" />
+    <circle {...FILL} cx="12" cy="12" r="1.8" />
+    <circle {...FILL} cx="19" cy="12" r="1.8" />
+  </>
 );
 
-export const IconUser = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 18} height={p.size || 18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
+export const IconMenu = icon(22, <path d="M4 7h16M4 12h16M4 17h16" />);
+
+export const IconImage = icon(
+  18,
+  <path
+    {...EVEN_ODD}
+    d="M5.5 3h13A2.5 2.5 0 0121 5.5v13a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 18.5v-13A2.5 2.5 0 015.5 3zM8.6 6.9a1.8 1.8 0 110 3.6 1.8 1.8 0 010-3.6zM5 18l4.2-5.3 3 3.6 2.2-2.6L19 18z"
+  />
 );
 
-export const IconPhone = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 18} height={p.size || 18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z" />
-  </svg>
+export const IconPin = icon(
+  16,
+  <>
+    <path {...FILL} d="M8 3.5h8l-1.2 6.2 2.7 2.8c.5.5.1 1.5-.6 1.5H7.1c-.7 0-1.1-1-.6-1.5l2.7-2.8z" />
+    <path d="M12 14v6.5" strokeWidth="2.2" />
+  </>
 );
 
-export const IconVideo = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 18} height={p.size || 18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M23 7l-7 5 7 5V7z" />
-    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-  </svg>
+export const IconBell = icon(
+  16,
+  <>
+    <path {...FILL} d={BELL} />
+    <path {...FILL} d={BELL_CLAPPER} />
+  </>
 );
 
-export const IconPhoneOff = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 18} height={p.size || 18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.42 19.42 0 01-3.33-2.67m-2.67-3.33a19.79 19.79 0 01-3.07-8.63A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91" />
-    <line x1="1" y1="1" x2="23" y2="23" />
-  </svg>
+export const IconBellOff = icon(
+  16,
+  <>
+    <path {...FILL} d={BELL} fillOpacity="0.45" />
+    <path {...FILL} d={BELL_CLAPPER} fillOpacity="0.45" />
+    <path d="M4 4l16 16" />
+  </>
 );
 
-export const IconMicOff = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 18} height={p.size || 18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M1 1l22 22" />
-    <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V5a3 3 0 00-5.94-.6" />
-    <path d="M17 16.95A7 7 0 015 12v-2m14 0v2a7 7 0 01-.11 1.23" />
-    <line x1="12" y1="19" x2="12" y2="23" />
-    <line x1="8" y1="23" x2="16" y2="23" />
-  </svg>
+export const IconMailUnread = icon(
+  16,
+  <>
+    <path {...EVEN_ODD} d={`${rrect(2.5, 5.5, 19, 13, 3)}M5 8.4l7 4.8 7-4.8v1.9l-7 4.8-7-4.8z`} />
+    <circle {...FILL} cx="19.5" cy="5" r="3" />
+  </>
 );
 
-export const IconVolume = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 18} height={p.size || 18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-    <path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07" />
-  </svg>
+export const IconEraser = icon(
+  16,
+  <>
+    <path
+      {...FILL}
+      d="M14.2 3.8a2.2 2.2 0 013.1 0l3 3a2.2 2.2 0 010 3.1l-8.6 8.6H8.2l-4.4-4.4a2.2 2.2 0 010-3.1z"
+    />
+    <path d="M11 20.5h9" strokeWidth="2.2" />
+  </>
 );
 
-export const IconVideoOff = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 18} height={p.size || 18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M16 16v1a2 2 0 01-2 2H3a2 2 0 01-2-2V7a2 2 0 012-2h2m5 0h4a2 2 0 012 2v3.5l5-3.5v10l-3.38-2.37" />
-    <line x1="1" y1="1" x2="23" y2="23" />
-  </svg>
+export const IconSmile = icon(
+  20,
+  <path
+    {...EVEN_ODD}
+    d="M12 2a10 10 0 100 20 10 10 0 000-20zM8.6 8.8a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8zm6.8 0a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8zM7.4 13.6h9.2a4.6 4.6 0 01-9.2 0z"
+  />
 );
 
-export const IconMoreDots = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 18} height={p.size || 18} fill="currentColor" {...p}>
-    <circle cx="5" cy="12" r="2.2" />
-    <circle cx="12" cy="12" r="2.2" />
-    <circle cx="19" cy="12" r="2.2" />
-  </svg>
+export const IconSticker = icon(
+  20,
+  <path
+    {...EVEN_ODD}
+    d="M8 3h6.5L21 9.5V16a5 5 0 01-5 5H8a5 5 0 01-5-5V8a5 5 0 015-5zM14 4.4V8a1.5 1.5 0 001.5 1.5h4.1z"
+  />
 );
 
-export const IconMenu = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 22} height={p.size || 22} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" {...p}>
-    <line x1="3" y1="6" x2="21" y2="6" />
-    <line x1="3" y1="12" x2="21" y2="12" />
-    <line x1="3" y1="18" x2="21" y2="18" />
-  </svg>
+export const IconFile = icon(
+  20,
+  <path
+    {...EVEN_ODD}
+    d="M7 2.5h6l6 6V19a2.5 2.5 0 01-2.5 2.5h-9.5A2.5 2.5 0 015 19V5A2.5 2.5 0 017 2.5zM13 4.4V8a1 1 0 001 1h3.6z"
+  />
 );
 
-export const IconUsers = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 13} height={p.size || 13} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 00-3-3.87" />
-    <path d="M16 3.13a4 4 0 010 7.75" />
-  </svg>
+export const IconDownload = icon(20, <path d="M12 4v11M7 11l5 5 5-5M5 20h14" />);
+
+export const IconPlus = icon(20, <path d="M12 5v14M5 12h14" strokeWidth="2.6" />);
+
+export const IconSettings = icon(
+  20,
+  <>
+    <rect {...FILL} x="3" y="5" width="18" height="2.4" rx="1.2" />
+    <rect {...FILL} x="3" y="10.8" width="18" height="2.4" rx="1.2" />
+    <rect {...FILL} x="3" y="16.6" width="18" height="2.4" rx="1.2" />
+    <circle {...FILL} cx="15.5" cy="6.2" r="3.2" />
+    <circle {...FILL} cx="8.5" cy="12" r="3.2" />
+    <circle {...FILL} cx="16" cy="17.8" r="3.2" />
+  </>
 );
 
-export const IconImage = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 18} height={p.size || 18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <circle cx="8.5" cy="8.5" r="1.5" />
-    <path d="M21 15l-5-5L5 21" />
-  </svg>
-);
-
-export const IconPin = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 16} height={p.size || 16} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M12 17v5" />
-    <path d="M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V7a1 1 0 011-1 2 2 0 000-4H8a2 2 0 000 4 1 1 0 011 1z" />
-  </svg>
-);
-
-export const IconBell = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 16} height={p.size || 16} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-    <path d="M13.73 21a2 2 0 01-3.46 0" />
-  </svg>
-);
-
-export const IconBellOff = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 16} height={p.size || 16} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M13.73 21a2 2 0 01-3.46 0" />
-    <path d="M18.63 13A17.89 17.89 0 0118 8" />
-    <path d="M6.26 6.26A5.86 5.86 0 006 8c0 7-3 9-3 9h14" />
-    <path d="M18 8a6 6 0 00-9.33-5" />
-    <line x1="1" y1="1" x2="23" y2="23" />
-  </svg>
-);
-
-export const IconMailUnread = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 16} height={p.size || 16} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <circle cx="18" cy="6" r="3" fill="currentColor" stroke="none" />
-    <path d="M21 11.08V19a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h9" />
-    <polyline points="3 7 12 13 15.5 10.8" />
-  </svg>
-);
-
-export const IconEraser = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 16} height={p.size || 16} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M20 20H8l-6-6a2 2 0 010-2.83l9-9a2 2 0 012.83 0l6 6a2 2 0 010 2.83L11.5 20" />
-    <line x1="8" y1="20" x2="20" y2="20" />
-    <line x1="5.5" y1="12.5" x2="13" y2="20" />
-  </svg>
-);
-
-export const IconSmile = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 20} height={p.size || 20} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <circle cx="12" cy="12" r="10" />
-    <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-    <line x1="9" y1="9" x2="9.01" y2="9" />
-    <line x1="15" y1="9" x2="15.01" y2="9" />
-  </svg>
-);
-
-export const IconSticker = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 20} height={p.size || 20} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M14.5 3H7a4 4 0 00-4 4v10a4 4 0 004 4h8a4 4 0 004-4v-5.5z" />
-    <path d="M15 3.5V9a2 2 0 002 2h5.5" />
-    <line x1="8" y1="14" x2="12" y2="14" />
-    <line x1="8" y1="17" x2="10.5" y2="17" />
-  </svg>
-);
-
-export const IconFile = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 20} height={p.size || 20} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-    <polyline points="14 2 14 8 20 8" />
-  </svg>
-);
-
-export const IconDownload = (p) => (
-  <svg viewBox="0 0 24 24" width={p.size || 20} height={p.size || 20} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M12 3v12" />
-    <polyline points="7 11 12 16 17 11" />
-    <path d="M5 20h14" />
-  </svg>
+export const IconChat = icon(
+  24,
+  <path
+    {...EVEN_ODD}
+    d={`${BUBBLE}M8 10a1.25 1.25 0 110 2.5A1.25 1.25 0 018 10zm4 0a1.25 1.25 0 110 2.5A1.25 1.25 0 0112 10zm4 0a1.25 1.25 0 110 2.5A1.25 1.25 0 0116 10z`}
+  />
 );

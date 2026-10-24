@@ -40,7 +40,7 @@ export default function Avatar({ name, seed, size = 40, online, isGroup, src }) 
             height: size * 0.28,
             right: -1,
             bottom: -1,
-            background: '#4fae4e',
+            background: 'var(--online)',
             border: '2px solid var(--panel)',
           }}
         />

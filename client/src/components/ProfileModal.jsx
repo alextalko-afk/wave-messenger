@@ -11,7 +11,7 @@ function Switch({ on }) {
   return (
     <span
       className="w-10 h-6 rounded-full relative shrink-0 transition-colors"
-      style={{ background: on ? 'var(--accent)' : 'var(--border)' }}
+      style={{ background: on ? 'var(--accent-fill)' : 'var(--badge-muted)' }}
     >
       <span
         className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform"
@@ -165,13 +165,16 @@ export default function ProfileModal({ onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-md rounded-2xl p-5 shadow-2xl pop-in max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-md md:max-w-4xl rounded-3xl p-5 md:p-7 shadow-2xl pop-in max-h-[92vh] overflow-y-auto"
         style={{ background: 'var(--overlay)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold mb-4 text-center">Настройки</h2>
+        <h2 className="font-display text-[22px] font-bold mb-5 text-center md:text-left">Настройки</h2>
 
-        <div className="flex flex-col items-center mb-5">
+        <div className="md:grid md:grid-cols-2 md:gap-x-10">
+        <div>
+
+        <div className="flex flex-col items-center md:items-start mb-5">
           <button
             onClick={() => avatarInputRef.current?.click()}
             disabled={avatarBusy}
@@ -181,7 +184,7 @@ export default function ProfileModal({ onClose }) {
             <Avatar name={displayName || user.displayName} seed={user.id} size={80} src={user.avatarUrl} />
             <span
               className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full flex items-center justify-center"
-              style={{ background: 'var(--accent)', border: '2px solid var(--overlay)' }}
+              style={{ background: 'var(--accent-fill)', border: '2px solid var(--overlay)' }}
             >
               <IconEdit size={13} className="text-white" />
             </span>
@@ -237,14 +240,16 @@ export default function ProfileModal({ onClose }) {
         <button
           disabled={busy}
           onClick={handleSave}
-          className="w-full py-2.5 rounded-full text-white font-medium hover:opacity-90 transition disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }}
+          className="w-full py-2.5 rounded-xl text-white font-medium hover:opacity-90 transition disabled:opacity-50"
+          style={{ background: 'var(--accent-fill)' }}
         >
           {busy ? 'Сохраняем…' : 'Сохранить'}
         </button>
 
-        <div className="my-5" style={{ borderTop: '1px solid var(--border)' }} />
+        <div className="my-5 md:hidden" style={{ borderTop: '1px solid var(--border)' }} />
+        </div>
 
+        <div className="md:mt-0">
         <h3 className="text-sm font-semibold mb-3">Смена пароля</h3>
         {passwordError && (
           <div className="mb-3 text-sm text-red-400 bg-red-500/10 rounded-xl px-3 py-2">{passwordError}</div>
@@ -279,7 +284,7 @@ export default function ProfileModal({ onClose }) {
         <button
           disabled={passwordBusy || !currentPassword || !newPassword || !confirmPassword}
           onClick={handleChangePassword}
-          className="w-full py-2.5 rounded-full font-medium hover:opacity-90 transition disabled:opacity-50"
+          className="w-full py-2.5 rounded-xl font-medium hover:opacity-90 transition disabled:opacity-50"
           style={{ background: 'var(--panel2)', color: 'var(--text)' }}
         >
           {passwordBusy ? 'Сохраняем…' : 'Сменить пароль'}
@@ -312,7 +317,7 @@ export default function ProfileModal({ onClose }) {
         <button
           disabled={sessionsBusy}
           onClick={handleRevokeSessions}
-          className="w-full py-2.5 rounded-full font-medium hover:opacity-90 transition disabled:opacity-50"
+          className="w-full py-2.5 rounded-xl font-medium hover:opacity-90 transition disabled:opacity-50"
           style={{ background: 'var(--panel2)', color: 'var(--text)' }}
         >
           {sessionsBusy ? 'Выходим…' : 'Выйти на других устройствах'}
@@ -325,6 +330,8 @@ export default function ProfileModal({ onClose }) {
           <button onClick={toggleAccent}>
             <Switch on={accent === 'mono'} />
           </button>
+        </div>
+        </div>
         </div>
       </div>
     </div>
