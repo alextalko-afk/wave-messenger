@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Avatar from './Avatar.jsx';
-import ProfileModal from './ProfileModal.jsx';
+import SettingsModal from './SettingsModal.jsx';
 import CallHistoryModal from './CallHistoryModal.jsx';
 import ContextMenu from './ContextMenu.jsx';
 import { formatTime, formatDayLabel } from '../lib/format.js';
@@ -117,7 +117,7 @@ function Highlighted({ text, needle }) {
 
 export default function Sidebar({ conversations, activeId, onSelect, onNewChat, onAction, onCreated }) {
   const { user, logout } = useAuth();
-  const { theme, toggle } = useTheme();
+  const { resolvedTheme: theme, toggle } = useTheme();
   const [filter, setFilter] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -528,7 +528,7 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
         )}
       </div>
 
-      {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
+      {profileOpen && <SettingsModal onClose={() => setProfileOpen(false)} />}
       {callHistoryOpen && <CallHistoryModal onClose={() => setCallHistoryOpen(false)} />}
 
       {contextMenu && (
