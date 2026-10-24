@@ -1,21 +1,31 @@
 import { Router } from 'express';
-import { all } from '../db/index.js';
+import { all, searchKey } from '../db/index.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { searchLimiter } from '../limiters.js';
+import { parseLimit } from '../pagination.js';
 import { publicUser } from './auth.js';
 
 const router = Router();
 router.use(authMiddleware);
 
-router.get('/search', async (req, res) => {
-  const q = String(req.query.q || '').toLowerCase().trim();
-  if (!q) return res.json({ users: [] });
-  // SQLite's LOWER()/LIKE only fold ASCII, so match in JS to make Cyrillic
-  // search case-insensitive ("алиса" finds "Алиса").
-  const rows = await all('SELECT * FROM users WHERE id != ? ORDER BY created_at DESC LIMIT 5000', [req.userId]);
-  const matches = rows
-    .filter((u) => u.username.toLowerCase().includes(q) || u.display_name.toLowerCase().includes(q))
-    .slice(0, 20);
-  res.json({ users: matches.map(publicUser) });
+// GET /api/users/search?q=...&limit=...&offset=...
+// Matches usernames (always lower-case ASCII) and display names. SQLite's
+// LOWER()/LIKE only fold ASCII, so display names are matched against
+// users.display_name_lower, which is folded in JS when the name is written
+// ("алиса" finds "Алиса").
+router.get('/search', searchLimiter, async (req, res) => {
+  const q = searchKey(String(req.query.q || '').trim());
+  if (!q) return res.json({ users: [], hasMore: false });
+  const limit = parseLimit(req.query.limit, 20, 50);
+  const offset = Math.max(0, Number.parseInt(req.query.offset, 10) || 0);
+
+  const rows = await all(
+    `SELECT * FROM users
+     WHERE id != ? AND (instr(username, ?) > 0 OR instr(COALESCE(display_name_lower, lower(display_name)), ?) > 0)
+     ORDER BY created_at DESC, rowid DESC LIMIT ? OFFSET ?`,
+    [req.userId, q, q, limit + 1, offset]
+  );
+  res.json({ users: rows.slice(0, limit).map(publicUser), hasMore: rows.length > limit });
 });
 
 export default router;

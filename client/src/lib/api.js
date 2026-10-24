@@ -24,7 +24,18 @@ export const api = {
   login: (body) => request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
   me: () => request('/auth/me'),
   updateMe: (body) => request('/auth/me', { method: 'PUT', body: JSON.stringify(body) }),
-  changePassword: (body) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(body) }),
+  // Changing the password revokes every older token; the response carries the
+  // replacement that keeps this device signed in.
+  changePassword: async (body) => {
+    const data = await request('/auth/change-password', { method: 'POST', body: JSON.stringify(body) });
+    if (data.token) setToken(data.token);
+    return data;
+  },
+  revokeOtherSessions: async () => {
+    const data = await request('/auth/revoke-sessions', { method: 'POST' });
+    if (data.token) setToken(data.token);
+    return data;
+  },
   googleAuth: (idToken) => request('/auth/google', { method: 'POST', body: JSON.stringify({ idToken }) }),
   linkGoogle: (idToken) => request('/auth/link-google', { method: 'POST', body: JSON.stringify({ idToken }) }),
   searchUsers: (q) => request(`/users/search?q=${encodeURIComponent(q)}`),

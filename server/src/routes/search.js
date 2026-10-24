@@ -1,16 +1,14 @@
 import { Router } from 'express';
-import { all } from '../db/index.js';
+import { all, searchKey } from '../db/index.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { searchLimiter } from '../limiters.js';
+import { parseLimit, parseCursor, olderThan, toPage } from '../pagination.js';
 
 const router = Router();
 router.use(authMiddleware);
 
 const MIN_QUERY_LENGTH = 2;
 const MAX_QUERY_LENGTH = 100;
-const MAX_RESULTS = 30;
-// SQLite's LOWER()/LIKE only fold ASCII, so "привет" would never match
-// "Привет". Pull the most recent candidates and compare in JS instead.
-const MAX_CANDIDATES = 5000;
 
 function snippet(content, needle) {
   const idx = content.toLowerCase().indexOf(needle);
@@ -19,15 +17,22 @@ function snippet(content, needle) {
   return `${start > 0 ? '…' : ''}${text}${start + 120 < content.length ? '…' : ''}`;
 }
 
-// GET /api/search/messages?q=...&conversationId=...
+// GET /api/search/messages?q=...&conversationId=...&limit=...&before=...&beforeId=...
 // Searches only conversations the caller belongs to, and never reaches
-// before the point where they cleared that chat's history.
-router.get('/messages', async (req, res) => {
-  const q = String(req.query.q || '').trim().toLowerCase();
-  if (q.length < MIN_QUERY_LENGTH || q.length > MAX_QUERY_LENGTH) return res.json({ results: [] });
+// before the point where they cleared that chat's history. Matching runs in
+// the database against messages.content_search (the JS-lower-cased text, so
+// Cyrillic folds correctly); rows not yet backfilled fall back to ASCII-only
+// LOWER(). Results are newest first; `nextCursor` continues the listing.
+router.get('/messages', searchLimiter, async (req, res) => {
+  const q = searchKey(String(req.query.q || '').trim());
+  if (q.length < MIN_QUERY_LENGTH || q.length > MAX_QUERY_LENGTH) {
+    return res.json({ results: [], hasMore: false, nextCursor: null });
+  }
   const conversationId = typeof req.query.conversationId === 'string' ? req.query.conversationId : null;
+  const limit = parseLimit(req.query.limit, 30, 50);
+  const cursor = olderThan(parseCursor(req.query), { table: 'messages', alias: 'm' });
 
-  const rows = await all(
+  const fetched = await all(
     `SELECT m.id, m.conversation_id, m.sender_id, m.content, m.created_at, u.display_name AS sender_name,
             c.is_group, c.name AS conv_name
      FROM messages m
@@ -35,15 +40,16 @@ router.get('/messages', async (req, res) => {
      JOIN users u ON u.id = m.sender_id
      JOIN conversations c ON c.id = m.conversation_id
      WHERE m.deleted = 0 AND m.content != '' AND m.created_at > cm.cleared_before
+       AND instr(COALESCE(m.content_search, lower(m.content)), ?) > 0
        ${conversationId ? 'AND m.conversation_id = ?' : ''}
-     ORDER BY m.created_at DESC LIMIT ${MAX_CANDIDATES}`,
-    conversationId ? [req.userId, conversationId] : [req.userId]
+       ${cursor.sql}
+     ORDER BY m.created_at DESC, m.rowid DESC LIMIT ?`,
+    [req.userId, q, ...(conversationId ? [conversationId] : []), ...cursor.args, limit + 1]
   );
 
-  const results = [];
-  for (const r of rows) {
-    if (!r.content.toLowerCase().includes(q)) continue;
-    results.push({
+  const { page, hasMore, nextCursor } = toPage(fetched, limit);
+  res.json({
+    results: page.map((r) => ({
       id: r.id,
       conversationId: r.conversation_id,
       senderId: r.sender_id,
@@ -52,10 +58,10 @@ router.get('/messages', async (req, res) => {
       conversationName: r.is_group ? r.conv_name : null,
       snippet: snippet(r.content, q),
       createdAt: r.created_at,
-    });
-    if (results.length >= MAX_RESULTS) break;
-  }
-  res.json({ results });
+    })),
+    hasMore,
+    nextCursor,
+  });
 });
 
 export default router;

@@ -1,12 +1,11 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
 import { randomInt } from 'crypto';
 import { rateLimit } from 'express-rate-limit';
 import { OAuth2Client } from 'google-auth-library';
-import { get, run } from '../db/index.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { get, run, searchKey } from '../db/index.js';
+import { authMiddleware, signToken, revokeUserTokens, announceRevocation } from '../middleware/auth.js';
 
 const router = Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -44,6 +43,14 @@ function publicUser(u) {
   };
 }
 
+// Invalidates all of the user's tokens and returns a replacement. Sockets that
+// authenticated with an old token are closed once `res` has been sent.
+async function rotateSession(userId, res) {
+  const version = await revokeUserTokens(userId);
+  announceRevocation(res, userId, version);
+  return signToken(await get('SELECT * FROM users WHERE id = ?', [userId]));
+}
+
 async function verifyGoogleIdToken(idToken) {
   if (!process.env.GOOGLE_CLIENT_ID) {
     const err = new Error('Google Sign-In не настроен на сервере');
@@ -68,10 +75,10 @@ async function verifyGoogleIdToken(idToken) {
 router.post('/login', authLimiter, async (req, res) => {
   const { username, password } = req.body || {};
   const user = await get('SELECT * FROM users WHERE username = ?', [(username || '').toLowerCase()]);
-  if (!user || !bcrypt.compareSync(password || '', user.password_hash)) {
+  if (!user || !(await bcrypt.compare(String(password || ''), user.password_hash))) {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
-  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  const token = signToken(user);
   res.json({ token, user: publicUser(user) });
 });
 
@@ -97,11 +104,10 @@ router.put('/me', authMiddleware, async (req, res) => {
     await run('UPDATE users SET username = ? WHERE id = ?', [normalized, req.userId]);
   }
 
-  await run('UPDATE users SET display_name = COALESCE(?, display_name), bio = COALESCE(?, bio) WHERE id = ?', [
-    displayName ?? null,
-    bio ?? null,
-    req.userId,
-  ]);
+  await run(
+    'UPDATE users SET display_name = COALESCE(?, display_name), display_name_lower = COALESCE(?, display_name_lower), bio = COALESCE(?, bio) WHERE id = ?',
+    [displayName ?? null, displayName == null ? null : searchKey(displayName), bio ?? null, req.userId]
+  );
   const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
   res.json({ user: publicUser(user) });
 });
@@ -112,12 +118,19 @@ router.post('/change-password', authMiddleware, authLimiter, async (req, res) =>
     return res.status(400).json({ error: 'Новый пароль от 8 символов' });
   }
   const user = await get('SELECT * FROM users WHERE id = ?', [req.userId]);
-  if (!user || !bcrypt.compareSync(currentPassword || '', user.password_hash)) {
+  if (!user || !(await bcrypt.compare(String(currentPassword || ''), user.password_hash))) {
     return res.status(401).json({ error: 'Неверный текущий пароль' });
   }
-  const hash = bcrypt.hashSync(newPassword, 10);
+  const hash = await bcrypt.hash(newPassword, 10);
   await run('UPDATE users SET password_hash = ? WHERE id = ?', [hash, req.userId]);
-  res.json({ ok: true });
+  // A password change must cut off whoever else holds a token: bump the
+  // version and hand this device a fresh token so it stays signed in.
+  res.json({ ok: true, token: await rotateSession(req.userId, res) });
+});
+
+// "Sign out of all other devices". Returns a new token for the caller.
+router.post('/revoke-sessions', authMiddleware, authLimiter, async (req, res) => {
+  res.json({ ok: true, token: await rotateSession(req.userId, res) });
 });
 
 // No SMS gateway is configured, so there is no way to deliver a code to the
@@ -173,14 +186,15 @@ router.post('/phone/verify', authLimiter, async (req, res) => {
     const id = nanoid();
     const username = `user_${Math.floor(1e8 + Math.random() * 9e8)}`;
     const randomPasswordHash = bcrypt.hashSync(nanoid(), 10);
+    const name = displayName || 'Новый пользователь';
     await run(
-      'INSERT INTO users (id, username, display_name, password_hash, avatar_color, phone) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, username, displayName || 'Новый пользователь', randomPasswordHash, pickColor(), phone]
+      'INSERT INTO users (id, username, display_name, display_name_lower, password_hash, avatar_color, phone) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, username, name, searchKey(name), randomPasswordHash, pickColor(), phone]
     );
     user = await get('SELECT * FROM users WHERE id = ?', [id]);
   }
 
-  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  const token = signToken(user);
   res.json({ token, user: publicUser(user), isNewUser });
 });
 
@@ -207,14 +221,15 @@ router.post('/google', authLimiter, async (req, res) => {
       username = `${base}_${Math.floor(1000 + Math.random() * 9000)}`;
     }
     const randomPasswordHash = bcrypt.hashSync(nanoid(), 10);
+    const name = payload.name || username;
     await run(
-      'INSERT INTO users (id, username, display_name, password_hash, avatar_color, google_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, username, payload.name || username, randomPasswordHash, pickColor(), googleId]
+      'INSERT INTO users (id, username, display_name, display_name_lower, password_hash, avatar_color, google_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, username, name, searchKey(name), randomPasswordHash, pickColor(), googleId]
     );
     user = await get('SELECT * FROM users WHERE id = ?', [id]);
   }
 
-  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  const token = signToken(user);
   res.json({ token, user: publicUser(user), isNewUser });
 });
 

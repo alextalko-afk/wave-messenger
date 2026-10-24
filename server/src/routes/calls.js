@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createHmac } from 'crypto';
 import { all } from '../db/index.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { parseLimit, parseCursor, olderThan, toPage } from '../pagination.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -39,17 +40,20 @@ router.get('/ice-servers', (req, res) => {
 });
 
 router.get('/', async (req, res) => {
-  const rows = await all(
+  const limit = parseLimit(req.query.limit, 100, 100);
+  const cursor = olderThan(parseCursor(req.query), { table: 'calls', alias: 'c', timeColumn: 'started_at' });
+  const fetched = await all(
     `SELECT c.*,
        u1.display_name as caller_name, u1.avatar_color as caller_color, u1.avatar_url as caller_avatar_url,
        u2.display_name as callee_name, u2.avatar_color as callee_color, u2.avatar_url as callee_avatar_url
      FROM calls c
      JOIN users u1 ON u1.id = c.caller_id
      JOIN users u2 ON u2.id = c.callee_id
-     WHERE c.caller_id = ? OR c.callee_id = ?
-     ORDER BY c.started_at DESC LIMIT 100`,
-    [req.userId, req.userId]
+     WHERE (c.caller_id = ? OR c.callee_id = ?) ${cursor.sql}
+     ORDER BY c.started_at DESC, c.rowid DESC LIMIT ?`,
+    [req.userId, req.userId, ...cursor.args, limit + 1]
   );
+  const { page: rows, hasMore, nextCursor } = toPage(fetched, limit, 'started_at');
 
   res.json({
     calls: rows.map((r) => {
@@ -70,6 +74,8 @@ router.get('/', async (req, res) => {
         durationSeconds: r.answered_at && r.ended_at ? Math.max(0, r.ended_at - r.answered_at) : 0,
       };
     }),
+    hasMore,
+    nextCursor,
   });
 });
 

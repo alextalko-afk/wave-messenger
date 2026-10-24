@@ -64,5 +64,18 @@ messenger/
 | `FIREBASE_SERVICE_ACCOUNT` | JSON сервис-аккаунта Firebase (сырой или base64) — включает push. Без него push не отправляется. |
 | `TURN_URLS`, `TURN_SECRET` | TURN-сервер для звонков (coturn `use-auth-secret`, временные учётные данные). Либо `TURN_USERNAME` + `TURN_CREDENTIAL`. |
 | `STUN_URLS` | Список STUN через запятую (по умолчанию публичные Google STUN). |
+| `TRUST_PROXY` | Сколько прокси стоит перед сервером (по умолчанию `1` в production: Fly.io). Без этого лимиты запросов считаются по адресу прокси, а не клиента. |
+| `UPLOAD_MAX_MB`, `UPLOAD_DAILY_QUOTA_MB` | Максимальный размер файла (25) и суточная квота загрузок на пользователя (500). |
+| `UPLOAD_CLEANUP`, `UPLOAD_ORPHAN_MAX_AGE_HOURS` | Удаление «осиротевших» файлов из локальной папки `uploads` (по умолчанию включено только в production; возраст 24 ч). |
+| `AUTH_CACHE_TTL_MS` | Сколько секунд сервер кеширует версию токена пользователя (по умолчанию 10000). |
+
+`CLIENT_ORIGIN` можно задать списком через запятую.
+
+## Безопасность и API
+
+- Токены можно отозвать: `POST /api/auth/change-password` и `POST /api/auth/revoke-sessions` инвалидируют все выданные ранее токены (в ответе приходит новый `token` для текущего устройства), а сокеты со старым токеном закрываются. Токен удалённого пользователя перестаёт работать.
+- Загрузки: исполняемые и скриптовые типы (`.html`, `.svg`, `.js`, `.exe`, …) отклоняются, аватары принимаются только как JPEG/PNG/GIF/WebP с проверкой сигнатуры файла, на пользователя действуют лимит частоты и суточная квота.
+- Заголовки: `helmet` (HSTS, nosniff, frame-ancestors…); CSP пока в режиме `Report-Only` — проверьте консоль браузера и переключите на боевой режим в `server/src/index.js`.
+- Пагинация (курсор по `before` + `beforeId`, чтобы не терять сообщения одной секунды): `GET /conversations/:id/messages`, `/media`, `/api/search/messages`, `/api/calls` принимают `limit`, `before`, `beforeId` и возвращают `hasMore` и `nextCursor`; `GET /api/conversations` и `GET /api/users/search` — `limit` и `offset`.
 
 Для push в Android-приложении положите `google-services.json` в `client/android/app/`, для iOS — загрузите ключ APNs в Firebase.

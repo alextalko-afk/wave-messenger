@@ -22,17 +22,22 @@ function freePort() {
 
 /**
  * Boots the real server on a free port with a throwaway SQLite database.
+ * Pass `dir` (from an earlier `stop({ keepDir: true })`) to boot again on the
+ * same data, e.g. after seeding rows that tests can't create through the API;
+ * never write to the database file while the server is running.
  * Phone login with the code in the response (ALLOW_DEV_PHONE_CODE) is how
  * tests create users, since password registration no longer exists.
  */
-export async function startServer({ env = {}, nodeArgs = [] } = {}) {
+export async function startServer({ env = {}, nodeArgs = [], dir: existingDir } = {}) {
   const port = await freePort();
-  const dir = mkdtempSync(path.join(tmpdir(), 'wave-test-'));
+  const dir = existingDir ?? mkdtempSync(path.join(tmpdir(), 'wave-test-'));
   const childEnv = {
     ...process.env,
     PORT: String(port),
     JWT_SECRET: 'test-secret',
     DB_PATH: path.join(dir, 'test.db'),
+    UPLOADS_DIR: path.join(dir, 'uploads'),
+    UPLOAD_CLEANUP: '0',
     TURSO_DATABASE_URL: '',
     CLOUDINARY_CLOUD_NAME: '',
     ALLOW_DEV_PHONE_CODE: '1',
@@ -66,11 +71,25 @@ export async function startServer({ env = {}, nodeArgs = [] } = {}) {
     return { status: res.status, body: await res.json().catch(() => null) };
   };
 
+  /** Multipart upload of `bytes` as `name`/`type` to a route such as /api/upload. */
+  const upload = async (route, { token, name, type, bytes, method = 'POST' }) => {
+    const form = new FormData();
+    form.append('file', new Blob([bytes], { type }), name);
+    const res = await fetch(base + route, {
+      method,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    return { status: res.status, body: await res.json().catch(() => null) };
+  };
+
   let phoneCounter = 0;
   return {
     port,
     base,
+    dir,
     api,
+    upload,
     log: () => log,
     alive: () => child.exitCode === null,
     async createUser(name) {
@@ -80,6 +99,8 @@ export async function startServer({ env = {}, nodeArgs = [] } = {}) {
         method: 'POST',
         body: { phone, code: req.body.devCode, displayName: name },
       });
+      if (!ver.body?.user) throw new Error(`createUser(${name}) failed: ${req.status} ${JSON.stringify(req.body)} / ${ver.status} ${JSON.stringify(ver.body)}
+${log.slice(-800)}`);
       return { token: ver.body.token, id: ver.body.user.id, name };
     },
     connect(token) {
@@ -90,11 +111,16 @@ export async function startServer({ env = {}, nodeArgs = [] } = {}) {
         s.on('connect_error', reject);
       });
     },
-    async stop() {
+    async stop({ keepDir = false } = {}) {
       sockets.forEach((s) => s.disconnect());
       child.kill();
       await new Promise((r) => (child.exitCode !== null ? r() : child.once('exit', r)));
-      rmSync(dir, { recursive: true, force: true });
+      if (keepDir) return;
+      try {
+        rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+      } catch {
+        /* best effort: a test's own sqlite handle can keep the directory locked on Windows */
+      }
     },
   };
 }

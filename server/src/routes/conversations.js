@@ -3,8 +3,9 @@ import { nanoid } from 'nanoid';
 import { get, all, run, batch } from '../db/index.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { publicUser } from './auth.js';
-import { upload, useCloudinary } from './upload.js';
+import { uploadAvatar, uploadedUrl } from './upload.js';
 import { getReactionsFor, replyPreview } from '../messages.js';
+import { parseLimit, parseCursor, olderThan, toPage } from '../pagination.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -69,17 +70,27 @@ async function serializeConversation(conv, userId) {
   };
 }
 
+const MAX_CONVERSATIONS_PER_PAGE = 500;
+
+// Pinned chats first, then by latest activity (newest message that survives
+// the member's "clear history", else the chat's creation time). The ordering
+// lives in SQL so a page is cut from the right place; `limit`/`offset` page
+// through it and `hasMore` says whether another page exists.
 router.get('/', async (req, res) => {
-  const conversations = await all(
-    `SELECT c.* FROM conversations c JOIN conversation_members cm ON cm.conversation_id = c.id
-     WHERE cm.user_id = ? ORDER BY c.created_at DESC`,
-    [req.userId]
+  const limit = parseLimit(req.query.limit, MAX_CONVERSATIONS_PER_PAGE, MAX_CONVERSATIONS_PER_PAGE);
+  const offset = Math.max(0, Number.parseInt(req.query.offset, 10) || 0);
+  const rows = await all(
+    `SELECT c.* FROM conversations c JOIN conversation_members cm ON cm.conversation_id = c.id AND cm.user_id = ?
+     ORDER BY cm.pinned DESC,
+       COALESCE((SELECT MAX(m.created_at) FROM messages m WHERE m.conversation_id = c.id AND m.created_at > cm.cleared_before),
+                c.created_at) DESC,
+       c.id
+     LIMIT ? OFFSET ?`,
+    [req.userId, limit + 1, offset]
   );
-  const result = (await Promise.all(conversations.map((c) => serializeConversation(c, req.userId)))).sort((a, b) => {
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-    return (b.lastMessage?.createdAt || b.createdAt) - (a.lastMessage?.createdAt || a.createdAt);
-  });
-  res.json({ conversations: result });
+  const hasMore = rows.length > limit;
+  const conversations = await Promise.all(rows.slice(0, limit).map((c) => serializeConversation(c, req.userId)));
+  res.json({ conversations, hasMore });
 });
 
 router.post('/direct', async (req, res) => {
@@ -147,14 +158,14 @@ async function requireGroupAdmin(req, res) {
   return true;
 }
 
-router.post('/:id/avatar', upload.single('file'), async (req, res) => {
-  if (!(await requireGroupAdmin(req, res))) return;
+// Checked before the upload so a non-admin can't push files onto the server.
+const groupAdminOnly = async (req, res, next) => {
+  if (await requireGroupAdmin(req, res)) next();
+};
+
+router.post('/:id/avatar', groupAdminOnly, ...uploadAvatar, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
-  if (!req.file.mimetype?.startsWith('image/')) {
-    return res.status(400).json({ error: 'Аватар должен быть изображением' });
-  }
-  const url = useCloudinary ? req.file.path : `/uploads/${req.file.filename}`;
-  await run('UPDATE conversations SET avatar_url = ? WHERE id = ?', [url, req.params.id]);
+  await run('UPDATE conversations SET avatar_url = ? WHERE id = ?', [uploadedUrl(req.file), req.params.id]);
   const conv = await get('SELECT * FROM conversations WHERE id = ?', [req.params.id]);
   res.json({ conversation: await serializeConversation(conv, req.userId) });
 });
@@ -173,9 +184,10 @@ router.get('/:id/messages', async (req, res) => {
   ]);
   if (!member) return res.status(403).json({ error: 'Нет доступа к этому чату' });
 
-  const before = req.query.before ? Number(req.query.before) : Date.now() / 1000 + 1000000;
+  const limit = parseLimit(req.query.limit, 50, 100);
+  const cursor = olderThan(parseCursor(req.query), { table: 'messages', alias: 'm' });
   const clearedBefore = member.cleared_before || 0;
-  const rows = await all(
+  const fetched = await all(
     `SELECT m.*, u.display_name as sender_name, u.avatar_color as sender_color, u.avatar_url as sender_avatar_url,
             rm.content as reply_content, rm.deleted as reply_deleted, rm.file_type as reply_file_type,
             ru.display_name as reply_sender_name
@@ -183,9 +195,11 @@ router.get('/:id/messages', async (req, res) => {
      JOIN users u ON u.id = m.sender_id
      LEFT JOIN messages rm ON rm.id = m.reply_to_id AND rm.conversation_id = m.conversation_id
      LEFT JOIN users ru ON ru.id = rm.sender_id
-     WHERE m.conversation_id = ? AND m.created_at < ? AND m.created_at > ? ORDER BY m.created_at DESC LIMIT 50`,
-    [req.params.id, before, clearedBefore]
+     WHERE m.conversation_id = ? AND m.created_at > ? ${cursor.sql}
+     ORDER BY m.created_at DESC, m.rowid DESC LIMIT ?`,
+    [req.params.id, clearedBefore, ...cursor.args, limit + 1]
   );
+  const { page: rows, hasMore, nextCursor } = toPage(fetched, limit);
   const reactions = await getReactionsFor(rows.map((m) => m.id));
 
   res.json({
@@ -208,6 +222,8 @@ router.get('/:id/messages', async (req, res) => {
       deleted: !!m.deleted,
       createdAt: m.created_at,
     })),
+    hasMore,
+    nextCursor,
   });
 });
 
@@ -260,10 +276,7 @@ router.get('/:id/stats', async (req, res) => {
 });
 
 router.get('/:id/media', async (req, res) => {
-  const member = await get('SELECT 1 FROM conversation_members WHERE conversation_id = ? AND user_id = ?', [
-    req.params.id,
-    req.userId,
-  ]);
+  const member = await getOwnMember(req.params.id, req.userId);
   if (!member) return res.status(403).json({ error: 'Нет доступа к этому чату' });
 
   const type = req.query.type;
@@ -272,11 +285,15 @@ router.get('/:id/media', async (req, res) => {
   else if (type === 'voice') whereClause = "file_type LIKE 'audio/%'";
   else whereClause = "file_url IS NOT NULL AND file_type NOT LIKE 'image/%' AND file_type NOT LIKE 'audio/%'";
 
-  const rows = await all(
-    `SELECT id, file_url, file_name, file_type, created_at FROM messages
-     WHERE conversation_id = ? AND deleted = 0 AND ${whereClause} ORDER BY created_at DESC`,
-    [req.params.id]
+  const limit = parseLimit(req.query.limit, 200, 500);
+  const cursor = olderThan(parseCursor(req.query), { table: 'messages', alias: 'm' });
+  const fetched = await all(
+    `SELECT m.id, m.file_url, m.file_name, m.file_type, m.created_at FROM messages m
+     WHERE m.conversation_id = ? AND m.deleted = 0 AND ${whereClause} ${cursor.sql}
+     ORDER BY m.created_at DESC, m.rowid DESC LIMIT ?`,
+    [req.params.id, ...cursor.args, limit + 1]
   );
+  const { page: rows, hasMore, nextCursor } = toPage(fetched, limit);
 
   res.json({
     items: rows.map((r) => ({
@@ -286,6 +303,8 @@ router.get('/:id/media', async (req, res) => {
       fileType: r.file_type,
       createdAt: r.created_at,
     })),
+    hasMore,
+    nextCursor,
   });
 });
 

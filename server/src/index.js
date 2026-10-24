@@ -8,9 +8,12 @@ import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { nanoid } from 'nanoid';
+import helmet from 'helmet';
 
-import { get, all, run } from './db/index.js';
-import { verifySocketToken } from './middleware/auth.js';
+import { get, all, run, searchKey, backfillSearchColumns } from './db/index.js';
+import { verifySocketToken, onTokensRevoked } from './middleware/auth.js';
+import { apiLimiter } from './limiters.js';
+import { startUploadCleanup } from './uploadCleanup.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import conversationRoutes, { serializeConversation } from './routes/conversations.js';
@@ -33,12 +36,61 @@ process.on('uncaughtException', (err) => console.error('uncaughtException:', err
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const httpServer = createServer(app);
+
+// CLIENT_ORIGIN may list several origins, comma-separated. Authentication uses
+// bearer tokens rather than cookies, so a wildcard cannot be used for CSRF, but
+// it still should not stay open in production.
+const clientOrigins = (process.env.CLIENT_ORIGIN || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+const corsOrigin = clientOrigins.length === 0 ? '*' : clientOrigins.length === 1 ? clientOrigins[0] : clientOrigins;
+if (process.env.NODE_ENV === 'production' && clientOrigins.length === 0) {
+  console.warn('CLIENT_ORIGIN is not set - allowing cross-origin requests from any origin');
+}
+
+// Behind a reverse proxy (Fly.io, nginx) req.ip is the proxy unless told how
+// many hops to trust, which would put every user in one rate-limit bucket.
+const trustProxy = process.env.TRUST_PROXY ?? (process.env.NODE_ENV === 'production' ? '1' : '');
+if (trustProxy) app.set('trust proxy', /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy);
+app.disable('x-powered-by');
+
 const io = new Server(httpServer, {
-  cors: { origin: process.env.CLIENT_ORIGIN || '*', credentials: true },
+  cors: { origin: corsOrigin },
+  // Chat messages, call signalling and SDP are small; nothing legitimate
+  // needs the 1 MB default.
+  maxHttpBufferSize: 256 * 1024,
 });
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
-app.use(express.json());
+app.use(
+  helmet({
+    // The CSP is report-only until it has been checked against every client
+    // (web, Capacitor, desktop); violations show up in the browser console.
+    contentSecurityPolicy: {
+      reportOnly: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", 'https://accounts.google.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://accounts.google.com'],
+        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        mediaSrc: ["'self'", 'blob:', 'https:'],
+        connectSrc: ["'self'", 'ws:', 'wss:', 'https://accounts.google.com'],
+        frameSrc: ['https://accounts.google.com'],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'self'"],
+      },
+    },
+    // Uploads and the API are fetched cross-origin by the native apps and the
+    // desktop shell, and Google sign-in relies on a popup that keeps its opener.
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginOpenerPolicy: false,
+  })
+);
+app.use(cors({ origin: corsOrigin }));
+app.use(express.json({ limit: '100kb' }));
 const SAFE_INLINE_EXTENSIONS = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico',
   '.mp3', '.wav', '.ogg', '.oga', '.weba', '.webm', '.m4a', '.mp4', '.mov',
@@ -62,6 +114,10 @@ app.use(
   })
 );
 
+// Registered before the limiter so platform health checks are never throttled.
+app.get('/api/health', (req, res) => res.json({ ok: true }));
+
+app.use('/api', apiLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/conversations', conversationRoutes);
@@ -69,8 +125,6 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/calls', callsRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/search', searchRoutes);
-
-app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 const clientDist = path.join(__dirname, '..', 'public');
 if (fs.existsSync(clientDist)) {
@@ -100,7 +154,8 @@ if (fs.existsSync(clientDist)) {
 app.use((err, req, res, next) => {
   console.error(err);
   if (res.headersSent) return;
-  if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'Файл слишком большой (максимум 25 МБ)' });
+  if (err.type === 'entity.too.large') return res.status(413).json({ error: 'Запрос слишком большой' });
+  if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'Файл слишком большой' });
   res.status(err.status || 500).json({ error: err.status && err.status < 500 ? err.message : 'Внутренняя ошибка сервера' });
 });
 
@@ -168,15 +223,28 @@ async function markAllDelivered(userId, socketId) {
   }
 }
 
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   // socket.io-client-swift (the iOS native client) has no support for the
   // v3+ `auth` handshake payload, only query params - accept either so
   // that client can authenticate the same way Android/web already do.
   const token = socket.handshake.auth?.token || socket.handshake.query?.token;
-  const payload = token && verifySocketToken(token);
-  if (!payload) return next(new Error('unauthorized'));
-  socket.userId = payload.userId;
+  const auth = typeof token === 'string' && token ? await verifySocketToken(token) : null;
+  if (!auth) return next(new Error('unauthorized'));
+  socket.userId = auth.userId;
+  socket.data.tokenVersion = auth.version;
   next();
+});
+
+// When a user's tokens are revoked (password change, "sign out everywhere"),
+// close every socket that connected with an older token.
+onTokensRevoked((userId, version) => {
+  for (const sid of onlineUsers.get(userId) ?? []) {
+    const s = io.sockets.sockets.get(sid);
+    if (s && s.data.tokenVersion !== version) {
+      s.emit('auth:revoked');
+      s.disconnect(true);
+    }
+  }
 });
 
 const MAX_CONTENT_LENGTH = 5000;
@@ -320,9 +388,9 @@ io.on('connection', (socket) => {
 
     const id = nanoid();
     await run(
-      `INSERT INTO messages (id, conversation_id, sender_id, content, file_url, file_name, file_type, reply_to_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, conversationId, userId, text, fileUrl || null, safeFileName, safeFileType, replyId]
+      `INSERT INTO messages (id, conversation_id, sender_id, content, content_search, file_url, file_name, file_type, reply_to_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, conversationId, userId, text, searchKey(text), fileUrl || null, safeFileName, safeFileType, replyId]
     );
 
     const sender = await get('SELECT display_name, avatar_color, avatar_url FROM users WHERE id = ?', [userId]);
@@ -382,7 +450,12 @@ io.on('connection', (socket) => {
       return ack?.({ error: 'Нельзя редактировать это сообщение' });
     }
     const editedAt = Math.floor(Date.now() / 1000);
-    await run('UPDATE messages SET content = ?, edited_at = ? WHERE id = ?', [text, editedAt, messageId]);
+    await run('UPDATE messages SET content = ?, content_search = ?, edited_at = ? WHERE id = ?', [
+      text,
+      searchKey(text),
+      editedAt,
+      messageId,
+    ]);
     await broadcastToConversation(msg.conversation_id, 'message:updated', { id: messageId, content: text, editedAt });
     ack?.({ ok: true });
   });
@@ -420,7 +493,7 @@ io.on('connection', (socket) => {
   on('message:delete', async ({ messageId }, ack) => {
     const msg = isString(messageId) ? await get('SELECT * FROM messages WHERE id = ?', [messageId]) : null;
     if (!msg || msg.sender_id !== userId) return ack?.({ error: 'Нельзя удалить это сообщение' });
-    await run("UPDATE messages SET deleted = 1, content = '', file_url = NULL WHERE id = ?", [messageId]);
+    await run("UPDATE messages SET deleted = 1, content = '', content_search = '', file_url = NULL WHERE id = ?", [messageId]);
     await run('DELETE FROM message_reactions WHERE message_id = ?', [messageId]);
     await broadcastToConversation(msg.conversation_id, 'message:deleted', { id: messageId });
     ack?.({ ok: true });
@@ -549,4 +622,6 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
   console.log(`Messenger server running on http://localhost:${PORT}`);
+  backfillSearchColumns().catch((err) => console.error('search backfill failed:', err));
+  startUploadCleanup();
 });

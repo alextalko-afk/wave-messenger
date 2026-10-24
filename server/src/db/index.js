@@ -109,6 +109,29 @@ await ensureColumn('users', 'phone', 'TEXT');
 await ensureColumn('users', 'google_id', 'TEXT');
 await ensureColumn('users', 'avatar_url', 'TEXT');
 await ensureColumn('conversations', 'avatar_url', 'TEXT');
+// Bumped to invalidate every token issued before (password change, "sign out
+// everywhere"). Tokens minted before this column existed carry no version and
+// are treated as version 0, so nobody is logged out by the migration.
+await ensureColumn('users', 'token_version', 'INTEGER NOT NULL DEFAULT 0');
+// Lower-cased copies for substring search: SQLite's LOWER()/LIKE only fold
+// ASCII, so Cyrillic is folded in JS on write and matched with instr().
+await ensureColumn('users', 'display_name_lower', 'TEXT');
+await ensureColumn('messages', 'content_search', 'TEXT');
+
+await client.executeMultiple(`
+CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) WHERE google_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone) WHERE phone IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_messages_media ON messages(conversation_id, created_at) WHERE deleted = 0 AND file_url IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS uploads (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  size INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER DEFAULT (strftime('%s','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_uploads_user ON uploads(user_id, created_at);
+`);
 
 await client.executeMultiple(`
 CREATE TABLE IF NOT EXISTS push_tokens (
@@ -148,6 +171,34 @@ export async function batch(statements) {
     statements.map((s) => ({ sql: s.sql, args: s.args || [] })),
     'write'
   );
+}
+
+/** Normalised form stored in the *_search / *_lower columns. */
+export const searchKey = (text) => String(text ?? '').toLowerCase();
+
+const BACKFILL_BATCH = 500;
+
+// Fills the search columns for rows written before they existed. Runs in the
+// background after startup; until a row is filled, queries fall back to the
+// ASCII-only LOWER() so search keeps working, just less precisely.
+export async function backfillSearchColumns() {
+  for (;;) {
+    const rows = await all(
+      `SELECT id, display_name FROM users WHERE display_name_lower IS NULL LIMIT ${BACKFILL_BATCH}`
+    );
+    if (rows.length === 0) break;
+    await batch(
+      rows.map((r) => ({ sql: 'UPDATE users SET display_name_lower = ? WHERE id = ?', args: [searchKey(r.display_name), r.id] }))
+    );
+  }
+  await run("UPDATE messages SET content_search = '' WHERE content_search IS NULL AND content = ''");
+  for (;;) {
+    const rows = await all(`SELECT id, content FROM messages WHERE content_search IS NULL LIMIT ${BACKFILL_BATCH}`);
+    if (rows.length === 0) break;
+    await batch(
+      rows.map((r) => ({ sql: 'UPDATE messages SET content_search = ? WHERE id = ?', args: [searchKey(r.content), r.id] }))
+    );
+  }
 }
 
 export default client;
