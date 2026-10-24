@@ -35,6 +35,7 @@ import com.wave.app.ui.theme.WaveAccent
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WavePanel
 import com.wave.app.ui.theme.WavePanel2
+import com.wave.app.ui.theme.WaveIcons
 
 @Composable
 fun AttachmentPreviewDialog(
@@ -89,7 +90,7 @@ fun AttachmentPreviewDialog(
                             .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White)
+                        Icon(WaveIcons.PlayArrow, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White)
                     }
                 }
                 else -> Row(
@@ -99,7 +100,7 @@ fun AttachmentPreviewDialog(
                         .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.InsertDriveFile, contentDescription = null, tint = WaveMuted)
+                    Icon(WaveIcons.InsertDriveFile, contentDescription = null, tint = WaveMuted)
                     Text(
                         attachment.uri.lastPathSegment ?: "Файл",
                         modifier = Modifier.padding(start = 8.dp)
@@ -121,7 +122,7 @@ fun AttachmentPreviewDialog(
                     CircularProgressIndicator(modifier = Modifier.padding(start = 8.dp).height(24.dp))
                 } else {
                     IconButton(onClick = { onConfirm(caption) }) {
-                        Icon(Icons.Default.Send, contentDescription = "Отправить", tint = WaveAccent)
+                        Icon(WaveIcons.Send, contentDescription = "Отправить", tint = WaveAccent)
                     }
                 }
             }

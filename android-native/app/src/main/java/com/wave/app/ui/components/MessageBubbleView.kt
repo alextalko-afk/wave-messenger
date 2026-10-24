@@ -56,6 +56,7 @@ import com.wave.app.ui.theme.WaveText
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.wave.app.ui.theme.WaveIcons
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -114,16 +115,12 @@ fun MessageBubbleView(
     ) {
         Box {
             val bubbleShape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (isMine) 16.dp else 4.dp,
-                bottomEnd = if (isMine) 4.dp else 16.dp
+                topStart = 18.dp,
+                topEnd = 18.dp,
+                bottomStart = if (isMine) 18.dp else 6.dp,
+                bottomEnd = if (isMine) 6.dp else 18.dp
             )
-            val bubbleBrush = if (isMine) {
-                Brush.linearGradient(listOf(WaveBubbleOut, lerp(WaveBubbleOut, WaveAccentDeep, 0.35f)))
-            } else {
-                SolidColor(WaveBubbleIn)
-            }
+            val bubbleBrush = SolidColor(if (isMine) WaveBubbleOut else WaveBubbleIn)
             Column(
                 modifier = Modifier
                     .widthIn(max = 280.dp)
@@ -175,7 +172,7 @@ fun MessageBubbleView(
                                 .background(Color.Black.copy(alpha = 0.45f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Воспроизвести", tint = Color.White)
+                            Icon(WaveIcons.PlayArrow, contentDescription = "Воспроизвести", tint = Color.White)
                         }
                     }
                 } else if (mediaUrl != null && isAudio) {
@@ -189,7 +186,7 @@ fun MessageBubbleView(
                             .padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.InsertDriveFile, contentDescription = null)
+                        Icon(WaveIcons.InsertDriveFile, contentDescription = null)
                         Text(
                             text = message.fileName ?: "Файл",
                             modifier = Modifier.padding(start = 8.dp),
@@ -214,7 +211,7 @@ fun MessageBubbleView(
                                 if (draft.isNotBlank() && draft != message.content) onEdit(message.id, draft.trim())
                                 editing = false
                             }) {
-                                Icon(Icons.Default.Check, contentDescription = "Сохранить")
+                                Icon(WaveIcons.Check, contentDescription = "Сохранить")
                             }
                         }
                     }
@@ -259,13 +256,13 @@ private fun OwnMessageMenu(
         if (canEdit) {
             DropdownMenuItem(
                 text = { Text("Редактировать") },
-                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                leadingIcon = { Icon(WaveIcons.Edit, contentDescription = null) },
                 onClick = onEdit
             )
         }
         DropdownMenuItem(
             text = { Text("Удалить") },
-            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+            leadingIcon = { Icon(WaveIcons.Delete, contentDescription = null) },
             onClick = onDelete
         )
     }
@@ -284,7 +281,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.MessageFooter(message
         )
         if (isMine) {
             Icon(
-                if (isRead) Icons.Default.DoneAll else Icons.Default.Check,
+                if (isRead) WaveIcons.DoneAll else WaveIcons.Check,
                 contentDescription = if (isRead) "Прочитано" else "Отправлено",
                 tint = if (isRead) WaveCheck else WaveText.copy(alpha = 0.55f),
                 modifier = Modifier.padding(start = 4.dp).size(14.dp)

@@ -43,6 +43,7 @@ import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WavePanel
 import kotlinx.coroutines.delay
+import com.wave.app.ui.theme.WaveIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,13 +95,13 @@ fun NewGroupScreen(onBack: () -> Unit, onCreated: (Conversation) -> Unit) {
                 title = { Text(if (step == 1) "Добавить участников" else "Новая группа") },
                 navigationIcon = {
                     IconButton(onClick = { if (step == 2) step = 1 else onBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(WaveIcons.ArrowBack, contentDescription = "Назад")
                     }
                 },
                 actions = {
                     if (step == 1 && selected.value.isNotEmpty()) {
                         IconButton(onClick = { step = 2 }) {
-                            Icon(Icons.Default.Check, contentDescription = "Далее", tint = WaveAccent)
+                            Icon(WaveIcons.Check, contentDescription = "Далее", tint = WaveAccent)
                         }
                     }
                 },

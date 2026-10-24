@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wave.app.ui.theme.WaveAccent
 import com.wave.app.ui.theme.WaveText
+import com.wave.app.ui.theme.WaveIcons
 
 @Composable
 fun VoiceMessagePlayer(url: String, isMine: Boolean) {
@@ -80,7 +81,7 @@ fun VoiceMessagePlayer(url: String, isMine: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = { togglePlay() }) {
             Icon(
-                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                if (isPlaying) WaveIcons.Pause else WaveIcons.PlayArrow,
                 contentDescription = if (isPlaying) "Пауза" else "Воспроизвести",
                 tint = tint
             )

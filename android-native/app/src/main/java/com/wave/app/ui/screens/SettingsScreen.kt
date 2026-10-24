@@ -74,6 +74,7 @@ import com.wave.app.ui.theme.WaveThemeVariant
 import com.wave.app.ui.theme.currentWaveAppearance
 import com.wave.app.ui.theme.currentWaveThemeVariant
 import com.wave.app.ui.theme.setWaveTheme
+import com.wave.app.ui.theme.WaveIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -242,7 +243,7 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                 title = { Text("Настройки") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(WaveIcons.ArrowBack, contentDescription = "Назад")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = WavePanel)
@@ -270,7 +271,7 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Default.Edit,
+                                WaveIcons.Edit,
                                 contentDescription = "Изменить фото",
                                 tint = Color.White,
                                 modifier = Modifier.size(14.dp)
@@ -404,7 +405,7 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                                     .background(Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep))),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.ChatBubble, contentDescription = null, tint = Color.White)
+                                Icon(WaveIcons.ChatBubble, contentDescription = null, tint = Color.White)
                             }
                         }
                         IconChoice(
@@ -421,7 +422,7 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                                     .background(Color.Black),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.ChatBubble, contentDescription = null, tint = Color.White)
+                                Icon(WaveIcons.ChatBubble, contentDescription = null, tint = Color.White)
                             }
                         }
                     }
@@ -442,7 +443,7 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                                     .background(Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep))),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.ChatBubble, contentDescription = null, tint = WaveOnAccent)
+                                Icon(WaveIcons.ChatBubble, contentDescription = null, tint = WaveOnAccent)
                             }
                         }
                         IconChoice(
@@ -456,7 +457,7 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                                     .background(Color.Black),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.ChatBubble, contentDescription = null, tint = Color.White)
+                                Icon(WaveIcons.ChatBubble, contentDescription = null, tint = Color.White)
                             }
                         }
                     }
@@ -496,7 +497,7 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onLogout) {
-                        Icon(Icons.Default.Logout, contentDescription = null, tint = Color(0xFFFF6B6B))
+                        Icon(WaveIcons.Logout, contentDescription = null, tint = Color(0xFFFF6B6B))
                     }
                     Text(
                         "Выйти из аккаунта",

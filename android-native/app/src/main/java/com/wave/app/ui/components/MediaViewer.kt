@@ -26,6 +26,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
+import com.wave.app.ui.theme.WaveIcons
 
 /**
  * Fullscreen photo/video viewer, opened by tapping a media bubble -
@@ -77,7 +78,7 @@ fun MediaViewerDialog(url: String, isVideo: Boolean, onDismiss: () -> Unit) {
                     .size(40.dp)
                     .background(Color.White.copy(alpha = 0.15f), shape = CircleShape)
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Закрыть", tint = Color.White)
+                Icon(WaveIcons.Close, contentDescription = "Закрыть", tint = Color.White)
             }
         }
     }

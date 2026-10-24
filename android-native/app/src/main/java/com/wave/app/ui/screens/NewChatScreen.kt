@@ -39,6 +39,7 @@ import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WavePanel
 import kotlinx.coroutines.delay
+import com.wave.app.ui.theme.WaveIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,7 +77,7 @@ fun NewChatScreen(onBack: () -> Unit, onOpen: (Conversation) -> Unit) {
                 title = { Text("Новый чат") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(WaveIcons.ArrowBack, contentDescription = "Назад")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = WavePanel)

@@ -49,6 +49,7 @@ import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WaveMutedFaint
 import com.wave.app.ui.theme.WavePanel
 import kotlinx.coroutines.launch
+import com.wave.app.ui.theme.WaveIcons
 
 private fun statusText(entry: CallLogEntry): Pair<String, Boolean> {
     return when (entry.status) {
@@ -90,7 +91,7 @@ fun CallHistoryScreen(onBack: () -> Unit) {
                 title = { Text("Звонки", style = MaterialTheme.typography.headlineSmall) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(WaveIcons.ArrowBack, contentDescription = "Назад")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = WavePanel)
@@ -105,7 +106,7 @@ fun CallHistoryScreen(onBack: () -> Unit) {
                     modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Default.Call, contentDescription = null, tint = WaveMutedFaint, modifier = Modifier)
+                    Icon(WaveIcons.Call, contentDescription = null, tint = WaveMutedFaint, modifier = Modifier)
                     Text("История звонков пуста", color = WaveMuted, modifier = Modifier.padding(top = 8.dp))
                     Text(
                         "Чтобы позвонить, откройте диалог и нажмите на значок трубки или камеры",
@@ -132,7 +133,7 @@ fun CallHistoryScreen(onBack: () -> Unit) {
                                 Text(entry.otherUser.displayName, style = MaterialTheme.typography.bodyLarge)
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Icon(
-                                        if (entry.isOutgoing) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                                        if (entry.isOutgoing) WaveIcons.ArrowUpward else WaveIcons.ArrowDownward,
                                         contentDescription = null,
                                         tint = if (isMissed) androidx.compose.ui.graphics.Color(0xFFE74C3C) else WaveMuted,
                                         modifier = Modifier.padding(0.dp)
@@ -147,7 +148,7 @@ fun CallHistoryScreen(onBack: () -> Unit) {
                             Text(formatTime(entry.startedAt), color = WaveMutedFaint, style = MaterialTheme.typography.labelSmall)
                             IconButton(onClick = { callBack(entry.otherUser.id, if (entry.kind == "video") CallKind.VIDEO else CallKind.AUDIO) }) {
                                 Icon(
-                                    if (entry.kind == "video") Icons.Default.Videocam else Icons.Default.Phone,
+                                    if (entry.kind == "video") WaveIcons.Videocam else WaveIcons.Phone,
                                     contentDescription = "Перезвонить",
                                     tint = WaveAccent
                                 )

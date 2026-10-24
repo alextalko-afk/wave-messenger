@@ -65,6 +65,7 @@ import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WavePanel
 import kotlinx.coroutines.launch
+import com.wave.app.ui.theme.WaveIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,7 +129,7 @@ fun ChatInfoScreen(session: SessionStore, conversation: Conversation, onBack: ()
                 title = { Text(if (conversation.isGroup) "Группа" else "Контакт") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(WaveIcons.ArrowBack, contentDescription = "Назад")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = WavePanel)
@@ -157,7 +158,7 @@ fun ChatInfoScreen(session: SessionStore, conversation: Conversation, onBack: ()
                                     .background(WaveAccent, shape = CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Edit, contentDescription = "Изменить фото", tint = Color.White, modifier = Modifier.size(14.dp))
+                                Icon(WaveIcons.Edit, contentDescription = "Изменить фото", tint = Color.White, modifier = Modifier.size(14.dp))
                             }
                         }
                     }
@@ -188,9 +189,9 @@ fun ChatInfoScreen(session: SessionStore, conversation: Conversation, onBack: ()
             stats?.let { s ->
                 item {
                     Row(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                        StatItem(icon = Icons.Default.Image, label = "Фото", value = s.photos)
-                        StatItem(icon = Icons.Default.Mic, label = "Голосовые", value = s.voice)
-                        StatItem(icon = Icons.Default.Description, label = "Файлы", value = s.files)
+                        StatItem(icon = WaveIcons.Image, label = "Фото", value = s.photos)
+                        StatItem(icon = WaveIcons.Mic, label = "Голосовые", value = s.voice)
+                        StatItem(icon = WaveIcons.Description, label = "Файлы", value = s.files)
                     }
                     HorizontalDivider()
                 }
@@ -285,7 +286,7 @@ fun ChatInfoScreen(session: SessionStore, conversation: Conversation, onBack: ()
                     onClick = { lightboxUrl = null },
                     modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = "Закрыть", tint = Color.White)
+                    Icon(WaveIcons.Close, contentDescription = "Закрыть", tint = Color.White)
                 }
             }
         }

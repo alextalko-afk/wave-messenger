@@ -127,21 +127,21 @@ enum Wave {
     }
 
     private static let colorful = Palette(
-        bg: Color(red: 0x0A / 255, green: 0x0E / 255, blue: 0x14 / 255),
-        panel: Color(red: 0x12 / 255, green: 0x18 / 255, blue: 0x22 / 255),
-        panel2: Color(red: 0x1A / 255, green: 0x22 / 255, blue: 0x30 / 255),
-        elevated: Color(red: 0x20 / 255, green: 0x2A / 255, blue: 0x38 / 255),
-        border: Color(red: 0x23 / 255, green: 0x2C / 255, blue: 0x3A / 255),
-        accent: Color(red: 0x2A / 255, green: 0xAB / 255, blue: 0xEE / 255),
-        accent2: Color(red: 0x3E / 255, green: 0x7B / 255, blue: 0xFA / 255),
-        accentDeep: Color(red: 0x6C / 255, green: 0x5C / 255, blue: 0xE7 / 255),
-        textPrimary: Color(red: 0xF3 / 255, green: 0xF6 / 255, blue: 0xFA / 255),
-        muted: Color(red: 0x8A / 255, green: 0x93 / 255, blue: 0xA6 / 255),
-        mutedFaint: Color(red: 0x5B / 255, green: 0x63 / 255, blue: 0x73 / 255),
-        bubbleOut: Color(red: 0x28 / 255, green: 0x5D / 255, blue: 0x8C / 255),
-        bubbleOutEnd: Color(red: 0x40 / 255, green: 0x5D / 255, blue: 0xAC / 255),
-        bubbleIn: Color(red: 0x16 / 255, green: 0x1F / 255, blue: 0x2B / 255),
-        online: Color(red: 0x5F / 255, green: 0xD3 / 255, blue: 0xA0 / 255)
+        bg: Color(red: 0x0A / 255, green: 0x10 / 255, blue: 0x17 / 255),
+        panel: Color(red: 0x0F / 255, green: 0x16 / 255, blue: 0x20 / 255),
+        panel2: Color(red: 0x17 / 255, green: 0x21 / 255, blue: 0x2C / 255),
+        elevated: Color(red: 0x22 / 255, green: 0x32 / 255, blue: 0x44 / 255),
+        border: Color(red: 0x1D / 255, green: 0x29 / 255, blue: 0x37 / 255),
+        accent: Color(red: 0x3B / 255, green: 0x82 / 255, blue: 0xF6 / 255),
+        accent2: Color(red: 0x25 / 255, green: 0x63 / 255, blue: 0xEB / 255),
+        accentDeep: Color(red: 0x25 / 255, green: 0x63 / 255, blue: 0xEB / 255),
+        textPrimary: Color(red: 0xEA / 255, green: 0xF0 / 255, blue: 0xF6 / 255),
+        muted: Color(red: 0x86 / 255, green: 0x96 / 255, blue: 0xA7 / 255),
+        mutedFaint: Color(red: 0x7A / 255, green: 0x8A / 255, blue: 0x9C / 255),
+        bubbleOut: Color(red: 0x25 / 255, green: 0x63 / 255, blue: 0xEB / 255),
+        bubbleOutEnd: Color(red: 0x25 / 255, green: 0x63 / 255, blue: 0xEB / 255),
+        bubbleIn: Color(red: 0x17 / 255, green: 0x21 / 255, blue: 0x2C / 255),
+        online: Color(red: 0x34 / 255, green: 0xD3 / 255, blue: 0x99 / 255)
     )
 
     private static let mono = Palette(
@@ -162,25 +162,26 @@ enum Wave {
         online: Color.white
     )
 
-    // Same brand accent hues as `colorful` (dark) - only surfaces/text flip
+    // Own bubbles keep the saturated blue in light mode too: message text on
+    // them is always white. Same brand accent hues as `colorful` (dark) - only surfaces/text flip
     // for light mode, matching the web client's light palette exactly so
     // all three clients agree on what "light theme" looks like.
     private static let colorfulLight = Palette(
-        bg: Color(red: 0xFF / 255, green: 0xFF / 255, blue: 0xFF / 255),
+        bg: Color(red: 0xEE / 255, green: 0xF2 / 255, blue: 0xF7 / 255),
         panel: Color(red: 0xFF / 255, green: 0xFF / 255, blue: 0xFF / 255),
-        panel2: Color(red: 0xF4 / 255, green: 0xF4 / 255, blue: 0xF5 / 255),
-        elevated: Color(red: 0xEC / 255, green: 0xEE / 255, blue: 0xF0 / 255),
-        border: Color(red: 0xE4 / 255, green: 0xE6 / 255, blue: 0xEB / 255),
-        accent: Color(red: 0x2A / 255, green: 0xAB / 255, blue: 0xEE / 255),
-        accent2: Color(red: 0x3E / 255, green: 0x7B / 255, blue: 0xFA / 255),
-        accentDeep: Color(red: 0x6C / 255, green: 0x5C / 255, blue: 0xE7 / 255),
-        textPrimary: Color(red: 0x17 / 255, green: 0x21 / 255, blue: 0x2B / 255),
-        muted: Color(red: 0x8A / 255, green: 0x97 / 255, blue: 0xA3 / 255),
-        mutedFaint: Color(red: 0xB0 / 255, green: 0xB8 / 255, blue: 0xC1 / 255),
-        bubbleOut: Color(red: 0xDC / 255, green: 0xEE / 255, blue: 0xFC / 255),
-        bubbleOutEnd: Color(red: 0xCF / 255, green: 0xE6 / 255, blue: 0xFB / 255),
-        bubbleIn: Color(red: 0xF1 / 255, green: 0xF2 / 255, blue: 0xF4 / 255),
-        online: Color(red: 0x34 / 255, green: 0xC7 / 255, blue: 0x59 / 255)
+        panel2: Color(red: 0xF1 / 255, green: 0xF5 / 255, blue: 0xFA / 255),
+        elevated: Color(red: 0xE3 / 255, green: 0xE9 / 255, blue: 0xF1 / 255),
+        border: Color(red: 0xDD / 255, green: 0xE4 / 255, blue: 0xED / 255),
+        accent: Color(red: 0x1D / 255, green: 0x6F / 255, blue: 0xE0 / 255),
+        accent2: Color(red: 0x25 / 255, green: 0x63 / 255, blue: 0xEB / 255),
+        accentDeep: Color(red: 0x1D / 255, green: 0x4E / 255, blue: 0xD8 / 255),
+        textPrimary: Color(red: 0x10 / 255, green: 0x18 / 255, blue: 0x26 / 255),
+        muted: Color(red: 0x5B / 255, green: 0x6B / 255, blue: 0x7C / 255),
+        mutedFaint: Color(red: 0x66 / 255, green: 0x75 / 255, blue: 0x87 / 255),
+        bubbleOut: Color(red: 0x25 / 255, green: 0x63 / 255, blue: 0xEB / 255),
+        bubbleOutEnd: Color(red: 0x25 / 255, green: 0x63 / 255, blue: 0xEB / 255),
+        bubbleIn: Color(red: 0xFF / 255, green: 0xFF / 255, blue: 0xFF / 255),
+        online: Color(red: 0x0F / 255, green: 0x8F / 255, blue: 0x60 / 255)
     )
 
     private static let monoLight = Palette(

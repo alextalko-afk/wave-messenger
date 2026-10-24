@@ -49,6 +49,7 @@ import com.wave.app.call.WebRTCClient
 import com.wave.app.ui.components.Avatar
 import org.webrtc.VideoTrack
 import org.webrtc.SurfaceViewRenderer
+import com.wave.app.ui.theme.WaveIcons
 
 @Composable
 private fun VideoRendererView(track: VideoTrack?, modifier: Modifier = Modifier) {
@@ -195,24 +196,24 @@ fun CallOverlay() {
 
             if (isIncoming) {
                 Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(70.dp), modifier = Modifier.padding(bottom = 60.dp)) {
-                    ControlButton(Icons.Default.CallEnd, Color(0xFFE74C3C), "Отклонить") { CallManager.rejectCall() }
-                    ControlButton(Icons.Default.Call, Color(0xFF4FAE4E), "Принять") { acceptWithPermissions() }
+                    ControlButton(WaveIcons.CallEnd, Color(0xFFE74C3C), "Отклонить") { CallManager.rejectCall() }
+                    ControlButton(WaveIcons.Call, Color(0xFF4FAE4E), "Принять") { acceptWithPermissions() }
                 }
             } else {
                 Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(28.dp), modifier = Modifier.padding(bottom = 60.dp)) {
                     ControlButton(
-                        if (CallManager.isMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                        if (CallManager.isMuted) WaveIcons.MicOff else WaveIcons.Mic,
                         Color(0xFF2A2F3A),
                         "Микрофон"
                     ) { CallManager.toggleMute() }
                     if (isVideo) {
                         ControlButton(
-                            if (CallManager.isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                            if (CallManager.isVideoEnabled) WaveIcons.Videocam else WaveIcons.VideocamOff,
                             Color(0xFF2A2F3A),
                             "Камера"
                         ) { CallManager.toggleVideo() }
                     }
-                    ControlButton(Icons.Default.CallEnd, Color(0xFFE74C3C), "Завершить") { CallManager.endCall() }
+                    ControlButton(WaveIcons.CallEnd, Color(0xFFE74C3C), "Завершить") { CallManager.endCall() }
                 }
             }
         }

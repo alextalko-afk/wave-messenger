@@ -74,6 +74,7 @@ import com.wave.app.ui.theme.WaveMutedFaint
 import com.wave.app.ui.theme.WaveOnAccent
 import com.wave.app.ui.theme.WavePanel
 import kotlinx.coroutines.delay
+import com.wave.app.ui.theme.WaveIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -137,7 +138,7 @@ fun ChatListScreen(
                 navigationIcon = {
                     if (searchActive) {
                         IconButton(onClick = { searchActive = false; query = "" }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Закрыть поиск")
+                            Icon(WaveIcons.ArrowBack, contentDescription = "Закрыть поиск")
                         }
                     }
                 },
@@ -145,13 +146,13 @@ fun ChatListScreen(
                 actions = {
                     if (!searchActive) {
                         IconButton(onClick = { searchActive = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "Поиск", tint = WaveMuted)
+                            Icon(WaveIcons.Search, contentDescription = "Поиск", tint = WaveMuted)
                         }
                         IconButton(onClick = onOpenCalls) {
-                            Icon(Icons.Default.Call, contentDescription = "Звонки", tint = WaveMuted)
+                            Icon(WaveIcons.Call, contentDescription = "Звонки", tint = WaveMuted)
                         }
                         IconButton(onClick = onOpenSettings) {
-                            Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = WaveMuted)
+                            Icon(WaveIcons.Settings, contentDescription = "Настройки", tint = WaveMuted)
                         }
                     }
                 }
@@ -174,18 +175,18 @@ fun ChatListScreen(
                                 .background(Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep))),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Новый чат", tint = WaveOnAccent)
+                            Icon(WaveIcons.Add, contentDescription = "Новый чат", tint = WaveOnAccent)
                         }
                     }
                     DropdownMenu(expanded = fabMenuOpen, onDismissRequest = { fabMenuOpen = false }) {
                         DropdownMenuItem(
                             text = { Text("Новый чат") },
-                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            leadingIcon = { Icon(WaveIcons.Person, contentDescription = null) },
                             onClick = { fabMenuOpen = false; onNewChat() }
                         )
                         DropdownMenuItem(
                             text = { Text("Новая группа") },
-                            leadingIcon = { Icon(Icons.Default.Group, contentDescription = null) },
+                            leadingIcon = { Icon(WaveIcons.Group, contentDescription = null) },
                             onClick = { fabMenuOpen = false; onNewGroup() }
                         )
                     }
@@ -231,7 +232,7 @@ fun ChatListScreen(
                             .background(WavePanel, shape = androidx.compose.foundation.shape.CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.ChatBubbleOutline, contentDescription = null, tint = WaveMutedFaint, modifier = Modifier.size(32.dp))
+                        Icon(WaveIcons.ChatBubbleOutline, contentDescription = null, tint = WaveMutedFaint, modifier = Modifier.size(32.dp))
                     }
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 16.dp))
                     Text("Пока нет чатов", color = WaveMuted, style = MaterialTheme.typography.bodyLarge)
@@ -287,7 +288,7 @@ private fun ConversationRow(
                     )
                     if (conv.muted) {
                         Icon(
-                            Icons.Default.NotificationsOff,
+                            WaveIcons.NotificationsOff,
                             contentDescription = "Без звука",
                             tint = WaveMuted,
                             modifier = Modifier.padding(start = 4.dp).size(14.dp)
@@ -306,7 +307,7 @@ private fun ConversationRow(
             }
             Column(horizontalAlignment = Alignment.End) {
                 if (conv.pinned) {
-                    Icon(Icons.Default.PushPin, contentDescription = "Закреплён", tint = WaveMuted, modifier = Modifier.size(14.dp))
+                    Icon(WaveIcons.PushPin, contentDescription = "Закреплён", tint = WaveMuted, modifier = Modifier.size(14.dp))
                 }
                 if (conv.lastMessage != null) {
                     Text(formatTime(conv.lastMessage.createdAt), color = WaveMuted, style = MaterialTheme.typography.labelSmall)
@@ -321,27 +322,27 @@ private fun ConversationRow(
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             DropdownMenuItem(
                 text = { Text(if (conv.pinned) "Открепить" else "Закрепить") },
-                leadingIcon = { Icon(Icons.Default.PushPin, contentDescription = null) },
+                leadingIcon = { Icon(WaveIcons.PushPin, contentDescription = null) },
                 onClick = { menuOpen = false; onPin() }
             )
             DropdownMenuItem(
                 text = { Text(if (conv.muted) "Включить уведомления" else "Отключить уведомления") },
-                leadingIcon = { Icon(if (conv.muted) Icons.Default.Notifications else Icons.Default.NotificationsOff, contentDescription = null) },
+                leadingIcon = { Icon(if (conv.muted) WaveIcons.Notifications else WaveIcons.NotificationsOff, contentDescription = null) },
                 onClick = { menuOpen = false; onMute() }
             )
             DropdownMenuItem(
                 text = { Text("Отметить непрочитанным") },
-                leadingIcon = { Icon(Icons.Default.MarkChatUnread, contentDescription = null) },
+                leadingIcon = { Icon(WaveIcons.MarkChatUnread, contentDescription = null) },
                 onClick = { menuOpen = false; onMarkUnread() }
             )
             DropdownMenuItem(
                 text = { Text("Очистить историю") },
-                leadingIcon = { Icon(Icons.Default.DeleteSweep, contentDescription = null) },
+                leadingIcon = { Icon(WaveIcons.DeleteSweep, contentDescription = null) },
                 onClick = { menuOpen = false; onClear() }
             )
             DropdownMenuItem(
                 text = { Text("Удалить чат") },
-                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                leadingIcon = { Icon(WaveIcons.Delete, contentDescription = null) },
                 onClick = { menuOpen = false; onDelete() }
             )
         }

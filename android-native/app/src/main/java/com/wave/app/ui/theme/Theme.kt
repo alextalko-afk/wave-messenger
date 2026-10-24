@@ -24,28 +24,28 @@ enum class WaveAppearance { DARK, LIGHT }
 // `remember` - so switching the theme just reassigns these and everything
 // that read one during composition recomposes, with zero call-site changes
 // across the ~15 files that already import them.
-var WaveBg by mutableStateOf(Color(0xFF0A0E14))
-var WavePanel by mutableStateOf(Color(0xFF121822))
-var WavePanel2 by mutableStateOf(Color(0xFF1A2230))
-var WaveElevated by mutableStateOf(Color(0xFF202A38))
-var WaveBorder by mutableStateOf(Color(0xFF232C3A))
+var WaveBg by mutableStateOf(Color(0xFF0A1017))
+var WavePanel by mutableStateOf(Color(0xFF0F1620))
+var WavePanel2 by mutableStateOf(Color(0xFF17212C))
+var WaveElevated by mutableStateOf(Color(0xFF223244))
+var WaveBorder by mutableStateOf(Color(0xFF1D2937))
 
-var WaveAccent by mutableStateOf(Color(0xFF2AABEE))
-var WaveAccent2 by mutableStateOf(Color(0xFF3E7BFA))
-var WaveAccentDeep by mutableStateOf(Color(0xFF6C5CE7))
+var WaveAccent by mutableStateOf(Color(0xFF3B82F6))
+var WaveAccent2 by mutableStateOf(Color(0xFF2563EB))
+var WaveAccentDeep by mutableStateOf(Color(0xFF2563EB))
 
 // The color to use for text/icons drawn on top of an accent-colored surface
 // (buttons, FAB, send/mic circle) - white on the colorful theme's blue
 // gradient, black on the mono theme's white/gray one.
 var WaveOnAccent by mutableStateOf(Color.White)
 
-var WaveText by mutableStateOf(Color(0xFFF3F6FA))
-var WaveMuted by mutableStateOf(Color(0xFF8A93A6))
-var WaveMutedFaint by mutableStateOf(Color(0xFF5B6373))
+var WaveText by mutableStateOf(Color(0xFFEAF0F6))
+var WaveMuted by mutableStateOf(Color(0xFF8696A7))
+var WaveMutedFaint by mutableStateOf(Color(0xFF7A8A9C))
 
-var WaveBubbleOut by mutableStateOf(Color(0xFF285D8C))
-var WaveBubbleIn by mutableStateOf(Color(0xFF161F2B))
-var WaveCheck by mutableStateOf(Color(0xFF5FD3A0))
+var WaveBubbleOut by mutableStateOf(Color(0xFF2563EB))
+var WaveBubbleIn by mutableStateOf(Color(0xFF17212C))
+var WaveCheck by mutableStateOf(Color(0xFF34D399))
 
 val WaveShadow = Color(0xFF000000)
 
@@ -59,21 +59,21 @@ fun applyWaveTheme(variant: WaveThemeVariant, appearance: WaveAppearance = curre
     currentWaveAppearance = appearance
     when (variant to appearance) {
         WaveThemeVariant.COLORFUL to WaveAppearance.DARK -> {
-            WaveBg = Color(0xFF0A0E14)
-            WavePanel = Color(0xFF121822)
-            WavePanel2 = Color(0xFF1A2230)
-            WaveElevated = Color(0xFF202A38)
-            WaveBorder = Color(0xFF232C3A)
-            WaveAccent = Color(0xFF2AABEE)
-            WaveAccent2 = Color(0xFF3E7BFA)
-            WaveAccentDeep = Color(0xFF6C5CE7)
+            WaveBg = Color(0xFF0A1017)
+            WavePanel = Color(0xFF0F1620)
+            WavePanel2 = Color(0xFF17212C)
+            WaveElevated = Color(0xFF223244)
+            WaveBorder = Color(0xFF1D2937)
+            WaveAccent = Color(0xFF3B82F6)
+            WaveAccent2 = Color(0xFF2563EB)
+            WaveAccentDeep = Color(0xFF2563EB)
             WaveOnAccent = Color.White
-            WaveText = Color(0xFFF3F6FA)
-            WaveMuted = Color(0xFF8A93A6)
-            WaveMutedFaint = Color(0xFF5B6373)
-            WaveBubbleOut = Color(0xFF285D8C)
-            WaveBubbleIn = Color(0xFF161F2B)
-            WaveCheck = Color(0xFF5FD3A0)
+            WaveText = Color(0xFFEAF0F6)
+            WaveMuted = Color(0xFF8696A7)
+            WaveMutedFaint = Color(0xFF7A8A9C)
+            WaveBubbleOut = Color(0xFF2563EB)
+            WaveBubbleIn = Color(0xFF17212C)
+            WaveCheck = Color(0xFF34D399)
         }
         WaveThemeVariant.MONO to WaveAppearance.DARK -> {
             WaveBg = Color(0xFF000000)
@@ -95,21 +95,21 @@ fun applyWaveTheme(variant: WaveThemeVariant, appearance: WaveAppearance = curre
         WaveThemeVariant.COLORFUL to WaveAppearance.LIGHT -> {
             // Same brand accent hues as the dark colorful palette - only
             // surfaces/text flip, matching the web client's light theme.
-            WaveBg = Color(0xFFFFFFFF)
+            WaveBg = Color(0xFFEEF2F7)
             WavePanel = Color(0xFFFFFFFF)
-            WavePanel2 = Color(0xFFF4F4F5)
-            WaveElevated = Color(0xFFECEEF0)
-            WaveBorder = Color(0xFFE4E6EB)
-            WaveAccent = Color(0xFF2AABEE)
-            WaveAccent2 = Color(0xFF3E7BFA)
-            WaveAccentDeep = Color(0xFF6C5CE7)
+            WavePanel2 = Color(0xFFF1F5FA)
+            WaveElevated = Color(0xFFE3E9F1)
+            WaveBorder = Color(0xFFDDE4ED)
+            WaveAccent = Color(0xFF1D6FE0)
+            WaveAccent2 = Color(0xFF2563EB)
+            WaveAccentDeep = Color(0xFF1D4ED8)
             WaveOnAccent = Color.White
-            WaveText = Color(0xFF17212B)
-            WaveMuted = Color(0xFF8A97A3)
-            WaveMutedFaint = Color(0xFFB0B8C1)
-            WaveBubbleOut = Color(0xFFDCEEFC)
-            WaveBubbleIn = Color(0xFFF1F2F4)
-            WaveCheck = Color(0xFF34C759)
+            WaveText = Color(0xFF101826)
+            WaveMuted = Color(0xFF5B6B7C)
+            WaveMutedFaint = Color(0xFF667587)
+            WaveBubbleOut = Color(0xFFD6E6FF)
+            WaveBubbleIn = Color(0xFFFFFFFF)
+            WaveCheck = Color(0xFF0F8F60)
         }
         else -> {
             // MONO to LIGHT

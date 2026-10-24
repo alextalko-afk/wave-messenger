@@ -71,6 +71,7 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
+import com.wave.app.ui.theme.WaveIcons
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -229,16 +230,16 @@ fun ChatScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(WaveIcons.ArrowBack, contentDescription = "Назад")
                     }
                 },
                 actions = {
                     if (conversation.otherUser != null) {
                         IconButton(onClick = { startCallWithPermissions(CallKind.AUDIO) }) {
-                            Icon(Icons.Default.Call, contentDescription = "Аудиозвонок", tint = WaveAccent)
+                            Icon(WaveIcons.Call, contentDescription = "Аудиозвонок", tint = WaveAccent)
                         }
                         IconButton(onClick = { startCallWithPermissions(CallKind.VIDEO) }) {
-                            Icon(Icons.Default.Videocam, contentDescription = "Видеозвонок", tint = WaveAccent)
+                            Icon(WaveIcons.Videocam, contentDescription = "Видеозвонок", tint = WaveAccent)
                         }
                     }
                 },
@@ -260,7 +261,7 @@ fun ChatScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = { cancelRecording() }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Отменить", tint = androidx.compose.ui.graphics.Color(0xFFFF6B6B))
+                            Icon(WaveIcons.Delete, contentDescription = "Отменить", tint = androidx.compose.ui.graphics.Color(0xFFFF6B6B))
                         }
                         Box(
                             modifier = Modifier.size(10.dp).background(androidx.compose.ui.graphics.Color.Red, shape = androidx.compose.foundation.shape.CircleShape)
@@ -272,7 +273,7 @@ fun ChatScreen(
                         )
                         Text("Запись голосового…", modifier = Modifier.padding(start = 8.dp).weight(1f), color = WaveMuted)
                         IconButton(onClick = { finishRecording() }) {
-                            Icon(Icons.Default.Check, contentDescription = "Отправить", tint = WaveAccent)
+                            Icon(WaveIcons.Check, contentDescription = "Отправить", tint = WaveAccent)
                         }
                     }
                 } else {
@@ -281,10 +282,10 @@ fun ChatScreen(
                         verticalAlignment = Alignment.Bottom
                     ) {
                         IconButton(onClick = { pickFile.launch("*/*") }, enabled = !sending) {
-                            Icon(Icons.Default.AttachFile, contentDescription = "Прикрепить", tint = WaveAccent)
+                            Icon(WaveIcons.AttachFile, contentDescription = "Прикрепить", tint = WaveAccent)
                         }
                         IconButton(onClick = { emojiSheetOpen = true }) {
-                            Icon(Icons.Default.EmojiEmotions, contentDescription = "Эмодзи", tint = WaveAccent)
+                            Icon(WaveIcons.EmojiEmotions, contentDescription = "Эмодзи", tint = WaveAccent)
                         }
                         com.wave.app.ui.components.WaveTextField(
                             value = text,
@@ -294,13 +295,13 @@ fun ChatScreen(
                         )
                         if (text.isNotBlank()) {
                             GradientCircleButton(
-                                icon = Icons.Default.Send,
+                                icon = WaveIcons.Send,
                                 contentDescription = "Отправить",
                                 onClick = { viewModel.sendText(text); text = "" }
                             )
                         } else {
                             GradientCircleButton(
-                                icon = Icons.Default.Mic,
+                                icon = WaveIcons.Mic,
                                 contentDescription = "Голосовое сообщение",
                                 onClick = {
                                     val granted = androidx.core.content.ContextCompat.checkSelfPermission(

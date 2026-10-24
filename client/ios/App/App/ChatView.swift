@@ -645,10 +645,10 @@ private struct MessageBubble: View {
 
     private var bubbleShape: UnevenRoundedRectangle {
         UnevenRoundedRectangle(
-            topLeadingRadius: 16,
-            bottomLeadingRadius: isMine ? 16 : 4,
-            bottomTrailingRadius: isMine ? 4 : 16,
-            topTrailingRadius: 16
+            topLeadingRadius: 18,
+            bottomLeadingRadius: isMine ? 18 : 6,
+            bottomTrailingRadius: isMine ? 6 : 18,
+            topTrailingRadius: 18
         )
     }
 
@@ -732,7 +732,7 @@ private struct MessageBubble: View {
         .frame(maxWidth: 280, alignment: .leading)
         .background {
             if isMine {
-                Wave.bubbleOutGradient
+                Wave.bubbleOut
             } else {
                 Wave.bubbleIn
             }
@@ -772,7 +772,7 @@ private struct MessageBubble: View {
                     .foregroundColor(isRead ? Wave.online : .white.opacity(0.55))
             }
         }
-        .foregroundColor(isMine ? .white.opacity(0.55) : Wave.mutedFaint)
+        .foregroundColor(isMine ? .white.opacity(0.92) : Wave.mutedFaint)
         .frame(maxWidth: .infinity, alignment: .trailing)
     }
 }
