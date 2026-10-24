@@ -9,9 +9,7 @@ import VoiceMessage from './VoiceMessage.jsx';
 import { formatLastSeen, formatDayLabel, pluralRu } from '../lib/format.js';
 import {
   IconClose,
-  IconImage,
   IconFile,
-  IconMic,
   IconUsers,
   IconGroup,
   IconBack,
@@ -27,17 +25,11 @@ import {
   IconPhone,
 } from './Icons.jsx';
 
-function StatRow({ icon, count, words, onClick }) {
-  if (!count) return null;
-  return (
-    <button onClick={onClick} className="w-full flex items-center gap-4 px-4 py-3 hover:bg-hover text-left">
-      <span className="text-muted">{icon}</span>
-      <span className="text-[15px]">
-        {count} {pluralRu(count, words)}
-      </span>
-    </button>
-  );
-}
+const MEDIA_TABS = [
+  { key: 'photos', label: 'Фото', stat: 'photos' },
+  { key: 'files', label: 'Файлы', stat: 'files' },
+  { key: 'voice', label: 'Голосовые', stat: 'voice' },
+];
 
 function SubHeader({ title, onBack }) {
   return (
@@ -56,7 +48,7 @@ function ActionButton({ icon, label, onClick, disabled, title }) {
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-lg hover:brightness-125 disabled:opacity-40 transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0"
+      className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl hover:brightness-125 disabled:opacity-40 transition-all outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0"
       style={{ background: 'var(--panel2)', color: 'var(--accent)', minWidth: 0 }}
     >
       {icon}
@@ -65,7 +57,9 @@ function ActionButton({ icon, label, onClick, disabled, title }) {
   );
 }
 
-export default function ProfileInfoPanel({ conversation, open, onClose, onOpenConversation, onAction, onConversationUpdate }) {
+// `docked` renders the panel as a column beside the chat; otherwise it is a
+// centred modal (narrow windows).
+export default function ProfileInfoPanel({ conversation, open, docked = false, onClose, onOpenConversation, onAction, onConversationUpdate }) {
   const call = useCall();
   const { user } = useAuth();
   const [lightboxSrc, setLightboxSrc] = useState(null);
@@ -105,53 +99,79 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
     }
   }
   const [stats, setStats] = useState(null);
-  const [subView, setSubView] = useState(null); // 'photos' | 'files' | 'voice' | 'groups' | 'member'
+  const [subView, setSubView] = useState(null); // 'groups' | 'member'
   const [subItems, setSubItems] = useState(null);
   const [subLoading, setSubLoading] = useState(false);
-  const [subCursor, setSubCursor] = useState(null); // nextCursor of the media list, when more pages exist
-  const [subMoreBusy, setSubMoreBusy] = useState(false);
+  const [tab, setTab] = useState(null); // 'photos' | 'files' | 'voice'
+  const [tabItems, setTabItems] = useState(null);
+  const [tabLoading, setTabLoading] = useState(false);
+  const [tabCursor, setTabCursor] = useState(null); // nextCursor of the media list, when more pages exist
+  const [tabMoreBusy, setTabMoreBusy] = useState(false);
   const [activeMember, setActiveMember] = useState(null);
   const [messagingBusy, setMessagingBusy] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     if (!open || !conversation) return;
+    let cancelled = false;
     setStats(null);
     setSubView(null);
     setSubItems(null);
-    setSubCursor(null);
+    setTab(null);
+    setTabItems(null);
+    setTabCursor(null);
     setActiveMember(null);
     setMoreOpen(false);
-    api.getConversationStats(conversation.id).then(setStats).catch(() => {});
+    api
+      .getConversationStats(conversation.id)
+      .then((s) => {
+        if (cancelled) return;
+        setStats(s);
+        const first = MEDIA_TABS.find((t) => s[t.stat] > 0);
+        if (first) selectTab(first.key);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [open, conversation?.id]);
 
   if (!open || !conversation) return null;
 
-  function openSubView(view) {
-    setMoreOpen(false);
-    setSubView(view);
-    setSubLoading(true);
-    setSubCursor(null);
-    const req =
-      view === 'groups'
-        ? api.getSharedGroups(conversation.id).then((r) => r.groups)
-        : api.getConversationMedia(conversation.id, view).then((r) => {
-            setSubCursor(r.hasMore ? r.nextCursor : null);
-            return r.items;
-          });
-    req.then(setSubItems).finally(() => setSubLoading(false));
+  function selectTab(key) {
+    setTab(key);
+    setTabItems(null);
+    setTabCursor(null);
+    setTabLoading(true);
+    api
+      .getConversationMedia(conversation.id, key)
+      .then((r) => {
+        setTabCursor(r.hasMore ? r.nextCursor : null);
+        setTabItems(r.items);
+      })
+      .finally(() => setTabLoading(false));
   }
 
   async function loadMoreMedia() {
-    if (!subCursor || subMoreBusy) return;
-    setSubMoreBusy(true);
+    if (!tabCursor || tabMoreBusy) return;
+    setTabMoreBusy(true);
     try {
-      const r = await api.getConversationMedia(conversation.id, subView, subCursor);
-      setSubItems((prev) => [...(prev || []), ...r.items]);
-      setSubCursor(r.hasMore ? r.nextCursor : null);
+      const r = await api.getConversationMedia(conversation.id, tab, tabCursor);
+      setTabItems((prev) => [...(prev || []), ...r.items]);
+      setTabCursor(r.hasMore ? r.nextCursor : null);
     } finally {
-      setSubMoreBusy(false);
+      setTabMoreBusy(false);
     }
+  }
+
+  function openGroups() {
+    setMoreOpen(false);
+    setSubView('groups');
+    setSubLoading(true);
+    api
+      .getSharedGroups(conversation.id)
+      .then((r) => setSubItems(r.groups))
+      .finally(() => setSubLoading(false));
   }
 
   function openMember(member) {
@@ -183,339 +203,353 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
     ? 'в сети'
     : formatLastSeen(conversation.otherUser?.lastSeen);
 
-  return (
+  const availableTabs = stats ? MEDIA_TABS.filter((t) => stats[t.stat] > 0) : [];
+
+  const body = subView ? (
     <>
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-[380px] max-h-[85vh] rounded-2xl flex flex-col overflow-hidden pop-in"
-        style={{
-          background: 'var(--overlay)',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-          border: '1px solid var(--border)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {subView ? (
+      <SubHeader
+        title={subView === 'member' ? 'Профиль' : 'Общие группы'}
+        onBack={() => setSubView(null)}
+      />
+      <div className="flex-1 overflow-y-auto">
+        {subView === 'member' && activeMember && (
           <>
-            <SubHeader
-              title={
-                subView === 'photos'
-                  ? 'Фотографии'
-                  : subView === 'files'
-                  ? 'Файлы'
-                  : subView === 'voice'
-                  ? 'Голосовые сообщения'
-                  : subView === 'member'
-                  ? 'Профиль'
-                  : 'Общие группы'
-              }
-              onBack={() => setSubView(null)}
-            />
-            <div className="flex-1 overflow-y-auto">
-              {subView === 'member' && activeMember && (
-                <>
-                  <div className="flex flex-col items-center px-4 pt-5 pb-4">
-                    <button
-                      onClick={() => activeMember.avatarUrl && setLightboxSrc(activeMember.avatarUrl)}
-                      className="rounded-full"
-                      style={{ cursor: activeMember.avatarUrl ? 'pointer' : 'default' }}
-                    >
-                      <Avatar name={activeMember.displayName} seed={activeMember.id} size={88} online={activeMember.online} src={activeMember.avatarUrl} />
-                    </button>
-                    <div className="mt-3 font-semibold text-lg text-center truncate max-w-full">
-                      {activeMember.displayName}
-                    </div>
-                    <div className="text-sm text-muted mt-0.5">
-                      {activeMember.online ? 'в сети' : formatLastSeen(activeMember.lastSeen)}
-                    </div>
-                    <div className="w-full mt-4">
-                      <ActionButton
-                        icon={<IconEdit size={19} />}
-                        label="Написать"
-                        onClick={handleMessageMember}
-                        disabled={messagingBusy}
-                      />
-                    </div>
-                  </div>
-                  <div style={{ borderTop: '1px solid var(--border)' }} />
-                  <div className="px-4 py-3">
-                    <div className="text-[15px]">@{activeMember.username}</div>
-                    <div className="text-xs text-muted mt-0.5">Логин</div>
-                  </div>
-                  {activeMember.bio && (
-                    <div className="px-4 py-3">
-                      <div className="text-[15px] whitespace-pre-wrap">{activeMember.bio}</div>
-                      <div className="text-xs text-muted mt-0.5">О себе</div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {subLoading && <div className="text-center text-muted text-sm mt-8">Загрузка…</div>}
-
-              {!subLoading && subView === 'photos' && (
-                <div className="grid grid-cols-3 gap-1 p-1">
-                  {subItems?.map((item) => (
-                    <a key={item.id} href={item.fileUrl} target="_blank" rel="noreferrer" className="aspect-square block">
-                      <img src={item.fileUrl} alt="" className="w-full h-full object-cover rounded" />
-                    </a>
-                  ))}
-                </div>
-              )}
-
-              {!subLoading && subView === 'files' && (
-                <div className="py-1">
-                  {subItems?.map((item) => (
-                    <a
-                      key={item.id}
-                      href={item.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-hover"
-                    >
-                      <IconFile size={20} className="text-muted shrink-0" />
-                      <div className="min-w-0">
-                        <div className="text-sm truncate">{item.fileName || 'Файл'}</div>
-                        <div className="text-xs text-muted">{formatDayLabel(item.createdAt)}</div>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              )}
-
-              {!subLoading && subView === 'voice' && (
-                <div className="py-1">
-                  {subItems?.map((item) => (
-                    <div key={item.id} className="px-4 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                      <VoiceMessage url={item.fileUrl} isMine={false} />
-                      <div className="text-xs text-muted -mt-1">{formatDayLabel(item.createdAt)}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {!subLoading && subView === 'groups' && (
-                <div className="py-1">
-                  {subItems?.map((g) => (
-                    <button
-                      key={g.id}
-                      onClick={() => {
-                        onOpenConversation?.(g.id);
-                        onClose();
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-hover text-left"
-                    >
-                      <Avatar name={g.name} seed={g.id} size={44} isGroup />
-                      <div className="min-w-0">
-                        <div className="text-sm truncate">{g.name}</div>
-                        <div className="text-xs text-muted">
-                          {g.memberCount} {pluralRu(g.memberCount, ['участник', 'участника', 'участников'])}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {!subLoading && subItems?.length === 0 && (
-                <div className="text-center text-muted text-sm mt-8">Пусто</div>
-              )}
-
-              {!subLoading && subCursor && (
-                <button
-                  onClick={loadMoreMedia}
-                  disabled={subMoreBusy}
-                  className="w-full py-3 text-sm text-muted hover:bg-hover disabled:opacity-50"
-                >
-                  {subMoreBusy ? 'Загрузка…' : 'Показать ещё'}
-                </button>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="relative flex flex-col items-center px-5 pt-6 pb-4 shrink-0">
+            <div className="flex flex-col items-center px-4 pt-5 pb-4">
               <button
-                onClick={onClose}
-                className="absolute top-2 right-2 w-9 h-9 rounded-full hover:bg-hover flex items-center justify-center text-muted"
+                onClick={() => activeMember.avatarUrl && setLightboxSrc(activeMember.avatarUrl)}
+                className="rounded-full"
+                style={{ cursor: activeMember.avatarUrl ? 'pointer' : 'default' }}
               >
-                <IconClose size={17} />
+                <Avatar name={activeMember.displayName} seed={activeMember.id} size={88} online={activeMember.online} src={activeMember.avatarUrl} />
               </button>
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    if (isGroupAdmin) groupAvatarInputRef.current?.click();
-                    else if (conversation.avatarUrl) setLightboxSrc(conversation.avatarUrl);
-                  }}
-                  disabled={groupAvatarBusy}
-                  className="rounded-full disabled:opacity-60"
-                  style={{ cursor: isGroupAdmin || conversation.avatarUrl ? 'pointer' : 'default' }}
-                >
-                  <Avatar name={conversation.name} seed={conversation.id} size={88} isGroup={conversation.isGroup} src={conversation.avatarUrl} />
-                  {isGroupAdmin && (
-                    <span
-                      className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full flex items-center justify-center"
-                      style={{ background: 'var(--accent-fill)', border: '2px solid var(--overlay)' }}
-                    >
-                      <IconEdit size={13} className="text-white" />
-                    </span>
-                  )}
-                </button>
-                {isGroupAdmin && (
-                  <input
-                    ref={groupAvatarInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleGroupAvatarPick}
-                  />
-                )}
+              <div className="mt-3 font-semibold text-lg text-center truncate max-w-full">
+                {activeMember.displayName}
               </div>
-              {isGroupAdmin && groupAvatarBusy && <div className="text-xs text-muted mt-1">Загружаем…</div>}
-              {isGroupAdmin && groupAvatarError && <div className="text-xs text-red-400 mt-1">{groupAvatarError}</div>}
-              {isGroupAdmin && conversation.avatarUrl && !groupAvatarBusy && (
-                <button onClick={handleGroupAvatarDelete} className="text-xs text-red-400 hover:underline mt-1">
-                  Удалить фото группы
-                </button>
-              )}
-              <div className="mt-3 font-semibold text-lg text-center truncate max-w-full">{conversation.name}</div>
-              <div className="text-sm text-muted mt-0.5">{subtitle}</div>
-
-              <div className="w-full flex gap-2 mt-4 relative">
-                <ActionButton icon={<IconChatLogo size={19} />} label="Чат" onClick={onClose} />
+              <div className="text-sm text-muted mt-0.5">
+                {activeMember.online ? 'в сети' : formatLastSeen(activeMember.lastSeen)}
+              </div>
+              <div className="w-full mt-4">
                 <ActionButton
-                  icon={conversation.muted ? <IconBellOff size={19} /> : <IconBell size={19} />}
-                  label="Звук"
-                  onClick={() => runAction('mute')}
+                  icon={<IconEdit size={19} />}
+                  label="Написать"
+                  onClick={handleMessageMember}
+                  disabled={messagingBusy}
                 />
-                {conversation.otherUser && (
-                  <ActionButton
-                    icon={<IconPhone size={19} />}
-                    label="Звонок"
-                    disabled={call.state.status !== 'idle'}
-                    onClick={() => {
-                      call.startCall(conversation, 'audio');
-                      onClose();
-                    }}
-                  />
-                )}
-                <div className="flex-1 relative">
-                  <ActionButton icon={<IconMoreDots size={19} />} label="Ещё" onClick={() => setMoreOpen((v) => !v)} />
-                  {moreOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setMoreOpen(false)} />
-                      <div
-                        className="absolute top-full mt-1 right-0 w-56 rounded-xl py-1.5 z-20 pop-in"
-                        style={{ background: 'var(--panel2)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', border: '1px solid var(--border)' }}
-                      >
-                        <button
-                          onClick={() => runAction('toggleRead')}
-                          className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-hover flex items-center gap-2.5"
-                        >
-                          {conversation.unreadCount > 0 ? <IconCheckAll size={16} /> : <IconMailUnread size={16} />}
-                          {conversation.unreadCount > 0 ? 'Пометить как прочитанное' : 'Пометить как непрочитанное'}
-                        </button>
-                        <button
-                          onClick={() => runAction('clear')}
-                          className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-hover flex items-center gap-2.5"
-                        >
-                          <IconEraser size={16} />
-                          Очистить историю
-                        </button>
-                        <button
-                          onClick={() => runAction('delete')}
-                          className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-hover flex items-center gap-2.5"
-                          style={{ color: '#f45b69' }}
-                        >
-                          <IconTrash size={16} />
-                          Удалить чат
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
               </div>
             </div>
-
             <div style={{ borderTop: '1px solid var(--border)' }} />
-
-            <div className="flex-1 overflow-y-auto">
-              {!conversation.isGroup && (
-                <>
-                  <div className="px-4 py-3">
-                    <div className="text-[15px]">@{conversation.otherUser?.username}</div>
-                    <div className="text-xs text-muted mt-0.5">Логин</div>
-                  </div>
-                  {conversation.otherUser?.bio && (
-                    <div className="px-4 py-3">
-                      <div className="text-[15px] whitespace-pre-wrap">{conversation.otherUser.bio}</div>
-                      <div className="text-xs text-muted mt-0.5">О себе</div>
-                    </div>
-                  )}
-                  <div style={{ borderTop: '1px solid var(--border)' }} />
-                </>
-              )}
-
-              {stats && (
-                <div className="py-1">
-                  <StatRow
-                    icon={<IconImage size={18} />}
-                    count={stats.photos}
-                    words={['фотография', 'фотографии', 'фотографий']}
-                    onClick={() => openSubView('photos')}
-                  />
-                  <StatRow
-                    icon={<IconFile size={18} />}
-                    count={stats.files}
-                    words={['файл', 'файла', 'файлов']}
-                    onClick={() => openSubView('files')}
-                  />
-                  <StatRow
-                    icon={<IconMic size={18} />}
-                    count={stats.voice}
-                    words={['голосовое сообщение', 'голосовых сообщения', 'голосовых сообщений']}
-                    onClick={() => openSubView('voice')}
-                  />
-                  {!conversation.isGroup && (
-                    <StatRow
-                      icon={<IconGroup size={18} />}
-                      count={stats.sharedGroups}
-                      words={['общая группа', 'общие группы', 'общих групп']}
-                      onClick={() => openSubView('groups')}
-                    />
-                  )}
-                </div>
-              )}
-
-              {conversation.isGroup && (
-                <>
-                  <div style={{ borderTop: '1px solid var(--border)' }} />
-                  <div className="px-4 py-2.5 text-xs text-muted flex items-center gap-2">
-                    <IconUsers size={13} />
-                    {conversation.members.length}{' '}
-                    {pluralRu(conversation.members.length, ['участник', 'участника', 'участников'])}
-                  </div>
-                  {conversation.members.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => openMember(m)}
-                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-hover text-left"
-                    >
-                      <Avatar name={m.displayName} seed={m.id} size={40} online={m.online} src={m.avatarUrl} />
-                      <div className="min-w-0">
-                        <div className="text-sm truncate">{m.displayName}</div>
-                        <div className="text-xs text-muted truncate">@{m.username}</div>
-                      </div>
-                    </button>
-                  ))}
-                </>
-              )}
+            <div className="px-4 py-3">
+              <div className="text-[15px]">@{activeMember.username}</div>
+              <div className="text-xs text-muted mt-0.5">Логин</div>
             </div>
+            {activeMember.bio && (
+              <div className="px-4 py-3">
+                <div className="text-[15px] whitespace-pre-wrap">{activeMember.bio}</div>
+                <div className="text-xs text-muted mt-0.5">О себе</div>
+              </div>
+            )}
+          </>
+        )}
+
+        {subLoading && <div className="text-center text-muted text-sm mt-8">Загрузка…</div>}
+
+        {!subLoading && subView === 'groups' && (
+          <div className="py-1">
+            {subItems?.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => {
+                  onOpenConversation?.(g.id);
+                  onClose();
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-hover text-left"
+              >
+                <Avatar name={g.name} seed={g.id} size={44} isGroup />
+                <div className="min-w-0">
+                  <div className="text-sm truncate">{g.name}</div>
+                  <div className="text-xs text-muted">
+                    {g.memberCount} {pluralRu(g.memberCount, ['участник', 'участника', 'участников'])}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!subLoading && subView === 'groups' && subItems?.length === 0 && (
+          <div className="text-center text-muted text-sm mt-8">Пусто</div>
+        )}
+      </div>
+    </>
+  ) : (
+    <>
+      <div className="relative flex flex-col items-center px-5 pt-6 pb-4 shrink-0">
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 w-9 h-9 rounded-full hover:bg-hover flex items-center justify-center text-muted"
+          title="Закрыть"
+        >
+          <IconClose size={17} />
+        </button>
+        <div className="relative">
+          <button
+            onClick={() => {
+              if (isGroupAdmin) groupAvatarInputRef.current?.click();
+              else if (conversation.avatarUrl) setLightboxSrc(conversation.avatarUrl);
+            }}
+            disabled={groupAvatarBusy}
+            className="rounded-full disabled:opacity-60"
+            style={{ cursor: isGroupAdmin || conversation.avatarUrl ? 'pointer' : 'default' }}
+          >
+            <Avatar name={conversation.name} seed={conversation.id} size={88} isGroup={conversation.isGroup} src={conversation.avatarUrl} />
+            {isGroupAdmin && (
+              <span
+                className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full flex items-center justify-center"
+                style={{ background: 'var(--accent-fill)', border: '2px solid var(--overlay)' }}
+              >
+                <IconEdit size={13} className="text-white" />
+              </span>
+            )}
+          </button>
+          {isGroupAdmin && (
+            <input
+              ref={groupAvatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleGroupAvatarPick}
+            />
+          )}
+        </div>
+        {isGroupAdmin && groupAvatarBusy && <div className="text-xs text-muted mt-1">Загружаем…</div>}
+        {isGroupAdmin && groupAvatarError && <div className="text-xs text-red-400 mt-1">{groupAvatarError}</div>}
+        {isGroupAdmin && conversation.avatarUrl && !groupAvatarBusy && (
+          <button onClick={handleGroupAvatarDelete} className="text-xs text-red-400 hover:underline mt-1">
+            Удалить фото группы
+          </button>
+        )}
+        <div className="mt-3 font-display font-bold text-xl text-center truncate max-w-full">{conversation.name}</div>
+        <div className="text-sm text-muted mt-0.5">{subtitle}</div>
+
+        <div className="w-full flex gap-2 mt-4 relative">
+          {!docked && <ActionButton icon={<IconChatLogo size={19} />} label="Чат" onClick={onClose} />}
+          <ActionButton
+            icon={conversation.muted ? <IconBellOff size={19} /> : <IconBell size={19} />}
+            label={conversation.muted ? 'Включить' : 'Звук'}
+            onClick={() => runAction('mute')}
+          />
+          {conversation.otherUser && (
+            <ActionButton
+              icon={<IconPhone size={19} />}
+              label="Звонок"
+              disabled={call.state.status !== 'idle'}
+              onClick={() => {
+                call.startCall(conversation, 'audio');
+                if (!docked) onClose();
+              }}
+            />
+          )}
+          <div className="flex-1 relative flex">
+            <ActionButton icon={<IconMoreDots size={19} />} label="Ещё" onClick={() => setMoreOpen((v) => !v)} />
+            {moreOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMoreOpen(false)} />
+                <div
+                  className="absolute top-full mt-1 right-0 w-56 rounded-xl py-1.5 z-20 pop-in"
+                  style={{ background: 'var(--panel2)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', border: '1px solid var(--border)' }}
+                >
+                  <button
+                    onClick={() => runAction('toggleRead')}
+                    className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-hover flex items-center gap-2.5"
+                  >
+                    {conversation.unreadCount > 0 ? <IconCheckAll size={16} /> : <IconMailUnread size={16} />}
+                    {conversation.unreadCount > 0 ? 'Пометить как прочитанное' : 'Пометить как непрочитанное'}
+                  </button>
+                  <button
+                    onClick={() => runAction('clear')}
+                    className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-hover flex items-center gap-2.5"
+                  >
+                    <IconEraser size={16} />
+                    Очистить историю
+                  </button>
+                  <button
+                    onClick={() => runAction('delete')}
+                    className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-hover flex items-center gap-2.5"
+                    style={{ color: '#f45b69' }}
+                  >
+                    <IconTrash size={16} />
+                    Удалить чат
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px solid var(--border)' }} />
+
+      <div className="flex-1 overflow-y-auto">
+        {!conversation.isGroup && (
+          <>
+            <div className="px-4 py-3">
+              <div className="text-[15px]">@{conversation.otherUser?.username}</div>
+              <div className="text-xs text-muted mt-0.5">Логин</div>
+            </div>
+            {conversation.otherUser?.bio && (
+              <div className="px-4 py-3">
+                <div className="text-[15px] whitespace-pre-wrap">{conversation.otherUser.bio}</div>
+                <div className="text-xs text-muted mt-0.5">О себе</div>
+              </div>
+            )}
+            {stats?.sharedGroups > 0 && (
+              <button onClick={openGroups} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-hover text-left">
+                <IconGroup size={18} className="text-muted" />
+                <span className="text-[15px]">
+                  {stats.sharedGroups} {pluralRu(stats.sharedGroups, ['общая группа', 'общие группы', 'общих групп'])}
+                </span>
+              </button>
+            )}
+            <div style={{ borderTop: '1px solid var(--border)' }} />
+          </>
+        )}
+
+        {availableTabs.length > 0 && (
+          <>
+            <div className="flex gap-5 px-4" style={{ borderBottom: '1px solid var(--border)' }}>
+              {availableTabs.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => selectTab(t.key)}
+                  className="py-2.5 text-sm font-medium transition-colors"
+                  style={{
+                    color: tab === t.key ? 'var(--text)' : 'var(--muted)',
+                    borderBottom: `2px solid ${tab === t.key ? 'var(--accent)' : 'transparent'}`,
+                    marginBottom: -1,
+                  }}
+                >
+                  {t.label}
+                  <span className="ml-1.5 text-xs text-muted">{stats[t.stat]}</span>
+                </button>
+              ))}
+            </div>
+
+            {tabLoading && <div className="text-center text-muted text-sm py-6">Загрузка…</div>}
+
+            {!tabLoading && tab === 'photos' && (
+              <div className="grid grid-cols-3 gap-1.5 p-3">
+                {tabItems?.map((item) => (
+                  <a key={item.id} href={item.fileUrl} target="_blank" rel="noreferrer" className="aspect-square block">
+                    <img src={item.fileUrl} alt="" className="w-full h-full object-cover rounded-xl" />
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {!tabLoading && tab === 'files' && (
+              <div className="py-1">
+                {tabItems?.map((item) => (
+                  <a
+                    key={item.id}
+                    href={item.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-hover"
+                  >
+                    <IconFile size={20} className="text-muted shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-sm truncate">{item.fileName || 'Файл'}</div>
+                      <div className="text-xs text-muted">{formatDayLabel(item.createdAt)}</div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {!tabLoading && tab === 'voice' && (
+              <div className="py-1">
+                {tabItems?.map((item) => (
+                  <div key={item.id} className="px-4 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
+                    <VoiceMessage url={item.fileUrl} isMine={false} />
+                    <div className="text-xs text-muted -mt-1">{formatDayLabel(item.createdAt)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!tabLoading && tabCursor && (
+              <button
+                onClick={loadMoreMedia}
+                disabled={tabMoreBusy}
+                className="w-full py-3 text-sm text-muted hover:bg-hover disabled:opacity-50"
+              >
+                {tabMoreBusy ? 'Загрузка…' : 'Показать ещё'}
+              </button>
+            )}
+          </>
+        )}
+
+        {stats && availableTabs.length === 0 && (
+          <div className="text-center text-muted text-sm py-6">Вложений пока нет</div>
+        )}
+
+        {conversation.isGroup && (
+          <>
+            <div style={{ borderTop: '1px solid var(--border)' }} />
+            <div className="px-4 py-2.5 text-xs text-muted flex items-center gap-2">
+              <IconUsers size={13} />
+              {conversation.members.length}{' '}
+              {pluralRu(conversation.members.length, ['участник', 'участника', 'участников'])}
+            </div>
+            {conversation.members.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => openMember(m)}
+                className="w-full flex items-center gap-3 px-4 py-2 hover:bg-hover text-left"
+              >
+                <Avatar name={m.displayName} seed={m.id} size={40} online={m.online} src={m.avatarUrl} />
+                <div className="min-w-0">
+                  <div className="text-sm truncate">{m.displayName}</div>
+                  <div className="text-xs text-muted truncate">@{m.username}</div>
+                </div>
+              </button>
+            ))}
           </>
         )}
       </div>
-    </div>
-    <AvatarLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+    </>
+  );
+
+  if (docked) {
+    return (
+      <>
+        <aside
+          className="hidden sm:flex w-[340px] shrink-0 h-full flex-col overflow-hidden border-l"
+          style={{ background: 'var(--panel)', borderColor: 'var(--border)' }}
+        >
+          {body}
+        </aside>
+        <AvatarLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+        <div
+          className="w-full max-w-[380px] max-h-[85vh] rounded-2xl flex flex-col overflow-hidden pop-in"
+          style={{
+            background: 'var(--overlay)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            border: '1px solid var(--border)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {body}
+        </div>
+      </div>
+      <AvatarLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
     </>
   );
 }

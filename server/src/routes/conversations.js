@@ -4,7 +4,7 @@ import { get, all, run, batch } from '../db/index.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { publicUser } from './auth.js';
 import { uploadAvatar, uploadedUrl } from './upload.js';
-import { getReactionsFor, replyPreview } from '../messages.js';
+import { getReactionsFor, replyPreview, getPinnedMessage } from '../messages.js';
 import { parseLimit, parseCursor, olderThan, toPage } from '../pagination.js';
 import { invalidateConversationMembers } from '../members.js';
 
@@ -46,6 +46,7 @@ async function serializeConversation(conv, userId) {
   const last = await getLastMessage(conv.id, own?.cleared_before || 0);
   const other = !conv.is_group ? members.find((m) => m.id !== userId) : null;
   const realUnread = await getUnreadCount(conv.id, userId, own);
+  const pinnedMessage = await getPinnedMessage(conv.id, own?.cleared_before || 0);
   return {
     id: conv.id,
     isGroup: !!conv.is_group,
@@ -65,6 +66,7 @@ async function serializeConversation(conv, userId) {
         }
       : null,
     unreadCount: own?.manually_unread ? Math.max(realUnread, 1) : realUnread,
+    pinnedMessage,
     pinned: !!own?.pinned,
     muted: !!own?.muted,
     createdAt: conv.created_at,

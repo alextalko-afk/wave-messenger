@@ -94,6 +94,39 @@ describe('replies, reactions and search', () => {
     assert.ok((await emit(sa, 'message:react', { messageId: 'nope', emoji: '👍' })).error);
   });
 
+  it('pins one message per chat, broadcasts it, exposes it on the chat and drops it on delete', async () => {
+    const chatOf = async (token) =>
+      (await srv.api('/api/conversations', { token })).body.conversations.find((c) => c.id === conv.id);
+    assert.equal((await chatOf(alice.token)).pinnedMessage, null);
+
+    const seen = collect(sb, 'conversation:pinned');
+    let r = await emit(sa, 'message:pin', { messageId: m1.id });
+    assert.equal(r.pinnedMessage.id, m1.id);
+    assert.equal(r.pinnedMessage.senderName, 'Алиса');
+    await sleep(200);
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].payload.pinnedMessage.id, m1.id);
+    assert.equal((await chatOf(bob.token)).pinnedMessage.id, m1.id);
+
+    r = await emit(sb, 'message:pin', { messageId: m2.id }); // replaces the previous pin
+    assert.equal((await chatOf(alice.token)).pinnedMessage.id, m2.id);
+
+    assert.ok((await emit(se, 'message:pin', { messageId: m2.id })).error); // outsider
+    assert.ok((await emit(sa, 'message:pin', { messageId: 'nope' })).error);
+
+    await emit(sa, 'message:pin', { messageId: m1.id, pinned: false }); // not the pinned one: no-op
+    assert.equal((await chatOf(alice.token)).pinnedMessage.id, m2.id);
+    r = await emit(sb, 'message:pin', { messageId: m2.id, pinned: false });
+    assert.equal(r.pinnedMessage, null);
+    assert.equal((await chatOf(alice.token)).pinnedMessage, null);
+
+    const temp = (await emit(sa, 'message:send', { conversationId: conv.id, content: 'временное' })).message;
+    await emit(sa, 'message:pin', { messageId: temp.id });
+    assert.equal((await chatOf(bob.token)).pinnedMessage.id, temp.id);
+    await emit(sa, 'message:delete', { messageId: temp.id });
+    assert.equal((await chatOf(bob.token)).pinnedMessage, null);
+  });
+
   const search = (q, token, extra = '') =>
     srv.api(`/api/search/messages?q=${encodeURIComponent(q)}${extra}`, { token }).then((r) => r.body.results);
 

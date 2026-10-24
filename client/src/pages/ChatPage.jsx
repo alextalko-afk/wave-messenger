@@ -96,12 +96,17 @@ export default function ChatPage() {
         )
       );
     }
+    function onPinned({ conversationId, pinnedMessage }) {
+      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, pinnedMessage } : c)));
+    }
+    socket.on('conversation:pinned', onPinned);
     socket.on('conversation:new', onNewConversation);
     socket.on('message:new', onNewMessage);
     socket.on('presence:update', onPresence);
     socket.on('message:read', onMessageRead);
     socket.on('message:delivered', onMessageDelivered);
     return () => {
+      socket.off('conversation:pinned', onPinned);
       socket.off('conversation:new', onNewConversation);
       socket.off('message:new', onNewMessage);
       socket.off('presence:update', onPresence);

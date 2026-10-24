@@ -23,7 +23,7 @@ import callsRoutes from './routes/calls.js';
 import pushRoutes from './routes/push.js';
 import searchRoutes from './routes/search.js';
 import { sendPush, previewText } from './push.js';
-import { ALLOWED_REACTIONS, getReactionsFor, replyPreview } from './messages.js';
+import { ALLOWED_REACTIONS, getReactionsFor, replyPreview, getPinnedMessage } from './messages.js';
 import { uploadsDir } from './paths.js';
 
 if (!process.env.JWT_SECRET) {
@@ -503,7 +503,40 @@ io.on('connection', (socket) => {
     await run("UPDATE messages SET deleted = 1, content = '', content_search = '', file_url = NULL WHERE id = ?", [messageId]);
     await run('DELETE FROM message_reactions WHERE message_id = ?', [messageId]);
     await broadcastToConversation(msg.conversation_id, 'message:deleted', { id: messageId });
+    const unpinned = await run(
+      'UPDATE conversations SET pinned_message_id = NULL WHERE id = ? AND pinned_message_id = ?',
+      [msg.conversation_id, messageId]
+    );
+    if (unpinned.changes) {
+      await broadcastToConversation(msg.conversation_id, 'conversation:pinned', {
+        conversationId: msg.conversation_id,
+        pinnedMessage: null,
+      });
+    }
     ack?.({ ok: true });
+  });
+
+  // Any member may pin or unpin; a chat has at most one pinned message.
+  on('message:pin', async ({ messageId, pinned }, ack) => {
+    if (!isString(messageId)) return ack?.({ error: 'Некорректное сообщение' });
+    const msg = await get('SELECT conversation_id, deleted FROM messages WHERE id = ?', [messageId]);
+    if (!msg || msg.deleted || !(await isMember(msg.conversation_id, userId))) {
+      return ack?.({ error: 'Нельзя закрепить это сообщение' });
+    }
+    if (pinned === false) {
+      await run('UPDATE conversations SET pinned_message_id = NULL WHERE id = ? AND pinned_message_id = ?', [
+        msg.conversation_id,
+        messageId,
+      ]);
+    } else {
+      await run('UPDATE conversations SET pinned_message_id = ? WHERE id = ?', [messageId, msg.conversation_id]);
+    }
+    const pinnedMessage = await getPinnedMessage(msg.conversation_id);
+    await broadcastToConversation(msg.conversation_id, 'conversation:pinned', {
+      conversationId: msg.conversation_id,
+      pinnedMessage,
+    });
+    ack?.({ ok: true, pinnedMessage });
   });
 
   on('typing:start', async ({ conversationId }) => {

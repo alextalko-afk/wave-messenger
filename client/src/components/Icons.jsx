@@ -215,6 +215,16 @@ export const IconImage = icon(
   />
 );
 
+export const IconInfo = icon(
+  20,
+  <path
+    {...EVEN_ODD}
+    d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 4.6a1.3 1.3 0 110 2.6 1.3 1.3 0 010-2.6zM10.8 11h2.4v6h-2.4z"
+  />
+);
+
+export const IconReply = icon(18, <path d="M9 7L4 12l5 5M4 12h10a6 6 0 016 6" />);
+
 export const IconPin = icon(
   16,
   <>

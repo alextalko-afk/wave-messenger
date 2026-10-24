@@ -8,12 +8,42 @@ import MessageBubble from './MessageBubble.jsx';
 import ProfileInfoPanel from './ProfileInfoPanel.jsx';
 import EmojiPopover from './EmojiPopover.jsx';
 import { formatDayLabel, formatLastSeen } from '../lib/format.js';
-import { IconBack, IconPaperclip, IconSend, IconMic, IconTrash, IconCheck, IconChatLogo, IconSmile, IconSticker, IconFile, IconClose, IconPhone, IconVideo } from './Icons.jsx';
+import { IconBack, IconPaperclip, IconSend, IconMic, IconTrash, IconCheck, IconChatLogo, IconSmile, IconSticker, IconFile, IconClose, IconPhone, IconVideo, IconInfo, IconReply, IconPin } from './Icons.jsx';
 
 function formatClock(sec) {
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+// Wide windows dock the profile panel beside the chat; narrow ones show it as a modal.
+const WIDE_QUERY = '(min-width: 1100px)';
+const INFO_KEY = 'wave.infoOpen';
+
+function useWide() {
+  const [wide, setWide] = useState(() => window.matchMedia(WIDE_QUERY).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE_QUERY);
+    const onChange = () => setWide(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return wide;
+}
+
+function storedInfoOpen() {
+  try {
+    return localStorage.getItem(INFO_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+function pinnedPreview(pm) {
+  if (pm.content) return pm.content;
+  if (pm.fileType?.startsWith('image/')) return 'Фотография';
+  if (pm.fileType?.startsWith('audio/')) return 'Голосовое сообщение';
+  return pm.fileName || 'Вложение';
 }
 
 export default function ChatWindow({ conversation, onBack, onConversationUpdate, onOpenConversation, onConversationAction }) {
@@ -32,7 +62,8 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   const [otherDeliveredAt, setOtherDeliveredAt] = useState(conversation.otherUser?.lastDeliveredAt || 0);
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
-  const [infoOpen, setInfoOpen] = useState(false);
+  const wide = useWide();
+  const [infoOpen, setInfoOpen] = useState(() => window.matchMedia(WIDE_QUERY).matches && storedInfoOpen());
   const [emojiPickerMode, setEmojiPickerMode] = useState(null); // null | 'emoji' | 'sticker'
   const [pendingFile, setPendingFile] = useState(null); // { file, previewUrl, isImage }
   const [caption, setCaption] = useState('');
@@ -254,6 +285,65 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
     socket?.emit('message:react', { messageId, emoji });
   }
 
+  function handlePin(messageId, pinned) {
+    socket?.emit('message:pin', { messageId, pinned });
+  }
+
+  function toggleInfo() {
+    const next = !infoOpen;
+    setInfoOpen(next);
+    if (wide) {
+      try {
+        localStorage.setItem(INFO_KEY, next ? '1' : '0');
+      } catch {
+        /* storage unavailable: the choice just won't persist */
+      }
+    }
+  }
+
+  // A modal left open while the window shrinks would pop up unasked; drop it.
+  useEffect(() => {
+    if (!wide) setInfoOpen(false);
+  }, [wide]);
+
+  function startReply(message) {
+    setReplyTo(message);
+    textareaRef.current?.focus();
+  }
+
+  function flash(el) {
+    el.classList.remove('msg-flash');
+    void el.offsetWidth; // restart the animation if it is already running
+    el.classList.add('msg-flash');
+    setTimeout(() => el.classList.remove('msg-flash'), 1500);
+  }
+
+  // Scroll to a message, paging in older history first when it isn't loaded yet.
+  async function jumpTo(messageId) {
+    const find = () => scrollRef.current?.querySelector(`[data-msg-id="${CSS.escape(messageId)}"]`);
+    let el = find();
+    if (!el && olderCursor) {
+      let cursor = olderCursor;
+      let loaded = [];
+      for (let i = 0; cursor && i < 20 && !loaded.some((m) => m.id === messageId); i++) {
+        const r = await api.getMessages(conversation.id, cursor);
+        loaded = [...r.messages, ...loaded];
+        cursor = r.hasMore ? r.nextCursor : null;
+      }
+      skipAutoScrollRef.current = true;
+      setMessages((prev) => {
+        const known = new Set(prev.map((m) => m.id));
+        return [...loaded.filter((m) => !known.has(m.id)), ...prev];
+      });
+      setOlderCursor(cursor);
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      el = find();
+    }
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    flash(el);
+  }
+
   async function startRecording() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -320,14 +410,17 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
 
   let lastDay = null;
 
+  const pinned = conversation.pinnedMessage;
+
   return (
-    <div className="relative flex-1 flex flex-col h-full chat-bg">
+    <div className="flex-1 flex h-full min-w-0">
+    <div className="relative flex-1 min-w-0 flex flex-col h-full chat-bg">
       <div className="flex items-center gap-3 px-4 sm:px-6 sm:h-[72px] py-2 border-b" style={{ background: 'var(--panel)', borderColor: 'var(--border)' }}>
         <button onClick={onBack} className="sm:hidden p-1 text-accent hover:bg-hover rounded-full">
           <IconBack size={22} />
         </button>
         <button
-          onClick={() => setInfoOpen(true)}
+          onClick={toggleInfo}
           className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-xl hover:bg-hover px-2 py-1.5 -ml-1 transition-colors"
         >
           <Avatar
@@ -379,7 +472,33 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
             </button>
           </div>
         )}
+        <button
+          onClick={toggleInfo}
+          aria-pressed={infoOpen}
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors hover:bg-hover"
+          style={{ background: infoOpen ? 'var(--selected)' : undefined, color: infoOpen ? 'var(--accent)' : 'var(--muted)' }}
+          title={infoOpen ? 'Скрыть профиль' : 'Показать профиль'}
+        >
+          <IconInfo size={20} />
+        </button>
       </div>
+
+      {pinned && (
+        <div className="flex items-center gap-3 pl-4 sm:pl-6 pr-2 py-1.5 border-b" style={{ background: 'var(--panel)', borderColor: 'var(--border)' }}>
+          <button onClick={() => jumpTo(pinned.id)} className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-lg hover:bg-hover px-1 py-0.5 transition-colors">
+            <span className="w-[3px] self-stretch rounded-full shrink-0" style={{ background: 'var(--accent-fill)' }} />
+            <div className="min-w-0">
+              <div className="text-[12px] leading-4 font-semibold flex items-center gap-1" style={{ color: 'var(--accent)' }}>
+                <IconPin size={12} /> Закреплённое сообщение
+              </div>
+              <div className="text-[13px] leading-[18px] truncate">{pinnedPreview(pinned)}</div>
+            </div>
+          </button>
+          <button onClick={() => handlePin(pinned.id, false)} className="w-8 h-8 rounded-lg hover:bg-hover flex items-center justify-center text-muted shrink-0" title="Открепить">
+            <IconClose size={14} />
+          </button>
+        </div>
+      )}
 
       <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-3 sm:px-14 py-4">
         {loadingOlder && <div className="text-center text-muted text-sm pb-3 animate-pulse">Загрузка…</div>}
@@ -401,7 +520,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
           const isRead = m.senderId === user.id && m.createdAt <= otherReadAt;
           const isDelivered = m.senderId === user.id && m.createdAt <= otherDeliveredAt;
           return (
-            <div key={m.id} className="flex flex-col">
+            <div key={m.id} data-msg-id={m.id} className="flex flex-col rounded-2xl">
               {showDay && (
                 <div className="flex justify-center my-4">
                   <span
@@ -423,7 +542,10 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
                 onReact={handleReact}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
-                onReply={() => setReplyTo(m)}
+                onReply={() => startReply(m)}
+                onPin={handlePin}
+                isPinned={pinned?.id === m.id}
+                onJumpToReply={jumpTo}
               />
             </div>
           );
@@ -431,25 +553,26 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
         <div ref={bottomRef} />
       </div>
 
-      <div className="p-3 flex items-end gap-2" style={{ background: 'var(--panel)' }}>
+      <div style={{ background: 'var(--panel)' }}>
         {replyTo && (
-          <div 
-            className="absolute bottom-20 left-3 right-3 p-3 rounded-2xl border-l-4 bg-panel2 pop-in flex items-center justify-between z-10"
-            style={{ borderColor: 'var(--accent)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)', borderTop: '1px solid var(--border)' }}
-          >
-            <div className="flex-1 min-w-0 mr-4">
-              <div className="text-[12px] font-semibold" style={{ color: 'var(--accent)' }}>
-                {replyTo.senderName}
+          <div className="flex items-center gap-3 px-4 pt-3 pop-in">
+            <span style={{ color: 'var(--accent)' }} className="shrink-0">
+              <IconReply size={18} />
+            </span>
+            <div className="flex-1 min-w-0 pl-3 border-l-2" style={{ borderColor: 'var(--accent-fill)' }}>
+              <div className="text-[12px] leading-4 font-semibold truncate" style={{ color: 'var(--accent)' }}>
+                Ответ {replyTo.senderId === user.id ? 'себе' : replyTo.senderName}
               </div>
-              <div className="text-[13px] truncate opacity-70">
+              <div className="text-[13px] leading-[18px] truncate text-muted">
                 {replyTo.content || (replyTo.fileUrl ? 'Медиафайл' : 'Пустое сообщение')}
               </div>
             </div>
-            <button onClick={() => setReplyTo(null)} className="p-1 hover:bg-hover rounded-full text-muted">
-              <IconClose size={16} />
+            <button onClick={() => setReplyTo(null)} className="w-8 h-8 rounded-lg hover:bg-hover flex items-center justify-center text-muted shrink-0" title="Отменить ответ">
+              <IconClose size={14} />
             </button>
           </div>
         )}
+      <div className="p-3 flex items-end gap-2">
         {isRecording ? (
           <>
             <button onClick={cancelRecording} className="w-10 h-10 rounded-full hover:bg-hover flex items-center justify-center shrink-0 text-red-400 transition-colors">
@@ -504,6 +627,8 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   sendMessage();
+                } else if (e.key === 'Escape' && replyTo) {
+                  setReplyTo(null);
                 }
               }}
               placeholder="Написать сообщение…"
@@ -544,6 +669,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
             )}
           </>
         )}
+      </div>
       </div>
 
       {pendingFile && (
@@ -600,10 +726,12 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
         </div>
       )}
 
+    </div>
       <ProfileInfoPanel
         conversation={conversation}
         open={infoOpen}
-        onClose={() => setInfoOpen(false)}
+        docked={wide}
+        onClose={toggleInfo}
         onOpenConversation={onOpenConversation}
         onAction={onConversationAction}
         onConversationUpdate={onConversationUpdate}

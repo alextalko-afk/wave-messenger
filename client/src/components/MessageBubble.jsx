@@ -1,11 +1,26 @@
 import { useState } from 'react';
 import { formatTime } from '../lib/format.js';
 import { isStickerContent } from '../lib/emoji.js';
-import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile, IconClose, IconDownload, IconPlay } from './Icons.jsx';
+import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile, IconClose, IconDownload, IconPlay, IconReply, IconPin, IconPlus } from './Icons.jsx';
 import VoiceMessage from './VoiceMessage.jsx';
 
 // Must match ALLOWED_REACTIONS on the server.
-const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👎'];
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '🔥'];
+const MORE_REACTIONS = ['😢', '🙏', '👎'];
+
+function BarButton({ title, onClick, children, danger }) {
+  return (
+    <button
+      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-hover transition-colors"
+      style={{ color: danger ? '#f45b69' : 'var(--text)' }}
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+    >
+      {children}
+    </button>
+  );
+}
 
 export default function MessageBubble({
   message,
@@ -15,12 +30,16 @@ export default function MessageBubble({
   isDelivered,
   showTail,
   currentUserId,
+  isPinned,
   onEdit,
   onDelete,
   onReply,
   onReact,
+  onPin,
+  onJumpToReply,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreReactions, setMoreReactions] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -45,33 +64,64 @@ export default function MessageBubble({
 
   const reactions = message.reactions || [];
 
-  const reactionBar = menuOpen && !editing && onReact && (
+  // One floating toolbar on hover: reactions, then reply / pin / edit / delete.
+  const actionBar = menuOpen && !editing && (
     <div
-      className={`absolute -top-10 pb-2 z-10 ${isMine ? 'right-2' : 'left-2'}`}
+      className={`absolute -top-12 pb-2 z-10 ${isMine ? 'right-2' : 'left-2'}`}
       onClick={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
     >
       <div
-        className="flex gap-0.5 rounded-full px-1.5 py-1 shadow-lg pop-in"
+        className="flex items-center gap-0.5 rounded-2xl p-1 shadow-lg pop-in"
         style={{ background: 'var(--overlay)', border: '1px solid var(--border)' }}
       >
-        {QUICK_REACTIONS.map((emoji) => {
-          const mine = reactions.some((r) => r.emoji === emoji && r.userIds.includes(currentUserId));
-          return (
-            <button
-              key={emoji}
-              className="w-7 h-7 flex items-center justify-center rounded-full text-[17px] leading-none hover:scale-125 transition-transform"
-              style={{ background: mine ? 'var(--hover)' : 'transparent' }}
-              onClick={() => {
-                onReact(message.id, emoji);
-                setMenuOpen(false);
-              }}
-              title={emoji}
-            >
-              {emoji}
-            </button>
-          );
-        })}
+        {onReact &&
+          (moreReactions ? [...QUICK_REACTIONS, ...MORE_REACTIONS] : QUICK_REACTIONS).map((emoji) => {
+            const mine = reactions.some((r) => r.emoji === emoji && r.userIds.includes(currentUserId));
+            return (
+              <button
+                key={emoji}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-[17px] leading-none hover:scale-110 transition-transform"
+                style={{ background: mine ? 'var(--react-mine)' : 'transparent' }}
+                onClick={() => {
+                  onReact(message.id, emoji);
+                  setMenuOpen(false);
+                  setMoreReactions(false);
+                }}
+                title={emoji}
+              >
+                {emoji}
+              </button>
+            );
+          })}
+        {onReact && !moreReactions && (
+          <BarButton title="Ещё реакции" onClick={() => setMoreReactions(true)}>
+            <IconPlus size={15} />
+          </BarButton>
+        )}
+        <span className="w-px h-5 mx-1" style={{ background: 'var(--border)' }} />
+        {onReply && (
+          <BarButton title="Ответить" onClick={() => onReply()}>
+            <IconReply size={16} />
+          </BarButton>
+        )}
+        {onPin && (
+          <BarButton title={isPinned ? 'Открепить' : 'Закрепить'} onClick={() => onPin(message.id, !isPinned)}>
+            <span style={{ color: isPinned ? 'var(--accent)' : 'inherit', display: 'inline-flex' }}>
+              <IconPin size={16} />
+            </span>
+          </BarButton>
+        )}
+        {isMine && !message.fileUrl && (
+          <BarButton title="Редактировать" onClick={() => setEditing(true)}>
+            <IconEdit size={15} />
+          </BarButton>
+        )}
+        {isMine && (
+          <BarButton title="Удалить" danger onClick={() => onDelete(message.id)}>
+            <IconTrash size={15} />
+          </BarButton>
+        )}
       </div>
     </div>
   );
@@ -97,22 +147,6 @@ export default function MessageBubble({
           </button>
         );
       })}
-    </div>
-  );
-
-  const editDeleteMenu = isMine && menuOpen && !editing && (
-    <div
-      className="absolute -top-3 right-2 flex gap-0.5 rounded-full px-1.5 py-1 shadow-lg pop-in"
-      style={{ background: 'var(--overlay)', border: '1px solid var(--border)' }}
-    >
-      {!message.fileUrl && (
-        <button className="p-1 hover:opacity-70" onClick={() => setEditing(true)} title="Редактировать">
-          <IconEdit size={14} />
-        </button>
-      )}
-      <button className="p-1 hover:opacity-70" onClick={() => onDelete(message.id)} title="Удалить">
-        <IconTrash size={14} />
-      </button>
     </div>
   );
 
@@ -142,7 +176,7 @@ export default function MessageBubble({
               </span>
             )}
           </div>
-          {editDeleteMenu}
+          {actionBar}
         </div>
       </div>
     );
@@ -160,7 +194,10 @@ export default function MessageBubble({
           boxShadow: 'var(--bubble-shadow)',
         }}
         onMouseEnter={() => setMenuOpen(true)}
-        onMouseLeave={() => setMenuOpen(false)}
+        onMouseLeave={() => {
+          setMenuOpen(false);
+          setMoreReactions(false);
+        }}
         onContextMenu={(e) => {
           // long-press on touch devices opens the reaction bar
           if (!onReact) return;
@@ -179,6 +216,7 @@ export default function MessageBubble({
           <div
             className="px-2.5 py-1.5 mb-1.5 rounded-xl cursor-pointer"
             style={{ background: isMine ? 'var(--reply-out)' : 'var(--reply-in)' }}
+            onClick={() => onJumpToReply?.(message.replyToId)}
           >
             <div
               className="text-[12px] leading-4 font-semibold"
@@ -268,8 +306,7 @@ export default function MessageBubble({
         </div>
 
         {reactionChips}
-        {reactionBar}
-        {editDeleteMenu}
+        {actionBar}
       </div>
 
       {lightboxOpen && (
