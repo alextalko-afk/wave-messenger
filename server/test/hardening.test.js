@@ -5,7 +5,7 @@ import { readdirSync } from 'node:fs';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { createClient } from '@libsql/client';
-import { startServer, emit, sleep } from './helpers.js';
+import { startServer, emit, collect, sleep } from './helpers.js';
 
 const uploadedFiles = (srv) => readdirSync(path.join(srv.dir, 'uploads')).filter((f) => !f.startsWith('.'));
 
@@ -401,5 +401,41 @@ describe('pagination', () => {
     const calls = await walk('/api/calls', 'calls', 3);
     assert.equal(calls.ids.length, 4);
     assert.equal(new Set(calls.ids).size, 4);
+  });
+});
+
+describe('realtime fan-out', () => {
+  let srv, alice, bob, carol, group, sa, sc;
+  before(async () => {
+    srv = await startServer();
+    [alice, bob, carol] = await Promise.all([srv.createUser('Alice'), srv.createUser('Bob'), srv.createUser('Carol')]);
+    const post = (route, body, token) => srv.api(route, { method: 'POST', body, token });
+    await post('/api/conversations/direct', { userId: bob.id }, alice.token);
+    group = (await post('/api/conversations/group', { name: 'G', memberIds: [bob.id, carol.id] }, alice.token)).body.conversation;
+    [sa, sc] = await Promise.all([srv.connect(alice.token), srv.connect(carol.token)]);
+  });
+  after(() => srv.stop());
+
+  it('announces presence once per peer even when several conversations are shared', async () => {
+    const seen = collect(sa, 'presence:update');
+    const sb = await srv.connect(bob.token); // alice shares two conversations with bob
+    await sleep(300);
+    assert.equal(seen.filter((e) => e.payload.userId === bob.id && e.payload.online).length, 1);
+    sb.disconnect();
+    await sleep(300);
+    assert.equal(seen.filter((e) => e.payload.userId === bob.id && !e.payload.online).length, 1);
+  });
+
+  it('stops delivering a conversation to a member right after they leave it', async () => {
+    const got = collect(sc, 'message:new');
+    assert.ok((await emit(sa, 'message:send', { conversationId: group.id, content: 'one' })).message);
+    await sleep(200);
+    assert.equal(got.length, 1, 'members receive messages (and the member list is now cached)');
+
+    const left = await srv.api(`/api/conversations/${group.id}`, { method: 'DELETE', token: carol.token });
+    assert.equal(left.status, 200);
+    assert.ok((await emit(sa, 'message:send', { conversationId: group.id, content: 'two' })).message);
+    await sleep(200);
+    assert.equal(got.length, 1, 'no delivery after leaving');
   });
 });

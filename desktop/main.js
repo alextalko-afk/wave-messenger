@@ -1,7 +1,8 @@
 const { app, BrowserWindow, Menu, shell, session } = require('electron');
 const path = require('path');
 
-const APP_URL = 'https://wave-messenger-3r2p.onrender.com';
+// WAVE_APP_URL points the shell at a local dev build (e.g. http://127.0.0.1:5174).
+const APP_URL = process.env.WAVE_APP_URL || 'https://wave-messenger-3r2p.onrender.com';
 
 // Electron auto-grants media requests by default, but doing it explicitly
 // keeps calling reliable across Electron versions/platforms and scopes the

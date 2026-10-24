@@ -13,6 +13,7 @@ import helmet from 'helmet';
 import { get, all, run, searchKey, backfillSearchColumns } from './db/index.js';
 import { verifySocketToken, onTokensRevoked } from './middleware/auth.js';
 import { apiLimiter } from './limiters.js';
+import { getConversationMemberIds } from './members.js';
 import { startUploadCleanup } from './uploadCleanup.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -81,6 +82,8 @@ app.use(
         baseUri: ["'self'"],
         formAction: ["'self'"],
         frameAncestors: ["'self'"],
+        // Ignored (and logged as an error) in report-only mode; re-enable when the policy is enforced.
+        upgradeInsecureRequests: null,
       },
     },
     // Uploads and the API are fetched cross-origin by the native apps and the
@@ -162,11 +165,6 @@ app.use((err, req, res, next) => {
 // -------- Socket.io realtime layer --------
 const onlineUsers = new Map(); // userId -> Set(socketIds)
 
-async function getConversationMemberIds(conversationId) {
-  const rows = await all('SELECT user_id FROM conversation_members WHERE conversation_id = ?', [conversationId]);
-  return rows.map((r) => r.user_id);
-}
-
 async function broadcastToConversation(conversationId, event, payload, exceptSocketId = null) {
   const memberIds = await getConversationMemberIds(conversationId);
   for (const uid of memberIds) {
@@ -179,17 +177,18 @@ async function broadcastToConversation(conversationId, event, payload, exceptSoc
   }
 }
 
+// Tells everyone who shares a conversation with the user (once each, however
+// many conversations they share) that the user came online or went offline.
 async function setPresence(userId, online) {
-  await run("UPDATE users SET online = ?, last_seen = strftime('%s','now') WHERE id = ?", [online ? 1 : 0, userId]);
-  const rows = await all('SELECT conversation_id FROM conversation_members WHERE user_id = ?', [userId]);
-  const user = await get('SELECT last_seen FROM users WHERE id = ?', [userId]);
-  for (const { conversation_id } of rows) {
-    await broadcastToConversation(conversation_id, 'presence:update', {
-      userId,
-      online,
-      lastSeen: user.last_seen,
-    });
-  }
+  const lastSeen = Math.floor(Date.now() / 1000);
+  await run('UPDATE users SET online = ?, last_seen = ? WHERE id = ?', [online ? 1 : 0, lastSeen, userId]);
+  const peers = await all(
+    `SELECT DISTINCT peer.user_id FROM conversation_members mine
+     JOIN conversation_members peer ON peer.conversation_id = mine.conversation_id
+     WHERE mine.user_id = ?`,
+    [userId]
+  );
+  for (const { user_id } of peers) emitToUser(user_id, 'presence:update', { userId, online, lastSeen });
 }
 
 // Delivery = the message reached an online device of the recipient. Stored per
@@ -217,9 +216,17 @@ async function markDelivered(conversationId, userIds, deliveredAt, exceptSocketI
 // to them while they were away.
 async function markAllDelivered(userId, socketId) {
   const now = Math.floor(Date.now() / 1000);
-  const rows = await all('SELECT conversation_id FROM conversation_members WHERE user_id = ?', [userId]);
-  for (const { conversation_id } of rows) {
-    await markDelivered(conversation_id, [userId], now, socketId);
+  const advanced = await all(
+    'UPDATE conversation_members SET last_delivered_at = ? WHERE user_id = ? AND last_delivered_at < ? RETURNING conversation_id',
+    [now, userId, now]
+  );
+  for (const { conversation_id } of advanced) {
+    await broadcastToConversation(
+      conversation_id,
+      'message:delivered',
+      { conversationId: conversation_id, userId, deliveredAt: now },
+      socketId
+    );
   }
 }
 

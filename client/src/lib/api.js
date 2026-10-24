@@ -20,6 +20,11 @@ async function request(path, options = {}) {
   return data;
 }
 
+function cursorQuery(cursor, prefix = '?') {
+  if (!cursor) return '';
+  return `${prefix}before=${encodeURIComponent(cursor.before)}&beforeId=${encodeURIComponent(cursor.beforeId)}`;
+}
+
 export const api = {
   login: (body) => request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
   me: () => request('/auth/me'),
@@ -43,11 +48,13 @@ export const api = {
   createDirect: (userId) => request('/conversations/direct', { method: 'POST', body: JSON.stringify({ userId }) }),
   createGroup: (name, memberIds) =>
     request('/conversations/group', { method: 'POST', body: JSON.stringify({ name, memberIds }) }),
-  getMessages: (conversationId, before) =>
-    request(`/conversations/${conversationId}/messages${before ? `?before=${before}` : ''}`),
+  // `cursor` is the previous page's nextCursor ({ before, beforeId }).
+  getMessages: (conversationId, cursor) =>
+    request(`/conversations/${conversationId}/messages${cursorQuery(cursor)}`),
   markRead: (conversationId) => request(`/conversations/${conversationId}/read`, { method: 'POST' }),
   getConversationStats: (conversationId) => request(`/conversations/${conversationId}/stats`),
-  getConversationMedia: (conversationId, type) => request(`/conversations/${conversationId}/media?type=${type}`),
+  getConversationMedia: (conversationId, type, cursor) =>
+    request(`/conversations/${conversationId}/media?type=${type}${cursorQuery(cursor, '&')}`),
   getSharedGroups: (conversationId) => request(`/conversations/${conversationId}/shared-groups`),
   pinConversation: (conversationId, pinned) =>
     request(`/conversations/${conversationId}/pin`, { method: 'POST', body: JSON.stringify({ pinned }) }),

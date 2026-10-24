@@ -108,6 +108,8 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
   const [subView, setSubView] = useState(null); // 'photos' | 'files' | 'voice' | 'groups' | 'member'
   const [subItems, setSubItems] = useState(null);
   const [subLoading, setSubLoading] = useState(false);
+  const [subCursor, setSubCursor] = useState(null); // nextCursor of the media list, when more pages exist
+  const [subMoreBusy, setSubMoreBusy] = useState(false);
   const [activeMember, setActiveMember] = useState(null);
   const [messagingBusy, setMessagingBusy] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -117,6 +119,7 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
     setStats(null);
     setSubView(null);
     setSubItems(null);
+    setSubCursor(null);
     setActiveMember(null);
     setMoreOpen(false);
     api.getConversationStats(conversation.id).then(setStats).catch(() => {});
@@ -128,11 +131,27 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
     setMoreOpen(false);
     setSubView(view);
     setSubLoading(true);
+    setSubCursor(null);
     const req =
       view === 'groups'
         ? api.getSharedGroups(conversation.id).then((r) => r.groups)
-        : api.getConversationMedia(conversation.id, view).then((r) => r.items);
+        : api.getConversationMedia(conversation.id, view).then((r) => {
+            setSubCursor(r.hasMore ? r.nextCursor : null);
+            return r.items;
+          });
     req.then(setSubItems).finally(() => setSubLoading(false));
+  }
+
+  async function loadMoreMedia() {
+    if (!subCursor || subMoreBusy) return;
+    setSubMoreBusy(true);
+    try {
+      const r = await api.getConversationMedia(conversation.id, subView, subCursor);
+      setSubItems((prev) => [...(prev || []), ...r.items]);
+      setSubCursor(r.hasMore ? r.nextCursor : null);
+    } finally {
+      setSubMoreBusy(false);
+    }
   }
 
   function openMember(member) {
@@ -300,6 +319,16 @@ export default function ProfileInfoPanel({ conversation, open, onClose, onOpenCo
 
               {!subLoading && subItems?.length === 0 && (
                 <div className="text-center text-muted text-sm mt-8">Пусто</div>
+              )}
+
+              {!subLoading && subCursor && (
+                <button
+                  onClick={loadMoreMedia}
+                  disabled={subMoreBusy}
+                  className="w-full py-3 text-sm text-muted hover:bg-hover disabled:opacity-50"
+                >
+                  {subMoreBusy ? 'Загрузка…' : 'Показать ещё'}
+                </button>
               )}
             </div>
           </>

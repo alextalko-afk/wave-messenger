@@ -38,6 +38,9 @@ export default function ProfileModal({ onClose }) {
   const [passwordError, setPasswordError] = useState('');
   const [passwordSaved, setPasswordSaved] = useState(false);
 
+  const [sessionsBusy, setSessionsBusy] = useState(false);
+  const [sessionsMessage, setSessionsMessage] = useState('');
+
   const [googleError, setGoogleError] = useState('');
   const googleButtonRef = useRef(null);
 
@@ -143,6 +146,19 @@ export default function ProfileModal({ onClose }) {
       setPasswordError(err.message);
     } finally {
       setPasswordBusy(false);
+    }
+  }
+
+  async function handleRevokeSessions() {
+    setSessionsBusy(true);
+    setSessionsMessage('');
+    try {
+      await api.revokeOtherSessions();
+      setSessionsMessage('Вы вышли на всех остальных устройствах');
+    } catch (err) {
+      setSessionsMessage(err.message);
+    } finally {
+      setSessionsBusy(false);
     }
   }
 
@@ -285,6 +301,22 @@ export default function ProfileModal({ onClose }) {
             <div ref={googleButtonRef} className="flex justify-center" />
           </>
         )}
+
+        <div className="my-5" style={{ borderTop: '1px solid var(--border)' }} />
+
+        <h3 className="text-sm font-semibold mb-1">Устройства</h3>
+        <div className="text-xs text-muted mb-2.5">
+          Завершит сеанс везде, кроме этого устройства: например, если вы потеряли телефон
+        </div>
+        {sessionsMessage && <div className="mb-2.5 text-sm text-muted">{sessionsMessage}</div>}
+        <button
+          disabled={sessionsBusy}
+          onClick={handleRevokeSessions}
+          className="w-full py-2.5 rounded-full font-medium hover:opacity-90 transition disabled:opacity-50"
+          style={{ background: 'var(--panel2)', color: 'var(--text)' }}
+        >
+          {sessionsBusy ? 'Выходим…' : 'Выйти на других устройствах'}
+        </button>
 
         <div className="my-5" style={{ borderTop: '1px solid var(--border)' }} />
 

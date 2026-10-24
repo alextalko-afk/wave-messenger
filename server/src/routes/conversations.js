@@ -6,6 +6,7 @@ import { publicUser } from './auth.js';
 import { uploadAvatar, uploadedUrl } from './upload.js';
 import { getReactionsFor, replyPreview } from '../messages.js';
 import { parseLimit, parseCursor, olderThan, toPage } from '../pagination.js';
+import { invalidateConversationMembers } from '../members.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -392,6 +393,7 @@ router.delete('/:id', async (req, res) => {
   const member = await getOwnMember(req.params.id, req.userId);
   if (!member) return res.status(403).json({ error: 'Нет доступа к этому чату' });
   await run('DELETE FROM conversation_members WHERE conversation_id = ? AND user_id = ?', [req.params.id, req.userId]);
+  invalidateConversationMembers(req.params.id);
   const remaining = (
     await get('SELECT COUNT(*) c FROM conversation_members WHERE conversation_id = ?', [req.params.id])
   ).c;

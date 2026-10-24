@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSocket } from '../context/SocketContext.jsx';
@@ -23,6 +23,8 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [olderCursor, setOlderCursor] = useState(null); // nextCursor of the oldest page loaded, while more history exists
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [typingUsers, setTypingUsers] = useState({});
   const [uploading, setUploading] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
@@ -35,6 +37,9 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   const [pendingFile, setPendingFile] = useState(null); // { file, previewUrl, isImage }
   const [caption, setCaption] = useState('');
   const bottomRef = useRef(null);
+  const scrollRef = useRef(null);
+  const prependRef = useRef(null); // scroll metrics captured just before older messages are prepended
+  const skipAutoScrollRef = useRef(false);
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const textareaRef = useRef(null);
@@ -46,11 +51,14 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   useEffect(() => {
     setLoading(true);
     setMessages([]);
+    setOlderCursor(null);
+    prependRef.current = null;
     const initialReadAt = conversation?.otherUser?.lastReadAt || 0;
     setOtherReadAt(initialReadAt);
     setOtherDeliveredAt(conversation?.otherUser?.lastDeliveredAt || 0);
     api.getMessages(conversation.id).then((r) => {
       setMessages(r.messages);
+      setOlderCursor(r.hasMore ? r.nextCursor : null);
       setLoading(false);
     });
     socket?.emit('conversation:join', conversation.id);
@@ -114,9 +122,45 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
     };
   }, [socket, conversation.id, user.id]);
 
+  // Prepending history must keep the message under the user's eyes in place,
+  // so restore the scroll offset before paint and skip the jump to the bottom.
+  useLayoutEffect(() => {
+    const before = prependRef.current;
+    const el = scrollRef.current;
+    if (!before || !el) return;
+    el.scrollTop = el.scrollHeight - before.height + before.top;
+    prependRef.current = null;
+    skipAutoScrollRef.current = true;
+  }, [messages]);
+
   useEffect(() => {
+    if (skipAutoScrollRef.current) {
+      skipAutoScrollRef.current = false;
+      return;
+    }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typingUsers]);
+
+  async function loadOlder() {
+    const el = scrollRef.current;
+    if (!olderCursor || loadingOlder || !el) return;
+    setLoadingOlder(true);
+    try {
+      const r = await api.getMessages(conversation.id, olderCursor);
+      prependRef.current = { height: el.scrollHeight, top: el.scrollTop };
+      setMessages((prev) => {
+        const known = new Set(prev.map((m) => m.id));
+        return [...r.messages.filter((m) => !known.has(m.id)), ...prev];
+      });
+      setOlderCursor(r.hasMore ? r.nextCursor : null);
+    } finally {
+      setLoadingOlder(false);
+    }
+  }
+
+  function handleScroll(e) {
+    if (e.currentTarget.scrollTop < 160) loadOlder();
+  }
 
   useEffect(() => () => stopMediaStream(), []);
 
@@ -334,7 +378,8 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 sm:px-20 py-4">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-3 sm:px-20 py-4">
+        {loadingOlder && <div className="text-center text-muted text-sm pb-3 animate-pulse">Загрузка…</div>}
         {loading && <div className="text-center text-muted mt-8 animate-pulse">Загрузка сообщений…</div>}
         {!loading && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center text-muted mt-12 gap-3 opacity-60">
