@@ -225,7 +225,15 @@ export const IconInfo = icon(
 
 export const IconReply = icon(18, <path d="M9 7L4 12l5 5M4 12h10a6 6 0 016 6" />);
 
-export const IconForward = icon(18, <path d="M15 7l5 5-5 5M20 12H10a6 6 0 00-6 6" />);
+export const IconClock = icon(
+  14,
+  <>
+    <circle cx="12" cy="12" r="9" strokeWidth="2.2" />
+    <path d="M12 7.5V12l3 2" strokeWidth="2.2" />
+  </>
+);
+
+export const IconForward =icon(18, <path d="M15 7l5 5-5 5M20 12H10a6 6 0 00-6 6" />);
 
 export const IconPin = icon(
   16,

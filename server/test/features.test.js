@@ -142,6 +142,25 @@ describe('replies, reactions and search', () => {
     assert.equal(blank.forwardedFrom, null);
   });
 
+  it('makes a retried send idempotent by clientId and echoes the id back', async () => {
+    const seen = collect(sb, 'message:new');
+    const first = (await emit(sa, 'message:send', { conversationId: conv.id, content: 'ещё раз', clientId: 'cid-1' })).message;
+    assert.equal(first.clientId, 'cid-1');
+    const again = (await emit(sa, 'message:send', { conversationId: conv.id, content: 'ещё раз', clientId: 'cid-1' })).message;
+    assert.equal(again.id, first.id);
+    assert.equal(again.clientId, 'cid-1');
+    await sleep(200);
+    assert.equal(seen.filter((e) => e.payload.clientId === 'cid-1').length, 1);
+    assert.equal((await history()).filter((m) => m.content === 'ещё раз').length, 1);
+
+    // the same clientId from another user is a different message
+    const other = (await emit(sb, 'message:send', { conversationId: conv.id, content: 'свой', clientId: 'cid-1' })).message;
+    assert.notEqual(other.id, first.id);
+    // oversized or missing ids are ignored rather than rejected
+    const long = (await emit(sa, 'message:send', { conversationId: conv.id, content: 'x', clientId: 'a'.repeat(65) })).message;
+    assert.equal(long.clientId, null);
+  });
+
   const search = (q, token, extra = '') =>
     srv.api(`/api/search/messages?q=${encodeURIComponent(q)}${extra}`, { token }).then((r) => r.body.results);
 

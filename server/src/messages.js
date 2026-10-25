@@ -34,6 +34,46 @@ export async function getPinnedMessage(conversationId, clearedBefore = 0) {
   };
 }
 
+/** The message JSON the client renders, from a row joined with its author and reply source. */
+export function serializeMessage(m, reactions = []) {
+  return {
+    id: m.id,
+    conversationId: m.conversation_id,
+    senderId: m.sender_id,
+    senderName: m.sender_name,
+    senderColor: m.sender_color,
+    senderAvatarUrl: m.sender_avatar_url || null,
+    content: m.deleted ? '' : m.content,
+    fileUrl: m.deleted ? null : m.file_url,
+    fileName: m.file_name,
+    fileType: m.file_type,
+    replyToId: m.reply_to_id,
+    replyToSenderName: m.reply_sender_name || null,
+    replyToContent: m.reply_deleted ? '' : replyPreview(m.reply_content),
+    forwardedFrom: m.deleted ? null : m.forwarded_from || null,
+    clientId: m.client_id || null,
+    reactions: m.deleted ? [] : reactions,
+    editedAt: m.edited_at,
+    deleted: !!m.deleted,
+    createdAt: m.created_at,
+  };
+}
+
+export async function getMessageById(id) {
+  const row = await get(
+    `SELECT m.*, u.display_name AS sender_name, u.avatar_color AS sender_color, u.avatar_url AS sender_avatar_url,
+            rm.content AS reply_content, rm.deleted AS reply_deleted, ru.display_name AS reply_sender_name
+     FROM messages m
+     JOIN users u ON u.id = m.sender_id
+     LEFT JOIN messages rm ON rm.id = m.reply_to_id AND rm.conversation_id = m.conversation_id
+     LEFT JOIN users ru ON ru.id = rm.sender_id
+     WHERE m.id = ?`,
+    [id]
+  );
+  if (!row) return null;
+  return serializeMessage(row, (await getReactionsFor([id])).get(id));
+}
+
 function groupReactions(rows) {
   const byEmoji = new Map();
   for (const r of rows) {

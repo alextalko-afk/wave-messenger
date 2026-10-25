@@ -4,7 +4,7 @@ import { get, all, run, batch } from '../db/index.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { publicUser } from './auth.js';
 import { uploadAvatar, uploadedUrl } from './upload.js';
-import { getReactionsFor, replyPreview, getPinnedMessage } from '../messages.js';
+import { getReactionsFor, replyPreview, getPinnedMessage, serializeMessage } from '../messages.js';
 import { parseLimit, parseCursor, olderThan, toPage } from '../pagination.js';
 import { invalidateConversationMembers } from '../members.js';
 
@@ -206,26 +206,7 @@ router.get('/:id/messages', async (req, res) => {
   const reactions = await getReactionsFor(rows.map((m) => m.id));
 
   res.json({
-    messages: rows.reverse().map((m) => ({
-      id: m.id,
-      conversationId: m.conversation_id,
-      senderId: m.sender_id,
-      senderName: m.sender_name,
-      senderColor: m.sender_color,
-      senderAvatarUrl: m.sender_avatar_url || null,
-      content: m.deleted ? '' : m.content,
-      fileUrl: m.deleted ? null : m.file_url,
-      fileName: m.file_name,
-      fileType: m.file_type,
-      replyToId: m.reply_to_id,
-      replyToSenderName: m.reply_sender_name || null,
-      replyToContent: m.reply_deleted ? '' : replyPreview(m.reply_content),
-      forwardedFrom: m.deleted ? null : m.forwarded_from || null,
-      reactions: m.deleted ? [] : reactions.get(m.id) || [],
-      editedAt: m.edited_at,
-      deleted: !!m.deleted,
-      createdAt: m.created_at,
-    })),
+    messages: rows.reverse().map((m) => serializeMessage(m, reactions.get(m.id) || [])),
     hasMore,
     nextCursor,
   });

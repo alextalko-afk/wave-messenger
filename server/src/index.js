@@ -23,7 +23,7 @@ import callsRoutes from './routes/calls.js';
 import pushRoutes from './routes/push.js';
 import searchRoutes from './routes/search.js';
 import { sendPush, previewText } from './push.js';
-import { ALLOWED_REACTIONS, getReactionsFor, replyPreview, getPinnedMessage } from './messages.js';
+import { ALLOWED_REACTIONS, getReactionsFor, replyPreview, getPinnedMessage, getMessageById } from './messages.js';
 import { uploadsDir } from './paths.js';
 
 if (!process.env.JWT_SECRET) {
@@ -369,8 +369,15 @@ io.on('connection', (socket) => {
   });
 
   on('message:send', async (data, ack) => {
-    const { conversationId, content, fileUrl, fileName, fileType, replyToId, forwardedFrom } = data;
+    const { conversationId, content, fileUrl, fileName, fileType, replyToId, forwardedFrom, clientId } = data;
     if (!(await isMember(conversationId, userId))) return ack?.({ error: 'Нет доступа к чату' });
+    // A retry of a send we already stored (the ack or the connection was lost)
+    // answers with the stored message instead of creating a duplicate.
+    const safeClientId = isString(clientId) && clientId.length > 0 && clientId.length <= 64 ? clientId : null;
+    if (safeClientId) {
+      const dup = await get('SELECT id FROM messages WHERE sender_id = ? AND client_id = ?', [userId, safeClientId]);
+      if (dup) return ack?.({ message: await getMessageById(dup.id) });
+    }
     if (content != null && !isString(content)) return ack?.({ error: 'Некорректное сообщение' });
     const text = content?.trim() || '';
     if (text.length > MAX_CONTENT_LENGTH) return ack?.({ error: 'Сообщение слишком длинное' });
@@ -396,9 +403,9 @@ io.on('connection', (socket) => {
 
     const id = nanoid();
     await run(
-      `INSERT INTO messages (id, conversation_id, sender_id, content, content_search, file_url, file_name, file_type, reply_to_id, forwarded_from)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, conversationId, userId, text, searchKey(text), fileUrl || null, safeFileName, safeFileType, replyId, safeForwardedFrom]
+      `INSERT INTO messages (id, conversation_id, sender_id, content, content_search, file_url, file_name, file_type, reply_to_id, forwarded_from, client_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, conversationId, userId, text, searchKey(text), fileUrl || null, safeFileName, safeFileType, replyId, safeForwardedFrom, safeClientId]
     );
 
     const sender = await get('SELECT display_name, avatar_color, avatar_url FROM users WHERE id = ?', [userId]);
@@ -417,6 +424,7 @@ io.on('connection', (socket) => {
       replyToSenderName: reply?.sender_name || null,
       replyToContent: reply && !reply.deleted ? replyPreview(reply.content) : '',
       forwardedFrom: safeForwardedFrom,
+      clientId: safeClientId,
       reactions: [],
       editedAt: null,
       deleted: false,

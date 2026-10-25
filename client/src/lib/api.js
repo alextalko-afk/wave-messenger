@@ -16,7 +16,11 @@ async function request(path, options = {}) {
 
   const res = await fetch(`/api${path}`, { ...options, headers });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Ошибка запроса');
+  if (!res.ok) {
+    const err = new Error(data.error || 'Ошибка запроса');
+    err.status = res.status; // lets callers tell a rejected session (401) from a flaky server
+    throw err;
+  }
   return data;
 }
 

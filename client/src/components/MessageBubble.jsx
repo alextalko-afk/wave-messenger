@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatTime } from '../lib/format.js';
 import { isStickerContent } from '../lib/emoji.js';
-import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile, IconClose, IconDownload, IconPlay, IconReply, IconForward, IconPin, IconPlus } from './Icons.jsx';
+import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile, IconClose, IconDownload, IconPlay, IconReply, IconForward, IconPin, IconPlus, IconClock } from './Icons.jsx';
 import VoiceMessage from './VoiceMessage.jsx';
 
 // Must match ALLOWED_REACTIONS on the server.
@@ -28,6 +28,7 @@ export default function MessageBubble({
   showSender,
   isRead,
   isDelivered,
+  sendStatus,
   showTail,
   currentUserId,
   isPinned,
@@ -66,7 +67,7 @@ export default function MessageBubble({
   const reactions = message.reactions || [];
 
   // One floating toolbar on hover: reactions, then reply / pin / edit / delete.
-  const actionBar = menuOpen && !editing && (
+  const actionBar = menuOpen && !editing && !sendStatus && (
     <div
       className={`absolute -top-12 pb-2 z-10 ${isMine ? 'right-2' : 'left-2'}`}
       onClick={(e) => e.stopPropagation()}
@@ -178,7 +179,7 @@ export default function MessageBubble({
             {formatTime(message.createdAt)}
             {isMine && (
               <span style={{ color: isRead ? 'var(--check)' : 'inherit', display: 'inline-flex' }}>
-                {isRead || isDelivered ? <IconCheckAll size={14} /> : <IconCheck size={11} />}
+                {sendStatus ? <IconClock size={12} /> : isRead || isDelivered ? <IconCheckAll size={14} /> : <IconCheck size={11} />}
               </span>
             )}
           </div>
@@ -312,7 +313,7 @@ export default function MessageBubble({
                 marginLeft: '2px',
               }}
             >
-              {isRead || isDelivered ? <IconCheckAll size={15} /> : <IconCheck size={12} />}
+              {sendStatus ? <IconClock size={13} /> : isRead || isDelivered ? <IconCheckAll size={15} /> : <IconCheck size={12} />}
             </span>
           )}
         </div>

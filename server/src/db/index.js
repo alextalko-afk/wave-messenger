@@ -113,6 +113,11 @@ await ensureColumn('conversations', 'avatar_url', 'TEXT');
 await ensureColumn('conversations', 'pinned_message_id', 'TEXT');
 // Display name of the original author when a message was forwarded.
 await ensureColumn('messages', 'forwarded_from', 'TEXT');
+// Client-generated id that makes a retried send idempotent.
+await ensureColumn('messages', 'client_id', 'TEXT');
+await client.execute(
+  'CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_client_id ON messages(sender_id, client_id) WHERE client_id IS NOT NULL'
+);
 // Bumped to invalidate every token issued before (password change, "sign out
 // everywhere"). Tokens minted before this column existed carry no version and
 // are treated as version 0, so nobody is logged out by the migration.

@@ -41,6 +41,22 @@ function storedInfoOpen() {
   }
 }
 
+const SEND_TIMEOUT_MS = 15000;
+
+function newClientId() {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// Fold a server message into the list: it replaces the local copy it was sent
+// from (matched by clientId) and is never added twice.
+function mergeMessage(list, msg) {
+  if (msg.clientId) {
+    const i = list.findIndex((m) => m.clientId === msg.clientId);
+    if (i !== -1) return list[i].id === msg.id ? list : list.map((m, j) => (j === i ? msg : m));
+  }
+  return list.some((m) => m.id === msg.id) ? list : [...list, msg];
+}
+
 function pinnedPreview(pm) {
   if (pm.content) return pm.content;
   if (pm.fileType?.startsWith('image/')) return 'Фотография';
@@ -81,6 +97,7 @@ export default function ChatWindow({ conversation, conversations = [], onBack, o
   const chunksRef = useRef([]);
   const streamRef = useRef(null);
   const recordTimerRef = useRef(null);
+  const outboxRef = useRef(new Map()); // clientId -> payload of messages not yet acknowledged
 
   useEffect(() => {
     setLoading(true);
@@ -108,8 +125,24 @@ export default function ChatWindow({ conversation, conversations = [], onBack, o
     if (!socket) return;
     function onNew(msg) {
       if (msg.conversationId !== conversation.id) return;
-      setMessages((prev) => [...prev, msg]);
+      if (msg.clientId) outboxRef.current.delete(msg.clientId);
+      setMessages((prev) => mergeMessage(prev, msg));
       socket.emit('conversation:read', { conversationId: conversation.id });
+    }
+    // Messages that timed out while offline go out again once we reconnect;
+    // the server ignores the ones it had already stored.
+    function onConnect() {
+      socket.emit('conversation:join', conversation.id);
+      for (const clientId of outboxRef.current.keys()) transmit(clientId);
+      // pick up whatever arrived while we were disconnected
+      api
+        .getMessages(conversation.id)
+        .then((r) =>
+          setMessages((prev) =>
+            r.messages.reduce(mergeMessage, prev).sort((a, b) => a.createdAt - b.createdAt)
+          )
+        )
+        .catch(() => {});
     }
     function onUpdated({ id, content, editedAt }) {
       setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, content, editedAt } : m)));
@@ -138,6 +171,7 @@ export default function ChatWindow({ conversation, conversations = [], onBack, o
       if (conversationId !== conversation.id || userId === user.id) return;
       setOtherDeliveredAt((prev) => Math.max(prev, deliveredAt));
     }
+    socket.on('connect', onConnect);
     socket.on('message:new', onNew);
     socket.on('message:updated', onUpdated);
     socket.on('message:deleted', onDeleted);
@@ -146,6 +180,7 @@ export default function ChatWindow({ conversation, conversations = [], onBack, o
     socket.on('message:read', onRead);
     socket.on('message:delivered', onDelivered);
     return () => {
+      socket.off('connect', onConnect);
       socket.off('message:new', onNew);
       socket.off('message:updated', onUpdated);
       socket.off('message:deleted', onDeleted);
@@ -215,17 +250,70 @@ export default function ChatWindow({ conversation, conversations = [], onBack, o
     }, 1500);
   }
 
-  function sendMessage(extra = {}) {
-    const content = text.trim();
-    if (!content && !extra.fileUrl) return;
-    socket?.emit('message:send', {
-      conversationId: conversation.id,
-      content,
-      replyToId: replyTo?.id,
-      ...extra
-    }, (res) => {
-      if (res?.error) console.error(res.error);
+  function setSendState(clientId, patch) {
+    setMessages((prev) => prev.map((m) => (m.clientId === clientId && m.status ? { ...m, ...patch } : m)));
+  }
+
+  // Shows the message right away and keeps it in the outbox until the server
+  // confirms it; a failure leaves it on screen with a retry button.
+  function sendPayload(payload, reply = null) {
+    const clientId = newClientId();
+    outboxRef.current.set(clientId, payload);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `local:${clientId}`,
+        clientId,
+        status: 'sending',
+        conversationId: conversation.id,
+        senderId: user.id,
+        senderName: user.displayName,
+        content: payload.content || '',
+        fileUrl: payload.fileUrl || null,
+        fileName: payload.fileName || null,
+        fileType: payload.fileType || null,
+        replyToId: reply?.id || null,
+        replyToSenderName: reply?.senderName || null,
+        replyToContent: reply?.content || '',
+        reactions: [],
+        editedAt: null,
+        deleted: false,
+        createdAt: Math.floor(Date.now() / 1000),
+      },
+    ]);
+    transmit(clientId);
+  }
+
+  function transmit(clientId) {
+    const payload = outboxRef.current.get(clientId);
+    if (!payload) return;
+    setSendState(clientId, { status: 'sending', error: null });
+    if (!socket || !socket.connected) {
+      setSendState(clientId, { status: 'failed', error: 'Нет соединения' });
+      return;
+    }
+    socket.timeout(SEND_TIMEOUT_MS).emit('message:send', { ...payload, clientId }, (err, res) => {
+      if (err) {
+        setSendState(clientId, { status: 'failed', error: 'Нет ответа от сервера' });
+      } else if (res?.error || !res?.message) {
+        outboxRef.current.delete(clientId); // the server refused it: retrying would fail the same way
+        setSendState(clientId, { status: 'failed', error: res?.error || 'Не удалось отправить' });
+      } else {
+        outboxRef.current.delete(clientId);
+        setMessages((prev) => mergeMessage(prev, res.message));
+      }
     });
+  }
+
+  function discardLocal(clientId) {
+    outboxRef.current.delete(clientId);
+    setMessages((prev) => prev.filter((m) => m.clientId !== clientId || !m.status));
+  }
+
+  function sendMessage() {
+    const content = text.trim();
+    if (!content) return;
+    sendPayload({ conversationId: conversation.id, content, replyToId: replyTo?.id }, replyTo);
     setText('');
     setDraft(conversation.id, '');
     setReplyTo(null);
@@ -253,9 +341,7 @@ export default function ChatWindow({ conversation, conversations = [], onBack, o
     try {
       const { url, name, type } = await api.upload(pendingFile.file);
       const content = caption.trim();
-      socket?.emit('message:send', { conversationId: conversation.id, content, fileUrl: url, fileName: name, fileType: type }, (res) => {
-        if (res?.error) console.error(res.error);
-      });
+      sendPayload({ conversationId: conversation.id, content, fileUrl: url, fileName: name, fileType: type });
       if (pendingFile.previewUrl) URL.revokeObjectURL(pendingFile.previewUrl);
       setPendingFile(null);
       setCaption('');
@@ -275,9 +361,7 @@ export default function ChatWindow({ conversation, conversations = [], onBack, o
 
   function handleStickerSelect(sticker) {
     setEmojiPickerMode(null);
-    socket?.emit('message:send', { conversationId: conversation.id, content: sticker }, (res) => {
-      if (res?.error) console.error(res.error);
-    });
+    sendPayload({ conversationId: conversation.id, content: sticker });
   }
 
   function handleEdit(messageId, content) {
@@ -413,13 +497,7 @@ export default function ChatWindow({ conversation, conversations = [], onBack, o
       try {
         const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type });
         const { url, name, type } = await api.upload(file);
-        socket?.emit(
-          'message:send',
-          { conversationId: conversation.id, content: '', fileUrl: url, fileName: name, fileType: type },
-          (res) => {
-            if (res?.error) console.error(res.error);
-          }
-        );
+        sendPayload({ conversationId: conversation.id, content: '', fileUrl: url, fileName: name, fileType: type });
       } catch (err) {
         console.error(err);
       } finally {
@@ -548,7 +626,7 @@ export default function ChatWindow({ conversation, conversations = [], onBack, o
           const isRead = m.senderId === user.id && m.createdAt <= otherReadAt;
           const isDelivered = m.senderId === user.id && m.createdAt <= otherDeliveredAt;
           return (
-            <div key={m.id} data-msg-id={m.id} className="flex flex-col rounded-2xl">
+            <div key={m.clientId || m.id} data-msg-id={m.id} className="flex flex-col rounded-2xl">
               {showDay && (
                 <div className="flex justify-center my-4">
                   <span
@@ -566,6 +644,7 @@ export default function ChatWindow({ conversation, conversations = [], onBack, o
                 showTail={showTail}
                 isRead={isRead}
                 isDelivered={isDelivered}
+                sendStatus={m.status}
                 currentUserId={user.id}
                 onReact={handleReact}
                 onEdit={handleEdit}
@@ -576,6 +655,19 @@ export default function ChatWindow({ conversation, conversations = [], onBack, o
                 isPinned={pinned?.id === m.id}
                 onJumpToReply={jumpTo}
               />
+              {m.status === 'failed' && (
+                <div className="flex items-center justify-end gap-3 px-2 pb-1 -mt-0.5 text-[12px]">
+                  <span style={{ color: '#f45b69' }}>{m.error || 'Не отправлено'}</span>
+                  {outboxRef.current.has(m.clientId) && (
+                    <button onClick={() => transmit(m.clientId)} className="font-semibold hover:underline" style={{ color: 'var(--accent)' }}>
+                      Повторить
+                    </button>
+                  )}
+                  <button onClick={() => discardLocal(m.clientId)} className="text-muted hover:underline">
+                    Удалить
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

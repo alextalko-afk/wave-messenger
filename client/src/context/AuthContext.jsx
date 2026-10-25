@@ -13,11 +13,33 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
-    api
-      .me()
-      .then(({ user }) => setUser(user))
-      .catch(() => setToken(null))
-      .finally(() => setLoading(false));
+    // Only a rejected session (401) signs the user out. A network blip or a
+    // server restart at start-up keeps the token and retries until the server answers.
+    let cancelled = false;
+    let timer;
+    function load() {
+      api
+        .me()
+        .then(({ user }) => {
+          if (cancelled) return;
+          setUser(user);
+          setLoading(false);
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          if (err.status === 401) {
+            setToken(null);
+            setLoading(false);
+          } else {
+            timer = setTimeout(load, 2000);
+          }
+        });
+    }
+    load();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
 
   // With two-step verification on, the server answers with a challenge instead
