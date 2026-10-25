@@ -5,6 +5,7 @@ import CallHistoryModal from './CallHistoryModal.jsx';
 import ContextMenu from './ContextMenu.jsx';
 import { formatTime, formatDayLabel } from '../lib/format.js';
 import { api } from '../lib/api.js';
+import { getDraft, useDraftsVersion } from '../lib/drafts.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import {
@@ -118,6 +119,7 @@ function Highlighted({ text, needle }) {
 export default function Sidebar({ conversations, activeId, onSelect, onNewChat, onAction, onCreated }) {
   const { user, logout } = useAuth();
   const { resolvedTheme: theme, toggle } = useTheme();
+  useDraftsVersion(); // re-render the list when a draft changes
   const [filter, setFilter] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -454,10 +456,17 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
                   )}
                 </div>
                 <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-sm text-muted truncate max-w-[220px]">
-                    {c.isGroup && c.lastMessage ? `${c.lastMessage.senderName}: ` : ''}
-                    {lastMessagePreview(c.lastMessage)}
-                  </span>
+                  {activeId !== c.id && getDraft(c.id) ? (
+                    <span className="text-sm text-muted truncate max-w-[220px]">
+                      <span style={{ color: '#f45b69' }}>Черновик: </span>
+                      {getDraft(c.id)}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted truncate max-w-[220px]">
+                      {c.isGroup && c.lastMessage ? `${c.lastMessage.senderName}: ` : ''}
+                      {lastMessagePreview(c.lastMessage)}
+                    </span>
+                  )}
                   {c.unreadCount > 0 && (
                     <span
                       className="text-white text-xs font-medium rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shrink-0 ml-2 pop-in"

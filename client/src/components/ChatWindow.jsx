@@ -8,6 +8,7 @@ import MessageBubble from './MessageBubble.jsx';
 import ProfileInfoPanel from './ProfileInfoPanel.jsx';
 import EmojiPopover from './EmojiPopover.jsx';
 import { formatDayLabel, formatLastSeen } from '../lib/format.js';
+import { getDraft, setDraft } from '../lib/drafts.js';
 import { IconBack, IconPaperclip, IconSend, IconMic, IconTrash, IconCheck, IconChatLogo, IconSmile, IconSticker, IconFile, IconClose, IconPhone, IconVideo, IconInfo, IconReply, IconPin } from './Icons.jsx';
 
 function formatClock(sec) {
@@ -51,7 +52,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   const socket = useSocket();
   const call = useCall();
   const [messages, setMessages] = useState([]);
-  const [text, setText] = useState('');
+  const [text, setText] = useState(() => getDraft(conversation.id));
   const [loading, setLoading] = useState(true);
   const [olderCursor, setOlderCursor] = useState(null); // nextCursor of the oldest page loaded, while more history exists
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -203,6 +204,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
 
   function handleTextChange(e) {
     setText(e.target.value);
+    setDraft(conversation.id, e.target.value);
     if (!socket) return;
     socket.emit('typing:start', { conversationId: conversation.id });
     clearTimeout(typingTimeoutRef.current);
@@ -223,6 +225,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
       if (res?.error) console.error(res.error);
     });
     setText('');
+    setDraft(conversation.id, '');
     setReplyTo(null);
     socket?.emit('typing:stop', { conversationId: conversation.id });
   }
@@ -262,7 +265,8 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   }
 
   function handleEmojiSelect(emoji) {
-    setText((prev) => prev + emoji);
+    setText(text + emoji);
+    setDraft(conversation.id, text + emoji);
     setEmojiPickerMode(null);
     textareaRef.current?.focus();
   }
