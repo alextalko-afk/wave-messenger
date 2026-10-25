@@ -34,7 +34,22 @@ data class PhoneRequestResponse(val ok: Boolean = true, val devCode: String? = n
 data class PhoneVerifyBody(val phone: String, val code: String, val displayName: String? = null)
 data class PhoneVerifyResponse(val token: String, val user: User, val isNewUser: Boolean = false)
 data class GoogleAuthBody(val idToken: String)
-data class GoogleAuthResponse(val token: String, val user: User, val isNewUser: Boolean = false)
+data class GoogleAuthResponse(
+    val token: String? = null,
+    val user: User? = null,
+    val isNewUser: Boolean = false,
+    val twoFactorRequired: Boolean = false,
+    val challengeToken: String? = null
+)
+data class TwoFactorSetupResponse(val secret: String, val otpauthUrl: String)
+data class TwoFactorCodeBody(val code: String)
+data class TwoFactorEnableResponse(val ok: Boolean = true, val recoveryCodes: List<String> = emptyList(), val user: User)
+data class TwoFactorDisableResponse(val ok: Boolean = true, val user: User)
+data class RecoveryCodesResponse(val recoveryCodes: List<String> = emptyList())
+data class RecoveryCodesRemainingResponse(val remaining: Int = 0)
+data class TwoFactorVerifyBody(val challengeToken: String, val code: String)
+data class TwoFactorVerifyResponse(val token: String, val user: User)
+data class RevokeSessionsResponse(val ok: Boolean = true, val token: String)
 data class LinkGoogleBody(val idToken: String)
 data class LinkGoogleResponse(val user: User)
 data class ConversationsResponse(val conversations: List<Conversation>)
@@ -70,6 +85,27 @@ interface AuthApi {
 
     @POST("api/auth/link-google")
     suspend fun linkGoogle(@Body body: LinkGoogleBody): LinkGoogleResponse
+
+    @POST("api/auth/2fa/setup")
+    suspend fun twoFactorSetup(): TwoFactorSetupResponse
+
+    @POST("api/auth/2fa/enable")
+    suspend fun twoFactorEnable(@Body body: TwoFactorCodeBody): TwoFactorEnableResponse
+
+    @POST("api/auth/2fa/disable")
+    suspend fun twoFactorDisable(@Body body: TwoFactorCodeBody): TwoFactorDisableResponse
+
+    @POST("api/auth/2fa/recovery-codes")
+    suspend fun twoFactorRecoveryCodes(@Body body: TwoFactorCodeBody): RecoveryCodesResponse
+
+    @GET("api/auth/2fa/recovery-codes/remaining")
+    suspend fun twoFactorRemaining(): RecoveryCodesRemainingResponse
+
+    @POST("api/auth/2fa/verify")
+    suspend fun twoFactorVerify(@Body body: TwoFactorVerifyBody): TwoFactorVerifyResponse
+
+    @POST("api/auth/revoke-sessions")
+    suspend fun revokeSessions(): RevokeSessionsResponse
 }
 
 interface ConversationsApi {

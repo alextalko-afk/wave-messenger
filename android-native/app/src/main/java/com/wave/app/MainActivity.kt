@@ -30,6 +30,7 @@ import com.wave.app.ui.screens.LoginScreen
 import com.wave.app.ui.screens.NewChatScreen
 import com.wave.app.ui.screens.NewGroupScreen
 import com.wave.app.ui.screens.RegisterScreen
+import com.wave.app.ui.screens.TwoFactorGate
 import com.wave.app.ui.screens.SettingsScreen
 import com.wave.app.ui.theme.WaveAppearance
 import com.wave.app.ui.theme.WaveTheme
@@ -72,27 +73,33 @@ class MainActivity : ComponentActivity() {
                 ) {
                     composable("login") {
                         val vm: AuthViewModel = viewModel(factory = factory)
-                        LoginScreen(
-                            viewModel = vm,
-                            onLoggedIn = {
-                                navController.navigate("chats") {
-                                    popUpTo("login") { inclusive = true }
-                                }
-                            },
-                            onGoRegister = { navController.navigate("register") }
-                        )
+                        val goChats: () -> Unit = {
+                            navController.navigate("chats") {
+                                popUpTo("login") { inclusive = true }
+                            }
+                        }
+                        TwoFactorGate(viewModel = vm, onLoggedIn = goChats) {
+                            LoginScreen(
+                                viewModel = vm,
+                                onLoggedIn = goChats,
+                                onGoRegister = { navController.navigate("register") }
+                            )
+                        }
                     }
                     composable("register") {
                         val vm: AuthViewModel = viewModel(factory = factory)
-                        RegisterScreen(
-                            viewModel = vm,
-                            onRegistered = {
-                                navController.navigate("chats") {
-                                    popUpTo("login") { inclusive = true }
-                                }
-                            },
-                            onGoLogin = { navController.popBackStack() }
-                        )
+                        val goChats: () -> Unit = {
+                            navController.navigate("chats") {
+                                popUpTo("login") { inclusive = true }
+                            }
+                        }
+                        TwoFactorGate(viewModel = vm, onLoggedIn = goChats) {
+                            RegisterScreen(
+                                viewModel = vm,
+                                onRegistered = goChats,
+                                onGoLogin = { navController.popBackStack() }
+                            )
+                        }
                     }
                     composable("chats") {
                         val vm: ChatListViewModel = viewModel(factory = factory)

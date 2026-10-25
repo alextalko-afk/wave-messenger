@@ -70,10 +70,9 @@ import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WaveOnAccent
 import com.wave.app.ui.theme.WavePanel
 import com.wave.app.ui.theme.WaveText
-import com.wave.app.ui.theme.WaveThemeVariant
-import com.wave.app.ui.theme.currentWaveAppearance
-import com.wave.app.ui.theme.currentWaveThemeVariant
-import com.wave.app.ui.theme.setWaveTheme
+import com.wave.app.ui.theme.WaveAppearance
+import com.wave.app.ui.theme.setWaveAppearance
+import com.wave.app.ui.theme.waveAppearanceChoice
 import com.wave.app.ui.theme.WaveIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -205,8 +204,8 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
 
     fun savePassword() {
         if (savingPassword) return
-        if (newPassword.length < 4) {
-            passwordError = "Новый пароль от 4 символов"
+        if (newPassword.length < 8) {
+            passwordError = "Новый пароль от 8 символов"
             return
         }
         if (newPassword != confirmPassword) {
@@ -324,7 +323,46 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
 
                 Spacer(modifier = Modifier.padding(top = 20.dp))
 
-                SectionCard(title = "Смена пароля") {
+                SectionCard(title = "Внешний вид") {
+                    Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
+                        IconChoice(
+                            selected = waveAppearanceChoice == WaveAppearance.SYSTEM,
+                            label = "Системная",
+                            onClick = { setWaveAppearance(context, WaveAppearance.SYSTEM) }
+                        ) {
+                            Row(modifier = Modifier.fillMaxSize()) {
+                                Box(modifier = Modifier.weight(1f).fillMaxSize().background(Color(0xFFEEF2F7)))
+                                Box(modifier = Modifier.weight(1f).fillMaxSize().background(Color(0xFF0A1017)))
+                            }
+                        }
+                        IconChoice(
+                            selected = waveAppearanceChoice == WaveAppearance.LIGHT,
+                            label = "Светлая",
+                            onClick = { setWaveAppearance(context, WaveAppearance.LIGHT) }
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize().background(Color(0xFFEEF2F7)), contentAlignment = Alignment.Center) {
+                                Box(modifier = Modifier.size(28.dp, 12.dp).background(Color(0xFF2563EB), shape = RoundedCornerShape(6.dp)))
+                            }
+                        }
+                        IconChoice(
+                            selected = waveAppearanceChoice == WaveAppearance.DARK,
+                            label = "Тёмная",
+                            onClick = { setWaveAppearance(context, WaveAppearance.DARK) }
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A1017)), contentAlignment = Alignment.Center) {
+                                Box(modifier = Modifier.size(28.dp, 12.dp).background(Color(0xFF2563EB), shape = RoundedCornerShape(6.dp)))
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.padding(top = 20.dp))
+
+                TwoFactorCard(session)
+
+                Spacer(modifier = Modifier.padding(top = 20.dp))
+
+                SectionCard(title = "Пароль") {
                     if (passwordError != null) {
                         Text(passwordError ?: "", color = Color(0xFFFF6B6B), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 8.dp))
                     }
@@ -363,6 +401,10 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                         enabled = currentPassword.isNotBlank() && newPassword.isNotBlank() && confirmPassword.isNotBlank()
                     )
                 }
+
+                Spacer(modifier = Modifier.padding(top = 20.dp))
+
+                DevicesCard(session)
 
                 Spacer(modifier = Modifier.padding(top = 20.dp))
 
@@ -429,61 +471,6 @@ fun SettingsScreen(session: SessionStore, onBack: () -> Unit, onLogout: () -> Un
                 }
 
                 Spacer(modifier = Modifier.padding(top = 20.dp))
-
-                SectionCard(title = "Тема") {
-                    Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
-                        IconChoice(
-                            selected = currentWaveThemeVariant == WaveThemeVariant.COLORFUL,
-                            label = "Цветная",
-                            onClick = { setWaveTheme(context, WaveThemeVariant.COLORFUL) }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Brush.linearGradient(listOf(WaveAccent, WaveAccent2, WaveAccentDeep))),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(WaveIcons.ChatBubble, contentDescription = null, tint = WaveOnAccent)
-                            }
-                        }
-                        IconChoice(
-                            selected = currentWaveThemeVariant == WaveThemeVariant.MONO,
-                            label = "Монохром",
-                            onClick = { setWaveTheme(context, WaveThemeVariant.MONO) }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Black),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(WaveIcons.ChatBubble, contentDescription = null, tint = Color.White)
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.padding(top = 20.dp))
-
-                SectionCard(title = "Оформление") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Светлая тема", color = WaveText)
-                        androidx.compose.material3.Switch(
-                            checked = currentWaveAppearance == com.wave.app.ui.theme.WaveAppearance.LIGHT,
-                            onCheckedChange = { checked ->
-                                com.wave.app.ui.theme.setWaveAppearance(
-                                    context,
-                                    if (checked) com.wave.app.ui.theme.WaveAppearance.LIGHT else com.wave.app.ui.theme.WaveAppearance.DARK
-                                )
-                            },
-                            colors = androidx.compose.material3.SwitchDefaults.colors(checkedTrackColor = WaveAccent)
-                        )
-                    }
-                }
 
                 Spacer(modifier = Modifier.padding(top = 24.dp))
                 HorizontalDivider()

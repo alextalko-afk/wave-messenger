@@ -10,15 +10,20 @@ data class User(
     val online: Boolean = false,
     val lastSeen: Long? = null,
     val hasGoogle: Boolean = false,
+    val twoFactorEnabled: Boolean = false,
     // Only present when this User came back as a conversation member
     // (server's getMembers() adds it); null everywhere else (search
     // results, /me, etc).
     val role: String? = null
 )
 
+// With two-step verification on, sign-in answers with a challenge instead of
+// a session: token/user are absent and twoFactorRequired is true.
 data class AuthResponse(
-    val token: String,
-    val user: User
+    val token: String? = null,
+    val user: User? = null,
+    val twoFactorRequired: Boolean = false,
+    val challengeToken: String? = null
 )
 
 data class LastMessage(

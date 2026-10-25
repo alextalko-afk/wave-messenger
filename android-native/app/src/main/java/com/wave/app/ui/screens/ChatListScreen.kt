@@ -72,6 +72,7 @@ import com.wave.app.ui.theme.WaveBg
 import com.wave.app.ui.theme.WaveMuted
 import com.wave.app.ui.theme.WaveMutedFaint
 import com.wave.app.ui.theme.WaveOnAccent
+import com.wave.app.ui.theme.WaveText
 import com.wave.app.ui.theme.WavePanel
 import kotlinx.coroutines.delay
 import com.wave.app.ui.theme.WaveIcons
@@ -86,9 +87,17 @@ fun ChatListScreen(
     onOpenSettings: () -> Unit,
     onOpenCalls: () -> Unit
 ) {
-    val conversations by viewModel.conversations.collectAsState()
+    val allConversations by viewModel.conversations.collectAsState()
     val loading by viewModel.loading.collectAsState()
     var fabMenuOpen by remember { mutableStateOf(false) }
+
+    // 0 = all, 1 = direct chats, 2 = groups
+    var chatFilter by remember { mutableStateOf(0) }
+    val conversations = when (chatFilter) {
+        1 -> allConversations.filter { !it.isGroup }
+        2 -> allConversations.filter { it.isGroup }
+        else -> allConversations
+    }
 
     var searchActive by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -219,9 +228,9 @@ fun ChatListScreen(
                         }
                     }
                 }
-            } else if (loading && conversations.isEmpty()) {
+            } else if (loading && allConversations.isEmpty()) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (conversations.isEmpty()) {
+            } else if (allConversations.isEmpty()) {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -239,6 +248,38 @@ fun ChatListScreen(
                     Text("Нажмите + чтобы начать", color = WaveMutedFaint, style = MaterialTheme.typography.bodySmall)
                 }
             } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("Все", "Личные", "Группы").forEachIndexed { index, label ->
+                        val selected = chatFilter == index
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    if (selected) WaveAccent2 else WavePanel,
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
+                                )
+                                .clickable { chatFilter = index }
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                label,
+                                color = if (selected) WaveOnAccent else WaveText,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+                }
+                if (conversations.isEmpty()) {
+                    Text(
+                        "В этом разделе пока нет чатов",
+                        color = WaveMuted,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(24.dp)
+                    )
+                }
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(conversations, key = { it.id }) { conv ->
                         ConversationRow(
@@ -251,6 +292,7 @@ fun ChatListScreen(
                             onDelete = { viewModel.deleteConversation(conv) }
                         )
                     }
+                }
                 }
             }
         }
