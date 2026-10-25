@@ -23,6 +23,7 @@
 		D34CB038542E4DCC89717604 /* SocketManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 669DC00BFA034176923D902E /* SocketManager.swift */; };
 		8B140C1EB3A9449AA2022575 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17BC14A170724B3294DC3787 /* AvatarView.swift */; };
 		D8CC227146554E30B554812B /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB9A1A271F4869963430A2 /* LoginView.swift */; };
+		A1B2C3D4E5F60718293A4B5C /* SecurityCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* SecurityCards.swift */; };
 		B231DBF932DB41BB9CD3BA90 /* ChatListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E98A870C6D904D60A8EC7E73 /* ChatListView.swift */; };
 		68C74571BE654D0CA1D2481E /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F851E9F2C544A53BCC2D22F /* ChatView.swift */; };
 		2C4CE01F2DDB4EE596F2A764 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 214A94224BDD49609B8F7387 /* RootView.swift */; };
@@ -67,6 +68,7 @@
 		669DC00BFA034176923D902E /* SocketManager.swift */ = {isa = PBXFileReference; name = "SocketManager.swift"; path = "SocketManager.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		17BC14A170724B3294DC3787 /* AvatarView.swift */ = {isa = PBXFileReference; name = "AvatarView.swift"; path = "AvatarView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		D0CB9A1A271F4869963430A2 /* LoginView.swift */ = {isa = PBXFileReference; name = "LoginView.swift"; path = "LoginView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		A1B2C3D4E5F60718293A4B5D /* SecurityCards.swift */ = {isa = PBXFileReference; name = "SecurityCards.swift"; path = "SecurityCards.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		E98A870C6D904D60A8EC7E73 /* ChatListView.swift */ = {isa = PBXFileReference; name = "ChatListView.swift"; path = "ChatListView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		0F851E9F2C544A53BCC2D22F /* ChatView.swift */ = {isa = PBXFileReference; name = "ChatView.swift"; path = "ChatView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		214A94224BDD49609B8F7387 /* RootView.swift */ = {isa = PBXFileReference; name = "RootView.swift"; path = "RootView.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
@@ -140,6 +142,7 @@
 				669DC00BFA034176923D902E /* SocketManager.swift */,
 				17BC14A170724B3294DC3787 /* AvatarView.swift */,
 				D0CB9A1A271F4869963430A2 /* LoginView.swift */,
+				A1B2C3D4E5F60718293A4B5D /* SecurityCards.swift */,
 				E98A870C6D904D60A8EC7E73 /* ChatListView.swift */,
 				0F851E9F2C544A53BCC2D22F /* ChatView.swift */,
 				214A94224BDD49609B8F7387 /* RootView.swift */,
@@ -259,6 +262,7 @@
 				D34CB038542E4DCC89717604 /* SocketManager.swift in Sources */,
 				8B140C1EB3A9449AA2022575 /* AvatarView.swift in Sources */,
 				D8CC227146554E30B554812B /* LoginView.swift in Sources */,
+				A1B2C3D4E5F60718293A4B5C /* SecurityCards.swift in Sources */,
 				B231DBF932DB41BB9CD3BA90 /* ChatListView.swift in Sources */,
 				68C74571BE654D0CA1D2481E /* ChatView.swift in Sources */,
 				2C4CE01F2DDB4EE596F2A764 /* RootView.swift in Sources */,

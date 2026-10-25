@@ -74,6 +74,35 @@ final class APIClient {
         try await request("api/auth/link-google", method: "POST", body: GoogleAuthBody(idToken: idToken))
     }
 
+    func twoFactorVerify(challengeToken: String, code: String) async throws -> TwoFactorVerifyResponse {
+        try await request("api/auth/2fa/verify", method: "POST", body: TwoFactorVerifyBody(challengeToken: challengeToken, code: code))
+    }
+
+    func twoFactorSetup() async throws -> TwoFactorSetupResponse {
+        try await request("api/auth/2fa/setup", method: "POST")
+    }
+
+    func twoFactorEnable(code: String) async throws -> TwoFactorEnableResponse {
+        try await request("api/auth/2fa/enable", method: "POST", body: TwoFactorCodeBody(code: code))
+    }
+
+    func twoFactorDisable(code: String) async throws -> TwoFactorDisableResponse {
+        try await request("api/auth/2fa/disable", method: "POST", body: TwoFactorCodeBody(code: code))
+    }
+
+    func twoFactorRecoveryCodes(code: String) async throws -> RecoveryCodesResponse {
+        try await request("api/auth/2fa/recovery-codes", method: "POST", body: TwoFactorCodeBody(code: code))
+    }
+
+    func twoFactorRemaining() async throws -> RecoveryCodesRemainingResponse {
+        try await request("api/auth/2fa/recovery-codes/remaining")
+    }
+
+    /// Signs out every other device; the response carries the replacement token for this one.
+    func revokeOtherSessions() async throws -> RevokeSessionsResponse {
+        try await request("api/auth/revoke-sessions", method: "POST")
+    }
+
     func me() async throws -> MeResponse {
         try await request("api/auth/me")
     }

@@ -9,11 +9,23 @@ struct ChatListView: View {
     @State private var showingNewChat = false
     @State private var showingNewGroup = false
     @State private var searchText = ""
+    // 0 = all, 1 = direct chats, 2 = groups
+    @State private var filter = 0
+
+    private static let filterTitles = ["Все", "Личные", "Группы"]
+
+    private var inFilter: [Conversation] {
+        switch filter {
+        case 1: return conversations.filter { !$0.isGroup }
+        case 2: return conversations.filter { $0.isGroup }
+        default: return conversations
+        }
+    }
 
     private var filtered: [Conversation] {
-        guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return conversations }
+        guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return inFilter }
         let q = searchText.lowercased()
-        return conversations.filter { $0.name.lowercased().contains(q) }
+        return inFilter.filter { $0.name.lowercased().contains(q) }
     }
 
     var body: some View {
@@ -23,6 +35,10 @@ struct ChatListView: View {
 
                 VStack(spacing: 0) {
                     searchField
+
+                    if !loading && error == nil && !conversations.isEmpty {
+                        filterChips
+                    }
 
                     if loading {
                         Spacer()
@@ -56,7 +72,8 @@ struct ChatListView: View {
                         Spacer()
                     } else if filtered.isEmpty {
                         Spacer()
-                        Text("Ничего не найдено").foregroundColor(Wave.muted)
+                        Text(searchText.trimmingCharacters(in: .whitespaces).isEmpty ? "В этом разделе пока нет чатов" : "Ничего не найдено")
+                            .foregroundColor(Wave.muted)
                         Spacer()
                     } else {
                         List(filtered) { conversation in
@@ -179,6 +196,27 @@ struct ChatListView: View {
         .cornerRadius(12)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    private var filterChips: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(ChatListView.filterTitles.enumerated()), id: \.offset) { index, title in
+                Button {
+                    filter = index
+                } label: {
+                    Text(title)
+                        .font(.system(size: 13, weight: .medium))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(filter == index ? Wave.accent : Wave.panel2)
+                        .foregroundColor(filter == index ? .white : Wave.textPrimary)
+                        .clipShape(Capsule())
+                }
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
     }
 
     private func upsert(_ conversation: Conversation) {

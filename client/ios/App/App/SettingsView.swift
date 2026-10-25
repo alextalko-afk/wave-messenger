@@ -160,27 +160,22 @@ struct SettingsView: View {
                         .padding(.horizontal, 16)
 
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Тема").font(.system(size: 15, weight: .semibold)).foregroundColor(Wave.textPrimary)
-                            HStack(spacing: 14) {
-                                ForEach(ThemeMode.allCases) { mode in
-                                    themeSwatch(mode)
+                            Text("Внешний вид").font(.system(size: 15, weight: .semibold)).foregroundColor(Wave.textPrimary)
+                            HStack(spacing: 8) {
+                                ForEach(AppearanceMode.allCases) { option in
+                                    Button {
+                                        themeManager.appearance = option
+                                    } label: {
+                                        Text(option.title)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 10)
+                                            .background(themeManager.appearance == option ? Wave.accent : Wave.panel2)
+                                            .foregroundColor(themeManager.appearance == option ? .white : Wave.textPrimary)
+                                            .cornerRadius(10)
+                                    }
                                 }
                             }
-                        }
-                        .padding(16)
-                        .background(Wave.panel.opacity(0.6))
-                        .cornerRadius(18)
-                        .padding(.horizontal, 16)
-
-                        HStack {
-                            Text("Светлая тема").font(.system(size: 15)).foregroundColor(Wave.textPrimary)
-                            Spacer()
-                            Toggle("", isOn: Binding(
-                                get: { themeManager.appearance == .light },
-                                set: { themeManager.appearance = $0 ? .light : .dark }
-                            ))
-                            .labelsHidden()
-                            .tint(Wave.accent)
                         }
                         .padding(16)
                         .background(Wave.panel.opacity(0.6))
@@ -199,6 +194,10 @@ struct SettingsView: View {
                         .background(Wave.panel.opacity(0.6))
                         .cornerRadius(18)
                         .padding(.horizontal, 16)
+
+                        TwoFactorCard()
+
+                        DevicesCard()
 
                         if session.user?.hasGoogle != true {
                             VStack(alignment: .leading, spacing: 12) {
@@ -270,26 +269,6 @@ struct SettingsView: View {
             }
         }
         .tint(Wave.accent)
-    }
-
-    private func themeSwatch(_ mode: ThemeMode) -> some View {
-        let colors: [Color] = mode == .mono
-            ? [.white, Color(white: 0.85), Color(white: 0.7)]
-            : [Wave.accent, Wave.accent2, Wave.accentDeep]
-        return Button {
-            themeManager.mode = mode
-        } label: {
-            VStack(spacing: 6) {
-                LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
-                    .frame(width: 64, height: 64)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(themeManager.mode == mode ? Wave.accent : Color.clear, lineWidth: 3)
-                    )
-                Text(mode.title).font(.system(size: 11)).foregroundColor(Wave.muted)
-            }
-        }
     }
 
     private func iconSwatch(_ option: AppIconOption) -> some View {

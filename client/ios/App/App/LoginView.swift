@@ -3,6 +3,11 @@ import SwiftUI
 struct LoginView: View {
     @State private var error: String?
     @State private var googleBusy = false
+    // Set once the server asks for a two-step verification code.
+    @State private var challengeToken: String?
+    @State private var code = ""
+    @State private var useRecoveryCode = false
+    @State private var verifying = false
 
     var body: some View {
         NavigationStack {
@@ -39,22 +44,11 @@ struct LoginView: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
 
-                            Button(action: signInWithGoogle) {
-                                ZStack {
-                                    if googleBusy {
-                                        ProgressView().tint(.white)
-                                    } else {
-                                        Text("Войти через Google").fontWeight(.semibold)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Wave.accentGradient)
-                                .foregroundColor(.white)
-                                .cornerRadius(14)
+                            if challengeToken != nil {
+                                twoFactorForm
+                            } else {
+                                googleButton
                             }
-                            .opacity(googleBusy ? 0.6 : 1)
-                            .disabled(googleBusy)
                         }
                         .padding(20)
                         .background(Wave.panel)
@@ -70,6 +64,89 @@ struct LoginView: View {
         .tint(Wave.accent)
     }
 
+    private var googleButton: some View {
+        Button(action: signInWithGoogle) {
+            ZStack {
+                if googleBusy {
+                    ProgressView().tint(.white)
+                } else {
+                    Text("Войти через Google").fontWeight(.semibold)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Wave.accentGradient)
+            .foregroundColor(.white)
+            .cornerRadius(14)
+        }
+        .opacity(googleBusy ? 0.6 : 1)
+        .disabled(googleBusy)
+    }
+
+    private var twoFactorForm: some View {
+        VStack(spacing: 14) {
+            Text("Введите код")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(Wave.textPrimary)
+            Text(useRecoveryCode
+                 ? "Введите один из кодов восстановления. Каждый подходит только один раз."
+                 : "Откройте Google Authenticator и введите 6-значный код.")
+                .font(.footnote)
+                .foregroundColor(Wave.muted)
+                .multilineTextAlignment(.center)
+
+            TextField(useRecoveryCode ? "Код восстановления" : "000000", text: $code)
+                .keyboardType(useRecoveryCode ? .asciiCapable : .numberPad)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .multilineTextAlignment(.center)
+                .font(.system(size: useRecoveryCode ? 18 : 28, weight: .semibold, design: .monospaced))
+                .foregroundColor(Wave.textPrimary)
+                .padding(12)
+                .background(Wave.panel2)
+                .cornerRadius(12)
+                .onChange(of: code) { newValue in
+                    guard !useRecoveryCode else { return }
+                    let digits = String(newValue.filter { $0.isNumber }.prefix(6))
+                    if digits != newValue { code = digits }
+                    if digits.count == 6 { verifyCode() }
+                }
+
+            Button(action: verifyCode) {
+                ZStack {
+                    if verifying {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text("Войти").fontWeight(.semibold)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Wave.accentGradient)
+                .foregroundColor(.white)
+                .cornerRadius(14)
+            }
+            .opacity(verifying || code.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1)
+            .disabled(verifying || code.trimmingCharacters(in: .whitespaces).isEmpty)
+
+            Button(useRecoveryCode ? "Использовать код из приложения" : "Использовать код восстановления") {
+                useRecoveryCode.toggle()
+                code = ""
+                error = nil
+            }
+            .font(.system(size: 14))
+
+            Button("Отмена") {
+                challengeToken = nil
+                code = ""
+                error = nil
+                useRecoveryCode = false
+            }
+            .font(.system(size: 14))
+            .foregroundColor(Wave.muted)
+        }
+    }
+
     private func signInWithGoogle() {
         error = nil
         googleBusy = true
@@ -80,8 +157,16 @@ struct LoginView: View {
                     do {
                         let res = try await APIClient.shared.googleAuth(idToken: idToken)
                         await MainActor.run {
-                            SessionStore.shared.login(token: res.token, user: res.user)
-                            AppSocketManager.shared.connect(token: res.token)
+                            if res.twoFactorRequired == true, let challenge = res.challengeToken {
+                                challengeToken = challenge
+                                code = ""
+                                useRecoveryCode = false
+                            } else if let token = res.token, let user = res.user {
+                                SessionStore.shared.login(token: token, user: user)
+                                AppSocketManager.shared.connect(token: token)
+                            } else {
+                                self.error = "Не удалось войти. Попробуйте ещё раз."
+                            }
                             googleBusy = false
                         }
                     } catch {
@@ -95,6 +180,30 @@ struct LoginView: View {
                 DispatchQueue.main.async {
                     self.error = err.localizedDescription
                     googleBusy = false
+                }
+            }
+        }
+    }
+
+    private func verifyCode() {
+        guard let challengeToken, !verifying else { return }
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        error = nil
+        verifying = true
+        Task {
+            do {
+                let res = try await APIClient.shared.twoFactorVerify(challengeToken: challengeToken, code: trimmed)
+                await MainActor.run {
+                    SessionStore.shared.login(token: res.token, user: res.user)
+                    AppSocketManager.shared.connect(token: res.token)
+                    verifying = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = error.localizedDescription
+                    code = ""
+                    verifying = false
                 }
             }
         }

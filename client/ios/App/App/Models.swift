@@ -10,6 +10,7 @@ struct User: Codable, Identifiable, Equatable {
     var online: Bool
     var lastSeen: Int?
     var hasGoogle: Bool?
+    var twoFactorEnabled: Bool?
 }
 
 struct Member: Codable, Identifiable, Equatable {
@@ -71,10 +72,54 @@ struct GoogleAuthBody: Codable {
     let idToken: String
 }
 
+// With two-step verification on, the server answers with a challenge instead
+// of a session: `twoFactorRequired` + `challengeToken`, no token/user yet.
 struct GoogleAuthResponse: Codable {
+    let token: String?
+    let user: User?
+    let isNewUser: Bool?
+    let twoFactorRequired: Bool?
+    let challengeToken: String?
+}
+
+struct TwoFactorVerifyBody: Codable {
+    let challengeToken: String
+    let code: String
+}
+
+struct TwoFactorVerifyResponse: Codable {
     let token: String
     let user: User
-    let isNewUser: Bool
+}
+
+struct TwoFactorCodeBody: Codable {
+    let code: String
+}
+
+struct TwoFactorSetupResponse: Codable {
+    let secret: String
+    let otpauthUrl: String
+}
+
+struct TwoFactorEnableResponse: Codable {
+    let recoveryCodes: [String]
+    let user: User
+}
+
+struct TwoFactorDisableResponse: Codable {
+    let user: User
+}
+
+struct RecoveryCodesResponse: Codable {
+    let recoveryCodes: [String]
+}
+
+struct RecoveryCodesRemainingResponse: Codable {
+    let remaining: Int
+}
+
+struct RevokeSessionsResponse: Codable {
+    let token: String
 }
 
 struct MeResponse: Codable {

@@ -35,6 +35,12 @@ final class SessionStore: ObservableObject {
         isLoggedIn = true
     }
 
+    /// Keeps this device signed in after the server revoked every older token.
+    func replaceToken(_ token: String) {
+        defaults.set(token, forKey: tokenKey)
+        APIClient.shared.token = token
+    }
+
     func updateUser(_ user: User) {
         self.user = user
         if let data = try? JSONEncoder().encode(user) {
