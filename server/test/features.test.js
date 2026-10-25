@@ -127,6 +127,21 @@ describe('replies, reactions and search', () => {
     assert.equal((await chatOf(bob.token)).pinnedMessage, null);
   });
 
+  it('keeps the original author on forwarded messages, in the live event and in history', async () => {
+    const { message } = await emit(sb, 'message:send', {
+      conversationId: conv.id,
+      content: 'переслано',
+      forwardedFrom: '  Ева  ',
+    });
+    assert.equal(message.forwardedFrom, 'Ева');
+    const stored = (await history()).find((m) => m.id === message.id);
+    assert.equal(stored.forwardedFrom, 'Ева');
+    const plain = (await history()).find((m) => m.id === m1.id);
+    assert.equal(plain.forwardedFrom, null);
+    const blank = (await emit(sb, 'message:send', { conversationId: conv.id, content: 'x', forwardedFrom: '   ' })).message;
+    assert.equal(blank.forwardedFrom, null);
+  });
+
   const search = (q, token, extra = '') =>
     srv.api(`/api/search/messages?q=${encodeURIComponent(q)}${extra}`, { token }).then((r) => r.body.results);
 

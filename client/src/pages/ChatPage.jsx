@@ -3,6 +3,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { api } from '../lib/api.js';
 import { initPush } from '../lib/push.js';
 import { useSocket } from '../context/SocketContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import Sidebar from '../components/Sidebar.jsx';
 import ChatWindow from '../components/ChatWindow.jsx';
 import NewChatModal from '../components/NewChatModal.jsx';
@@ -16,6 +17,7 @@ function sortConversations(list) {
 }
 
 export default function ChatPage() {
+  const { user } = useAuth();
   const socket = useSocket();
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
@@ -64,7 +66,8 @@ export default function ChatPage() {
             fileType: msg.fileType,
             createdAt: msg.createdAt,
           },
-          unreadCount: msg.conversationId === activeId ? 0 : next[idx].unreadCount + 1,
+          unreadCount:
+            msg.conversationId === activeId ? 0 : msg.senderId === user.id ? next[idx].unreadCount : next[idx].unreadCount + 1,
         };
         return sortConversations(next);
       });
@@ -113,7 +116,7 @@ export default function ChatPage() {
       socket.off('message:read', onMessageRead);
       socket.off('message:delivered', onMessageDelivered);
     };
-  }, [socket, activeId]);
+  }, [socket, activeId, user.id]);
 
   function handleSelect(id) {
     setActiveId(id);
@@ -193,6 +196,7 @@ export default function ChatPage() {
           <ChatWindow
             key={`${active.id}:${active.clearVersion || 0}`}
             conversation={active}
+            conversations={conversations}
             onBack={() => setShowChatOnMobile(false)}
             onConversationUpdate={handleConversationUpdate}
             onOpenConversation={handleSelect}

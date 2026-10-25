@@ -220,6 +220,7 @@ router.get('/:id/messages', async (req, res) => {
       replyToId: m.reply_to_id,
       replyToSenderName: m.reply_sender_name || null,
       replyToContent: m.reply_deleted ? '' : replyPreview(m.reply_content),
+      forwardedFrom: m.deleted ? null : m.forwarded_from || null,
       reactions: m.deleted ? [] : reactions.get(m.id) || [],
       editedAt: m.edited_at,
       deleted: !!m.deleted,

@@ -225,6 +225,8 @@ export const IconInfo = icon(
 
 export const IconReply = icon(18, <path d="M9 7L4 12l5 5M4 12h10a6 6 0 016 6" />);
 
+export const IconForward = icon(18, <path d="M15 7l5 5-5 5M20 12H10a6 6 0 00-6 6" />);
+
 export const IconPin = icon(
   16,
   <>

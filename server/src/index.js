@@ -369,7 +369,7 @@ io.on('connection', (socket) => {
   });
 
   on('message:send', async (data, ack) => {
-    const { conversationId, content, fileUrl, fileName, fileType, replyToId } = data;
+    const { conversationId, content, fileUrl, fileName, fileType, replyToId, forwardedFrom } = data;
     if (!(await isMember(conversationId, userId))) return ack?.({ error: 'Нет доступа к чату' });
     if (content != null && !isString(content)) return ack?.({ error: 'Некорректное сообщение' });
     const text = content?.trim() || '';
@@ -392,12 +392,13 @@ io.on('connection', (socket) => {
     }
     const safeFileName = isString(fileName) ? fileName.slice(0, MAX_NAME_LENGTH) : null;
     const safeFileType = isString(fileType) ? fileType.slice(0, MAX_NAME_LENGTH) : null;
+    const safeForwardedFrom = isString(forwardedFrom) && forwardedFrom.trim() ? forwardedFrom.trim().slice(0, MAX_NAME_LENGTH) : null;
 
     const id = nanoid();
     await run(
-      `INSERT INTO messages (id, conversation_id, sender_id, content, content_search, file_url, file_name, file_type, reply_to_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, conversationId, userId, text, searchKey(text), fileUrl || null, safeFileName, safeFileType, replyId]
+      `INSERT INTO messages (id, conversation_id, sender_id, content, content_search, file_url, file_name, file_type, reply_to_id, forwarded_from)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, conversationId, userId, text, searchKey(text), fileUrl || null, safeFileName, safeFileType, replyId, safeForwardedFrom]
     );
 
     const sender = await get('SELECT display_name, avatar_color, avatar_url FROM users WHERE id = ?', [userId]);
@@ -415,6 +416,7 @@ io.on('connection', (socket) => {
       replyToId: replyId,
       replyToSenderName: reply?.sender_name || null,
       replyToContent: reply && !reply.deleted ? replyPreview(reply.content) : '',
+      forwardedFrom: safeForwardedFrom,
       reactions: [],
       editedAt: null,
       deleted: false,

@@ -6,6 +6,7 @@ import { useCall } from '../context/CallContext.jsx';
 import Avatar from './Avatar.jsx';
 import MessageBubble from './MessageBubble.jsx';
 import ProfileInfoPanel from './ProfileInfoPanel.jsx';
+import ForwardModal from './ForwardModal.jsx';
 import EmojiPopover from './EmojiPopover.jsx';
 import { formatDayLabel, formatLastSeen } from '../lib/format.js';
 import { getDraft, setDraft } from '../lib/drafts.js';
@@ -47,7 +48,7 @@ function pinnedPreview(pm) {
   return pm.fileName || 'Вложение';
 }
 
-export default function ChatWindow({ conversation, onBack, onConversationUpdate, onOpenConversation, onConversationAction }) {
+export default function ChatWindow({ conversation, conversations = [], onBack, onConversationUpdate, onOpenConversation, onConversationAction }) {
   const { user } = useAuth();
   const socket = useSocket();
   const call = useCall();
@@ -65,6 +66,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
   const [recordSeconds, setRecordSeconds] = useState(0);
   const wide = useWide();
   const [infoOpen, setInfoOpen] = useState(() => window.matchMedia(WIDE_QUERY).matches && storedInfoOpen());
+  const [forwardMsg, setForwardMsg] = useState(null);
   const [emojiPickerMode, setEmojiPickerMode] = useState(null); // null | 'emoji' | 'sticker'
   const [pendingFile, setPendingFile] = useState(null); // { file, previewUrl, isImage }
   const [caption, setCaption] = useState('');
@@ -287,6 +289,28 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
 
   function handleReact(messageId, emoji) {
     socket?.emit('message:react', { messageId, emoji });
+  }
+
+  function forwardTo(conversationIds) {
+    const m = forwardMsg;
+    setForwardMsg(null);
+    if (!m) return;
+    for (const id of conversationIds) {
+      socket?.emit(
+        'message:send',
+        {
+          conversationId: id,
+          content: m.content,
+          fileUrl: m.fileUrl || undefined,
+          fileName: m.fileName || undefined,
+          fileType: m.fileType || undefined,
+          forwardedFrom: m.forwardedFrom || m.senderName,
+        },
+        (res) => {
+          if (res?.error) console.error(res.error);
+        }
+      );
+    }
   }
 
   function handlePin(messageId, pinned) {
@@ -548,6 +572,7 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
                 onDelete={handleDelete}
                 onReply={() => startReply(m)}
                 onPin={handlePin}
+                onForward={setForwardMsg}
                 isPinned={pinned?.id === m.id}
                 onJumpToReply={jumpTo}
               />
@@ -675,6 +700,15 @@ export default function ChatWindow({ conversation, onBack, onConversationUpdate,
         )}
       </div>
       </div>
+
+      {forwardMsg && (
+        <ForwardModal
+          conversations={conversations}
+          message={forwardMsg}
+          onClose={() => setForwardMsg(null)}
+          onForward={forwardTo}
+        />
+      )}
 
       {pendingFile && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={cancelPendingFile}>

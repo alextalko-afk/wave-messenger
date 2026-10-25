@@ -111,6 +111,8 @@ await ensureColumn('users', 'avatar_url', 'TEXT');
 await ensureColumn('conversations', 'avatar_url', 'TEXT');
 // One pinned message per chat, shared by all members.
 await ensureColumn('conversations', 'pinned_message_id', 'TEXT');
+// Display name of the original author when a message was forwarded.
+await ensureColumn('messages', 'forwarded_from', 'TEXT');
 // Bumped to invalidate every token issued before (password change, "sign out
 // everywhere"). Tokens minted before this column existed carry no version and
 // are treated as version 0, so nobody is logged out by the migration.

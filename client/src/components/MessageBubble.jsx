@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatTime } from '../lib/format.js';
 import { isStickerContent } from '../lib/emoji.js';
-import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile, IconClose, IconDownload, IconPlay, IconReply, IconPin, IconPlus } from './Icons.jsx';
+import { IconEdit, IconTrash, IconCheck, IconCheckAll, IconFile, IconClose, IconDownload, IconPlay, IconReply, IconForward, IconPin, IconPlus } from './Icons.jsx';
 import VoiceMessage from './VoiceMessage.jsx';
 
 // Must match ALLOWED_REACTIONS on the server.
@@ -36,6 +36,7 @@ export default function MessageBubble({
   onReply,
   onReact,
   onPin,
+  onForward,
   onJumpToReply,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -103,6 +104,11 @@ export default function MessageBubble({
         {onReply && (
           <BarButton title="Ответить" onClick={() => onReply()}>
             <IconReply size={16} />
+          </BarButton>
+        )}
+        {onForward && (
+          <BarButton title="Переслать" onClick={() => onForward(message)}>
+            <IconForward size={16} />
           </BarButton>
         )}
         {onPin && (
@@ -209,6 +215,12 @@ export default function MessageBubble({
         {showSender && !isMine && (
           <div className="text-xs font-medium mb-0.5" style={{ color: 'var(--accent)' }}>
             {message.senderName}
+          </div>
+        )}
+
+        {message.forwardedFrom && (
+          <div className="text-[12px] leading-4 mb-1 font-medium flex items-center gap-1" style={{ color: isMine ? 'var(--bubble-out-meta)' : 'var(--accent)' }}>
+            <IconForward size={12} /> Переслано от {message.forwardedFrom}
           </div>
         )}
 
