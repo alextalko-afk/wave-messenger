@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { api } from '../lib/api.js';
 import { initPush } from '../lib/push.js';
@@ -8,6 +8,7 @@ import Sidebar from '../components/Sidebar.jsx';
 import ChatWindow from '../components/ChatWindow.jsx';
 import NewChatModal from '../components/NewChatModal.jsx';
 import QuickSearch from '../components/QuickSearch.jsx';
+import { ensureNotificationPermission, notifyMessage, updateUnreadBadge } from '../lib/desktop.js';
 import { IconChatLogo } from '../components/Icons.jsx';
 
 function sortConversations(list) {
@@ -25,6 +26,16 @@ export default function ChatPage() {
   const [modalMode, setModalMode] = useState(null);
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
   const [quickSearchOpen, setQuickSearchOpen] = useState(false);
+  const conversationsRef = useRef([]);
+  conversationsRef.current = conversations;
+
+  useEffect(() => ensureNotificationPermission(), []);
+
+  // Unread count in the tab title and the taskbar; muted chats don't count.
+  const unreadTotal = conversations.reduce((n, c) => n + (c.muted ? 0 : c.unreadCount || 0), 0);
+  useEffect(() => {
+    updateUnreadBadge(unreadTotal);
+  }, [unreadTotal]);
 
   useEffect(() => {
     function onKey(e) {
@@ -65,6 +76,10 @@ export default function ChatPage() {
       setConversations((prev) => (prev.some((c) => c.id === conv.id) ? prev : sortConversations([conv, ...prev])));
     }
     function onNewMessage(msg) {
+      const known = conversationsRef.current.find((c) => c.id === msg.conversationId);
+      if (known && !known.muted && msg.senderId !== user.id) {
+        notifyMessage({ conversation: known, message: msg, onOpen: (id) => { setActiveId(id); setShowChatOnMobile(true); } });
+      }
       setConversations((prev) => {
         const idx = prev.findIndex((c) => c.id === msg.conversationId);
         if (idx === -1) return prev;

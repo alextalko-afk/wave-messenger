@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, session } = require('electron');
+const { app, BrowserWindow, Menu, Tray, nativeImage, ipcMain, shell, session } = require('electron');
 const path = require('path');
 
 // WAVE_APP_URL points the shell at a local dev build (e.g. http://127.0.0.1:5174).
@@ -28,10 +28,63 @@ function isGoogleAuthUrl(url) {
 // grant to just mic/camera (needed for WebRTC audio/video calls) instead of
 // relying on the implicit default for everything.
 function allowCallMediaPermissions() {
+  // 'notifications' lets the app show system toasts for background messages.
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-    callback(permission === 'media');
+    callback(permission === 'media' || permission === 'notifications');
   });
 }
+
+let mainWindow = null;
+let tray = null;
+let quitting = false;
+
+function showWindow() {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+// Closing the window keeps Wave running in the tray so messages still arrive;
+// "Выйти" in the tray menu really quits.
+function createTray() {
+  const icon = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png')).resize({ width: 16, height: 16 });
+  tray = new Tray(icon);
+  tray.setToolTip('Wave');
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: 'Открыть Wave', click: showWindow },
+      { type: 'separator' },
+      {
+        label: 'Выйти',
+        click: () => {
+          quitting = true;
+          app.quit();
+        },
+      },
+    ])
+  );
+  tray.on('click', showWindow);
+}
+
+ipcMain.on('wave:focus', showWindow);
+
+ipcMain.on('wave:badge', (event, count, dataUrl) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return;
+  // Windows draws an overlay on the taskbar icon; macOS/Linux use the badge count.
+  if (process.platform === 'win32') {
+    const image = dataUrl && count > 0 ? nativeImage.createFromDataURL(dataUrl) : null;
+    mainWindow.setOverlayIcon(image, count > 0 ? `${count} непрочитанных` : '');
+  } else {
+    app.setBadgeCount(count);
+  }
+  tray?.setToolTip(count > 0 ? `Wave — ${count} непрочитанных` : 'Wave');
+});
+
+ipcMain.on('wave:attention', (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || mainWindow.isFocused()) return;
+  mainWindow.flashFrame(true);
+});
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -45,8 +98,17 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       sandbox: true,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
+  mainWindow = win;
+
+  win.on('close', (event) => {
+    if (quitting) return;
+    event.preventDefault();
+    win.hide();
+  });
+  win.on('focus', () => win.flashFrame(false));
 
   win.loadURL(APP_URL);
 
@@ -91,10 +153,22 @@ app.on('web-contents-created', (_event, contents) => {
   });
 });
 
+// One Wave at a time: a second launch just brings the first back.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) app.quit();
+else app.on('second-instance', showWindow);
+
+app.on('before-quit', () => {
+  quitting = true;
+});
+
 app.whenReady().then(() => {
+  if (!gotLock) return;
+  app.setAppUserModelId('com.wave.messenger.desktop'); // required for Windows toasts
   Menu.setApplicationMenu(null);
   allowCallMediaPermissions();
   createWindow();
+  createTray();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
