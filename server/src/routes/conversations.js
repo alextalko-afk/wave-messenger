@@ -7,6 +7,10 @@ import { uploadAvatar, uploadedUrl } from './upload.js';
 import { getReactionsFor, replyPreview, getPinnedMessage, serializeMessage } from '../messages.js';
 import { parseLimit, parseCursor, olderThan, toPage } from '../pagination.js';
 import { invalidateConversationMembers } from '../members.js';
+import { announceConversationChange } from '../realtime.js';
+
+const MAX_GROUP_NAME_LENGTH = 100;
+const MAX_GROUP_MEMBERS = 256;
 
 const router = Router();
 router.use(authMiddleware);
@@ -155,7 +159,7 @@ async function requireGroupAdmin(req, res) {
     req.userId,
   ]);
   if (!member || member.role !== 'admin') {
-    res.status(403).json({ error: 'Только администратор группы может менять аватар' });
+    res.status(403).json({ error: 'Это может делать только администратор группы' });
     return false;
   }
   return true;
@@ -178,6 +182,78 @@ router.delete('/:id/avatar', async (req, res) => {
   await run('UPDATE conversations SET avatar_url = NULL WHERE id = ?', [req.params.id]);
   const conv = await get('SELECT * FROM conversations WHERE id = ?', [req.params.id]);
   res.json({ conversation: await serializeConversation(conv, req.userId) });
+});
+
+async function respondWithConversation(req, res) {
+  const conv = await get('SELECT * FROM conversations WHERE id = ?', [req.params.id]);
+  res.json({ conversation: await serializeConversation(conv, req.userId) });
+}
+
+router.put('/:id', async (req, res) => {
+  if (!(await requireGroupAdmin(req, res))) return;
+  const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+  if (!name || name.length > MAX_GROUP_NAME_LENGTH) {
+    return res.status(400).json({ error: `Название — от 1 до ${MAX_GROUP_NAME_LENGTH} символов` });
+  }
+  await run('UPDATE conversations SET name = ? WHERE id = ?', [name, req.params.id]);
+  await announceConversationChange(req.params.id);
+  await respondWithConversation(req, res);
+});
+
+router.post('/:id/members', async (req, res) => {
+  if (!(await requireGroupAdmin(req, res))) return;
+  const ids = Array.isArray(req.body?.userIds) ? [...new Set(req.body.userIds.filter((x) => typeof x === 'string'))] : [];
+  if (ids.length === 0) return res.status(400).json({ error: 'Выберите хотя бы одного человека' });
+
+  const existing = new Set((await all('SELECT user_id FROM conversation_members WHERE conversation_id = ?', [req.params.id])).map((r) => r.user_id));
+  const users = await all(`SELECT id FROM users WHERE id IN (${ids.map(() => '?').join(',')})`, ids);
+  const toAdd = users.map((u) => u.id).filter((id) => !existing.has(id));
+  if (existing.size + toAdd.length > MAX_GROUP_MEMBERS) {
+    return res.status(400).json({ error: `В группе не может быть больше ${MAX_GROUP_MEMBERS} участников` });
+  }
+  if (toAdd.length > 0) {
+    await batch(
+      toAdd.map((uid) => ({
+        sql: 'INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)',
+        args: [req.params.id, uid],
+      }))
+    );
+    invalidateConversationMembers(req.params.id);
+    await announceConversationChange(req.params.id, { addedUserIds: toAdd });
+  }
+  await respondWithConversation(req, res);
+});
+
+router.delete('/:id/members/:userId', async (req, res) => {
+  if (!(await requireGroupAdmin(req, res))) return;
+  if (req.params.userId === req.userId) {
+    return res.status(400).json({ error: 'Чтобы выйти из группы, используйте «Покинуть группу»' });
+  }
+  const target = await getOwnMember(req.params.id, req.params.userId);
+  if (!target) return res.status(404).json({ error: 'Участник не найден' });
+  await run('DELETE FROM conversation_members WHERE conversation_id = ? AND user_id = ?', [req.params.id, req.params.userId]);
+  invalidateConversationMembers(req.params.id);
+  await announceConversationChange(req.params.id, { removedUserIds: [req.params.userId] });
+  await respondWithConversation(req, res);
+});
+
+router.put('/:id/members/:userId', async (req, res) => {
+  if (!(await requireGroupAdmin(req, res))) return;
+  const role = req.body?.role;
+  if (role !== 'admin' && role !== 'member') return res.status(400).json({ error: 'Некорректная роль' });
+  const target = await getOwnMember(req.params.id, req.params.userId);
+  if (!target) return res.status(404).json({ error: 'Участник не найден' });
+  if (role === 'member' && target.role === 'admin') {
+    const admins = (await get("SELECT COUNT(*) c FROM conversation_members WHERE conversation_id = ? AND role = 'admin'", [req.params.id])).c;
+    if (admins <= 1) return res.status(400).json({ error: 'В группе должен остаться хотя бы один администратор' });
+  }
+  await run('UPDATE conversation_members SET role = ? WHERE conversation_id = ? AND user_id = ?', [
+    role,
+    req.params.id,
+    req.params.userId,
+  ]);
+  await announceConversationChange(req.params.id);
+  await respondWithConversation(req, res);
 });
 
 router.get('/:id/messages', async (req, res) => {
@@ -383,6 +459,20 @@ router.delete('/:id', async (req, res) => {
   ).c;
   if (remaining === 0) {
     await run('DELETE FROM conversations WHERE id = ?', [req.params.id]);
+  } else {
+    // A group must never be left without an admin: the longest-standing member inherits the role.
+    const isGroup = (await get('SELECT is_group FROM conversations WHERE id = ?', [req.params.id]))?.is_group;
+    if (isGroup && member.role === 'admin') {
+      const admins = (await get("SELECT COUNT(*) c FROM conversation_members WHERE conversation_id = ? AND role = 'admin'", [req.params.id])).c;
+      if (admins === 0) {
+        await run(
+          `UPDATE conversation_members SET role = 'admin' WHERE conversation_id = ? AND user_id =
+             (SELECT user_id FROM conversation_members WHERE conversation_id = ? ORDER BY rowid LIMIT 1)`,
+          [req.params.id, req.params.id]
+        );
+      }
+    }
+    await announceConversationChange(req.params.id);
   }
   res.json({ ok: true });
 });

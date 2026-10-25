@@ -75,6 +75,14 @@ export const api = {
     request(`/conversations/${conversationId}/mark-unread`, { method: 'POST', body: JSON.stringify({ unread }) }),
   clearHistory: (conversationId) => request(`/conversations/${conversationId}/clear`, { method: 'POST' }),
   deleteConversation: (conversationId) => request(`/conversations/${conversationId}`, { method: 'DELETE' }),
+  renameGroup: (conversationId, name) =>
+    request(`/conversations/${conversationId}`, { method: 'PUT', body: JSON.stringify({ name }) }),
+  addGroupMembers: (conversationId, userIds) =>
+    request(`/conversations/${conversationId}/members`, { method: 'POST', body: JSON.stringify({ userIds }) }),
+  removeGroupMember: (conversationId, userId) =>
+    request(`/conversations/${conversationId}/members/${userId}`, { method: 'DELETE' }),
+  setGroupMemberRole: (conversationId, userId, role) =>
+    request(`/conversations/${conversationId}/members/${userId}`, { method: 'PUT', body: JSON.stringify({ role }) }),
   upload: (file) => {
     const form = new FormData();
     form.append('file', file);

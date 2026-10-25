@@ -18,6 +18,7 @@ import { startUploadCleanup } from './uploadCleanup.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import conversationRoutes, { serializeConversation } from './routes/conversations.js';
+import { bindAnnouncer } from './realtime.js';
 import uploadRoutes from './routes/upload.js';
 import callsRoutes from './routes/calls.js';
 import pushRoutes from './routes/push.js';
@@ -176,6 +177,18 @@ async function broadcastToConversation(conversationId, event, payload, exceptSoc
     }
   }
 }
+
+bindAnnouncer(async (conversationId, { addedUserIds, removedUserIds }) => {
+  const conv = await get('SELECT * FROM conversations WHERE id = ?', [conversationId]);
+  if (conv) {
+    for (const uid of await getConversationMemberIds(conversationId)) {
+      if (!onlineUsers.has(uid)) continue;
+      const event = addedUserIds.includes(uid) ? 'conversation:new' : 'conversation:updated';
+      emitToUser(uid, event, await serializeConversation(conv, uid));
+    }
+  }
+  for (const uid of removedUserIds) emitToUser(uid, 'conversation:removed', { conversationId });
+});
 
 // Tells everyone who shares a conversation with the user (once each, however
 // many conversations they share) that the user came online or went offline.

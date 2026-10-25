@@ -6,6 +6,7 @@ import { useCall } from '../context/CallContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { resizeImageFile } from '../lib/imageResize.js';
 import VoiceMessage from './VoiceMessage.jsx';
+import AddMembersModal from './AddMembersModal.jsx';
 import { formatLastSeen, formatDayLabel, pluralRu } from '../lib/format.js';
 import {
   IconClose,
@@ -23,6 +24,8 @@ import {
   IconMoreDots,
   IconChatLogo,
   IconPhone,
+  IconPlus,
+  IconCheck,
 } from './Icons.jsx';
 
 const MEDIA_TABS = [
@@ -110,10 +113,19 @@ export default function ProfileInfoPanel({ conversation, open, docked = false, o
   const [activeMember, setActiveMember] = useState(null);
   const [messagingBusy, setMessagingBusy] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [groupError, setGroupError] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
+  const [memberMenuId, setMemberMenuId] = useState(null);
 
   useEffect(() => {
     if (!open || !conversation) return;
     let cancelled = false;
+    setEditingName(false);
+    setAddOpen(false);
+    setMemberMenuId(null);
+    setGroupError('');
     setStats(null);
     setSubView(null);
     setSubItems(null);
@@ -189,6 +201,39 @@ export default function ProfileInfoPanel({ conversation, open, docked = false, o
     } finally {
       setMessagingBusy(false);
     }
+  }
+
+  // Every admin action answers with the fresh conversation; merge it into the list.
+  async function groupRequest(fn) {
+    setGroupError('');
+    try {
+      const { conversation: updated } = await fn();
+      onConversationUpdate?.(updated.id, updated);
+      return true;
+    } catch (err) {
+      setGroupError(err.message);
+      return false;
+    }
+  }
+
+  async function saveName() {
+    const name = nameDraft.trim();
+    if (!name || name === conversation.name) {
+      setEditingName(false);
+      return;
+    }
+    if (await groupRequest(() => api.renameGroup(conversation.id, name))) setEditingName(false);
+  }
+
+  async function changeRole(member, role) {
+    setMemberMenuId(null);
+    await groupRequest(() => api.setGroupMemberRole(conversation.id, member.id, role));
+  }
+
+  async function removeMember(member) {
+    setMemberMenuId(null);
+    if (!window.confirm(`Удалить ${member.displayName} из группы?`)) return;
+    await groupRequest(() => api.removeGroupMember(conversation.id, member.id));
   }
 
   function runAction(action) {
@@ -328,7 +373,43 @@ export default function ProfileInfoPanel({ conversation, open, docked = false, o
             Удалить фото группы
           </button>
         )}
-        <div className="mt-3 font-display font-bold text-xl text-center truncate max-w-full">{conversation.name}</div>
+        {editingName ? (
+          <div className="mt-3 flex items-center gap-1.5 w-full">
+            <input
+              autoFocus
+              value={nameDraft}
+              maxLength={100}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveName();
+                else if (e.key === 'Escape') setEditingName(false);
+              }}
+              aria-label="Название группы"
+              className="flex-1 min-w-0 px-3 py-2 rounded-xl outline-none text-[16px] font-semibold"
+              style={{ background: 'var(--panel2)' }}
+            />
+            <button onClick={saveName} className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0" style={{ background: 'var(--accent-fill)' }} title="Сохранить">
+              <IconCheck size={16} />
+            </button>
+          </div>
+        ) : (
+          <div className="mt-3 flex items-center justify-center gap-1.5 max-w-full">
+            <div className="font-display font-bold text-xl text-center truncate">{conversation.name}</div>
+            {isGroupAdmin && (
+              <button
+                onClick={() => {
+                  setNameDraft(conversation.name);
+                  setEditingName(true);
+                }}
+                className="w-7 h-7 rounded-lg hover:bg-hover flex items-center justify-center text-muted shrink-0"
+                title="Переименовать"
+              >
+                <IconEdit size={14} />
+              </button>
+            )}
+          </div>
+        )}
+        {groupError && <div className="text-xs text-red-400 mt-1 text-center">{groupError}</div>}
         <div className="text-sm text-muted mt-0.5">{subtitle}</div>
 
         <div className="w-full flex gap-2 mt-4 relative">
@@ -378,7 +459,7 @@ export default function ProfileInfoPanel({ conversation, open, docked = false, o
                     style={{ color: '#f45b69' }}
                   >
                     <IconTrash size={16} />
-                    Удалить чат
+                    {conversation.isGroup ? 'Покинуть группу' : 'Удалить чат'}
                   </button>
                 </div>
               </>
@@ -501,23 +582,80 @@ export default function ProfileInfoPanel({ conversation, open, docked = false, o
               {conversation.members.length}{' '}
               {pluralRu(conversation.members.length, ['участник', 'участника', 'участников'])}
             </div>
-            {conversation.members.map((m) => (
+            {isGroupAdmin && (
               <button
-                key={m.id}
-                onClick={() => openMember(m)}
-                className="w-full flex items-center gap-3 px-4 py-2 hover:bg-hover text-left"
+                onClick={() => setAddOpen(true)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-hover text-left"
+                style={{ color: 'var(--accent)' }}
               >
-                <Avatar name={m.displayName} seed={m.id} size={40} online={m.online} src={m.avatarUrl} />
-                <div className="min-w-0">
-                  <div className="text-sm truncate">{m.displayName}</div>
-                  <div className="text-xs text-muted truncate">@{m.username}</div>
-                </div>
+                <span className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--panel2)' }}>
+                  <IconPlus size={18} />
+                </span>
+                <span className="text-sm font-medium">Добавить участников</span>
               </button>
+            )}
+            {conversation.members.map((m) => (
+              <div key={m.id} className="relative flex items-center hover:bg-hover">
+                <button onClick={() => openMember(m)} className="flex-1 min-w-0 flex items-center gap-3 pl-4 pr-2 py-2 text-left">
+                  <Avatar name={m.displayName} seed={m.id} size={40} online={m.online} src={m.avatarUrl} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm truncate">
+                      {m.displayName}
+                      {m.id === user.id && <span className="text-muted"> (вы)</span>}
+                    </div>
+                    <div className="text-xs text-muted truncate">@{m.username}</div>
+                  </div>
+                  {m.role === 'admin' && (
+                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0" style={{ background: 'var(--selected)', color: 'var(--accent)' }}>
+                      админ
+                    </span>
+                  )}
+                </button>
+                {isGroupAdmin && m.id !== user.id && (
+                  <div className="relative shrink-0 pr-2">
+                    <button
+                      onClick={() => setMemberMenuId((id) => (id === m.id ? null : m.id))}
+                      className="w-8 h-8 rounded-lg hover:bg-hover flex items-center justify-center text-muted"
+                      title="Действия"
+                      aria-label={`Действия: ${m.displayName}`}
+                    >
+                      <IconMoreDots size={16} />
+                    </button>
+                    {memberMenuId === m.id && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setMemberMenuId(null)} />
+                        <div
+                          className="absolute right-2 top-full mt-1 w-56 rounded-xl py-1.5 z-20 pop-in"
+                          style={{ background: 'var(--panel2)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', border: '1px solid var(--border)' }}
+                        >
+                          <button
+                            onClick={() => changeRole(m, m.role === 'admin' ? 'member' : 'admin')}
+                            className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-hover"
+                          >
+                            {m.role === 'admin' ? 'Снять права администратора' : 'Сделать администратором'}
+                          </button>
+                          <button onClick={() => removeMember(m)} className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-hover" style={{ color: '#f45b69' }}>
+                            Удалить из группы
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             ))}
           </>
         )}
       </div>
     </>
+  );
+
+  const addModal = addOpen && (
+    <AddMembersModal
+      conversation={conversation}
+      onClose={() => setAddOpen(false)}
+      onAdded={(updated) => onConversationUpdate?.(updated.id, updated)}
+    />
   );
 
   if (docked) {
@@ -529,6 +667,7 @@ export default function ProfileInfoPanel({ conversation, open, docked = false, o
         >
           {body}
         </aside>
+        {addModal}
         <AvatarLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
       </>
     );
@@ -549,6 +688,7 @@ export default function ProfileInfoPanel({ conversation, open, docked = false, o
           {body}
         </div>
       </div>
+      {addModal}
       <AvatarLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
     </>
   );

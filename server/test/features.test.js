@@ -228,3 +228,76 @@ describe('ICE servers', () => {
     assert.ok(servers.some((s) => s.username === 'bob' && s.credential === 'pw'));
   });
 });
+
+describe('group management', () => {
+  let srv, alice, bob, eve, group, sa, sb, se;
+  const as = (user, path, method = 'GET', body) => srv.api(`/api/conversations${path}`, { method, body, token: user.token });
+  const chatOf = async (user) => (await as(user, '')).body.conversations.find((c) => c.id === group.id);
+
+  before(async () => {
+    srv = await startServer();
+    [alice, bob, eve] = await Promise.all([srv.createUser('Алиса'), srv.createUser('Боб'), srv.createUser('Ева')]);
+    group = (await as(alice, '/group', 'POST', { name: 'Команда', memberIds: [bob.id] })).body.conversation;
+    [sa, sb, se] = await Promise.all([srv.connect(alice.token), srv.connect(bob.token), srv.connect(eve.token)]);
+  });
+  after(() => srv.stop());
+
+  it('lets only admins rename the group, and tells the other members', async () => {
+    assert.equal((await as(bob, `/${group.id}`, 'PUT', { name: 'Захват' })).status, 403);
+    assert.equal((await as(alice, `/${group.id}`, 'PUT', { name: '   ' })).status, 400);
+    const seen = collect(sb, 'conversation:updated');
+    const r = await as(alice, `/${group.id}`, 'PUT', { name: '  Новая команда  ' });
+    assert.equal(r.body.conversation.name, 'Новая команда');
+    await sleep(200);
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].payload.name, 'Новая команда');
+  });
+
+  it('adds members (announcing the chat to them) and ignores duplicates', async () => {
+    assert.equal((await as(bob, `/${group.id}/members`, 'POST', { userIds: [eve.id] })).status, 403);
+    const added = collect(se, 'conversation:new');
+    const r = await as(alice, `/${group.id}/members`, 'POST', { userIds: [eve.id, bob.id, 'ghost'] });
+    assert.equal(r.body.conversation.members.length, 3);
+    await sleep(200);
+    assert.equal(added.length, 1);
+    assert.equal(added[0].payload.id, group.id);
+    assert.equal((await chatOf(eve)).name, 'Новая команда');
+  });
+
+  it('promotes and demotes admins but never leaves the group without one', async () => {
+    assert.equal((await as(bob, `/${group.id}/members/${eve.id}`, 'PUT', { role: 'admin' })).status, 403);
+    assert.equal((await as(alice, `/${group.id}/members/${bob.id}`, 'PUT', { role: 'boss' })).status, 400);
+    assert.equal((await as(alice, `/${group.id}/members/${alice.id}`, 'PUT', { role: 'member' })).status, 400); // the only admin
+    let r = await as(alice, `/${group.id}/members/${bob.id}`, 'PUT', { role: 'admin' });
+    assert.equal(r.body.conversation.members.find((m) => m.id === bob.id).role, 'admin');
+    r = await as(alice, `/${group.id}/members/${alice.id}`, 'PUT', { role: 'member' }); // fine now: Bob is an admin too
+    assert.equal(r.status, 200);
+    await as(bob, `/${group.id}/members/${alice.id}`, 'PUT', { role: 'admin' });
+  });
+
+  it('removes a member, who is told and stops receiving the chat', async () => {
+    assert.equal((await as(alice, `/${group.id}/members/${alice.id}`, 'DELETE')).status, 400);
+    assert.equal((await as(alice, `/${group.id}/members/nobody`, 'DELETE')).status, 404);
+    const removed = collect(se, 'conversation:removed');
+    const r = await as(alice, `/${group.id}/members/${eve.id}`, 'DELETE');
+    assert.equal(r.body.conversation.members.length, 2);
+    await sleep(200);
+    assert.equal(removed.length, 1);
+    assert.equal(removed[0].payload.conversationId, group.id);
+    assert.equal(await chatOf(eve), undefined);
+    const msgs = collect(se, 'message:new');
+    await emit(sa, 'message:send', { conversationId: group.id, content: 'для своих' });
+    await sleep(200);
+    assert.equal(msgs.length, 0);
+  });
+
+  it('hands admin rights to the longest-standing member when the last admin leaves', async () => {
+    await as(alice, `/${group.id}/members/${bob.id}`, 'PUT', { role: 'member' });
+    const seen = collect(sb, 'conversation:updated');
+    assert.equal((await as(alice, `/${group.id}`, 'DELETE')).status, 200);
+    await sleep(200);
+    const c = await chatOf(bob);
+    assert.deepEqual(c.members.map((m) => [m.id, m.role]), [[bob.id, 'admin']]);
+    assert.ok(seen.length >= 1);
+  });
+});

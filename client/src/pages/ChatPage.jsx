@@ -127,6 +127,16 @@ export default function ChatPage() {
         )
       );
     }
+    // Members added/removed, renamed or promoted by an admin.
+    function onUpdatedConversation(conv) {
+      setConversations((prev) => sortConversations(prev.map((c) => (c.id === conv.id ? { ...c, ...conv } : c))));
+    }
+    function onRemovedConversation({ conversationId }) {
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      setActiveId((current) => (current === conversationId ? null : current));
+    }
+    socket.on('conversation:updated', onUpdatedConversation);
+    socket.on('conversation:removed', onRemovedConversation);
     function onPinned({ conversationId, pinnedMessage }) {
       setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, pinnedMessage } : c)));
     }
@@ -137,6 +147,8 @@ export default function ChatPage() {
     socket.on('message:read', onMessageRead);
     socket.on('message:delivered', onMessageDelivered);
     return () => {
+      socket.off('conversation:updated', onUpdatedConversation);
+      socket.off('conversation:removed', onRemovedConversation);
       socket.off('conversation:pinned', onPinned);
       socket.off('conversation:new', onNewConversation);
       socket.off('message:new', onNewMessage);
@@ -191,7 +203,8 @@ export default function ChatPage() {
         clearVersion: (conv.clearVersion || 0) + 1,
       });
     } else if (action === 'delete') {
-      if (!window.confirm(`Удалить чат «${conv.name}»?`)) return;
+      const question = conv.isGroup ? `Покинуть группу «${conv.name}»?` : `Удалить чат «${conv.name}»?`;
+      if (!window.confirm(question)) return;
       await api.deleteConversation(conv.id);
       setConversations((prev) => prev.filter((c) => c.id !== conv.id));
       if (activeId === conv.id) {
