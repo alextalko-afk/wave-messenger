@@ -102,7 +102,7 @@ function MenuRow({ icon, label, danger, onClick, right }) {
 
 const MIN_MESSAGE_SEARCH_LENGTH = 2;
 
-function Highlighted({ text, needle }) {
+export function Highlighted({ text, needle }) {
   const idx = text.toLowerCase().indexOf(needle.toLowerCase());
   if (idx === -1) return text;
   return (

@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import Sidebar from '../components/Sidebar.jsx';
 import ChatWindow from '../components/ChatWindow.jsx';
 import NewChatModal from '../components/NewChatModal.jsx';
+import QuickSearch from '../components/QuickSearch.jsx';
 import { IconChatLogo } from '../components/Icons.jsx';
 
 function sortConversations(list) {
@@ -23,6 +24,18 @@ export default function ChatPage() {
   const [activeId, setActiveId] = useState(null);
   const [modalMode, setModalMode] = useState(null);
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
+  const [quickSearchOpen, setQuickSearchOpen] = useState(false);
+
+  useEffect(() => {
+    function onKey(e) {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyK') {
+        e.preventDefault();
+        setQuickSearchOpen((v) => !v);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     api.getConversations().then((r) => setConversations(r.conversations));
@@ -209,6 +222,15 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {quickSearchOpen && (
+        <QuickSearch
+          conversations={conversations}
+          onOpenConversation={handleSelect}
+          onCreated={handleCreated}
+          onClose={() => setQuickSearchOpen(false)}
+        />
+      )}
 
       {modalMode && (
         <NewChatModal initialMode={modalMode} onClose={() => setModalMode(null)} onCreated={handleCreated} />
